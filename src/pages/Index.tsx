@@ -56,17 +56,17 @@ export default function HomePage() {
   const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
 
-  // Show subscriber home if user has active subscription
-  if (subscription) {
+  // Show personalized home for any logged-in user
+  if (user) {
     return (
       <SubscriberHome
-        subscription={{
+        subscription={subscription ? {
           expires_at: subscription.expires_at,
           starts_at: subscription.starts_at,
           countries: subscription.countries,
           service_type: subscription.service_type,
           packages: subscription.packages as any,
-        }}
+        } : null}
         fullName={profile?.full_name || null}
       />
     );
