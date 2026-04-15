@@ -25,7 +25,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const reduced = useReducedMotion();
 
-  const { data: subscription } = useQuery({
+  const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["my-subscription", user?.id],
     queryFn: async () => {
       if (!user) return null;
