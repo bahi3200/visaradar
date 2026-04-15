@@ -39,6 +39,20 @@ export default function HomePage() {
     enabled: !!user,
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
 
