@@ -52,6 +52,7 @@ export default function AdminStats() {
         newMessages: messages.count ?? 0,
       };
     },
+    staleTime: 2 * 60_000,
   });
 
   // Play sound when pending requests increase (respects user preference)
