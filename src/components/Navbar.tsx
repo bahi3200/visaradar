@@ -4,12 +4,12 @@ import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import NotificationsBell from "@/components/NotificationsBell";
 
 const navLinks = [
@@ -24,15 +24,9 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
-  }, [user]);
+  const { isAdmin } = useIsAdmin();
 
   const handleSignOut = async () => {
     await signOut();

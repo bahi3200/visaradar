@@ -1,25 +1,10 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  const { data: isAdmin, isLoading: roleLoading } = useQuery({
-    queryKey: ["user-role", user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      return !!data;
-    },
-    enabled: !!user,
-  });
+  const { isAdmin, isLoading: roleLoading } = useIsAdmin();
 
   if (loading || roleLoading) {
     return (
