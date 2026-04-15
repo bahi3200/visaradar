@@ -54,11 +54,12 @@ export default function AdminStats() {
     },
   });
 
-  // Play sound when pending requests increase
+  // Play sound when pending requests increase (respects user preference)
   useEffect(() => {
     if (stats == null) return;
     const current = stats.pendingRequests + stats.newMessages;
-    if (prevPendingRef.current !== null && current > prevPendingRef.current) {
+    const soundEnabled = localStorage.getItem("notif_sound") !== "false";
+    if (prevPendingRef.current !== null && current > prevPendingRef.current && soundEnabled) {
       playAlertSound();
     }
     prevPendingRef.current = current;
