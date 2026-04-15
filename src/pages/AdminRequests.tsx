@@ -87,6 +87,35 @@ export default function AdminRequestsPage() {
     },
   });
 
+  // Moderator: suggest action (doesn't directly change status)
+  const suggestAction = async (id: string, action: string) => {
+    setProcessing(id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const updateData: any = {
+        moderator_id: user?.id,
+        moderator_action: action,
+        moderator_action_at: new Date().toISOString(),
+      };
+      if (adminNotes[id]) updateData.admin_notes = `[اقتراح مشرف] ${adminNotes[id]}`;
+
+      const { error } = await supabase
+        .from("subscription_requests")
+        .update(updateData)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      const actionText: Record<string, string> = { approved: "قبول", rejected: "رفض", frozen: "تجميد" };
+      toast.success(`تم اقتراح ${actionText[action] || action} — بانتظار موافقة المسؤول`);
+      queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
+    } catch (err: any) {
+      toast.error(err.message || "حدث خطأ");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const updateStatus = async (id: string, status: string) => {
     setProcessing(id);
     try {
@@ -96,6 +125,10 @@ export default function AdminRequestsPage() {
         status,
         reviewed_by: user?.id,
         reviewed_at: new Date().toISOString(),
+        // Clear moderator suggestion after admin acts
+        moderator_action: null,
+        moderator_id: null,
+        moderator_action_at: null,
       };
       if (adminNotes[id]) updateData.admin_notes = adminNotes[id];
 
@@ -106,7 +139,6 @@ export default function AdminRequestsPage() {
           const months = request.packages?.duration_months || 3;
           const isUpgradeRequest = request.admin_notes?.includes('ترقية');
 
-          // New subscription starts from today
           const expiresAt = new Date();
           expiresAt.setMonth(expiresAt.getMonth() + months);
 
