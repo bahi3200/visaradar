@@ -108,6 +108,14 @@ export default function SubscribeRequestPage() {
   const maxCountries = selectedPkg?.max_countries || 1;
   const needsCountry = serviceType === "visa" || serviceType === "both";
 
+  // Check if user already has this exact package active
+  const isAlreadySubscribed = !isUpgrade && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
+
+  // Check if user has a pending request for the same package
+  const hasPendingRequest = !isUpgrade && myRequests?.some(
+    (r) => r.package_id === selectedPackageId && r.status === "pending"
+  );
+
   // Calculate upgrade price difference
   const currentPrice = activeSubscription?.packages?.price || 0;
   const newPrice = selectedPkg?.price || 0;
