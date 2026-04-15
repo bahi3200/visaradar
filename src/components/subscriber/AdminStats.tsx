@@ -28,40 +28,32 @@ export default function AdminStats() {
   });
 
   const cards = [
-    { icon: Users, label: "إجمالي المستخدمين", value: stats?.totalUsers ?? "—", color: "text-primary", bg: "bg-primary/10", to: "/dashboard/users" },
-    { icon: CreditCard, label: "اشتراكات نشطة", value: stats?.activeSubscriptions ?? "—", color: "text-green-500", bg: "bg-green-500/10", to: "/dashboard/requests" },
-    { icon: FileText, label: "طلبات معلقة", value: stats?.pendingRequests ?? "—", color: "text-orange-500", bg: "bg-orange-500/10", to: "/dashboard/requests" },
-    { icon: Bell, label: "إجمالي التنبيهات", value: stats?.totalNotifications ?? "—", color: "text-accent", bg: "bg-accent/10", to: "/dashboard/notifications" },
+    { icon: Users, label: "المستخدمين", value: stats?.totalUsers ?? "—", gradient: "from-primary/20 to-primary/5", iconBg: "gradient-primary", iconColor: "text-primary-foreground", border: "border-primary/20", to: "/dashboard/users" },
+    { icon: CreditCard, label: "اشتراكات نشطة", value: stats?.activeSubscriptions ?? "—", gradient: "from-green-500/20 to-green-500/5", iconBg: "bg-green-500", iconColor: "text-white", border: "border-green-500/20", to: "/dashboard/requests" },
+    { icon: FileText, label: "طلبات معلقة", value: stats?.pendingRequests ?? "—", gradient: "from-orange-500/20 to-orange-500/5", iconBg: "bg-orange-500", iconColor: "text-white", border: "border-orange-500/20", to: "/dashboard/requests" },
+    { icon: Bell, label: "التنبيهات", value: stats?.totalNotifications ?? "—", gradient: "from-accent/20 to-accent/5", iconBg: "gradient-accent", iconColor: "text-accent-foreground", border: "border-accent/20", to: "/dashboard/notifications" },
   ];
 
   return (
-    <section className="container py-6">
-      <motion.h2
-        initial={reduced ? noMotion : { opacity: 0, y: 15 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="font-heading text-xl font-bold text-foreground text-center mb-4"
-      >
-        📊 إحصائيات سريعة
-      </motion.h2>
+    <section className="container py-6 -mt-6 relative z-10">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {cards.map((card, i) => (
           <motion.div
             key={card.label}
-            initial={reduced ? noMotion : { opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.08 * i }}
+            initial={reduced ? noMotion : { opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.1 * i, type: "spring", stiffness: 200, damping: 20 }}
           >
             <Link
               to={card.to}
-              className="gradient-card rounded-xl border border-border/50 p-4 flex flex-col items-center gap-2 text-center hover:border-accent/30 hover:shadow-lg transition-all group"
+              className={`relative rounded-2xl border ${card.border} p-4 flex flex-col items-center gap-1.5 text-center hover:shadow-lg transition-all group overflow-hidden bg-card`}
             >
-              <div className={`w-10 h-10 rounded-lg ${card.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                <card.icon className={`w-5 h-5 ${card.color}`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-50`} />
+              <div className={`w-10 h-10 rounded-xl ${card.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform relative`}>
+                <card.icon className={`w-5 h-5 ${card.iconColor}`} />
               </div>
-              <p className="text-2xl font-black text-foreground">{card.value}</p>
-              <span className="text-[10px] text-muted-foreground">{card.label}</span>
+              <p className="text-2xl font-black text-foreground relative tabular-nums">{card.value}</p>
+              <span className="text-[10px] text-muted-foreground relative">{card.label}</span>
             </Link>
           </motion.div>
         ))}

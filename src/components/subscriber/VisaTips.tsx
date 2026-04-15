@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Lightbulb, CheckCircle } from "lucide-react";
+import { Lightbulb, CheckCircle2 } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useMemo } from "react";
 
@@ -28,32 +28,43 @@ export default function VisaTips() {
   return (
     <section className="container py-8 pb-16">
       <motion.div
-        initial={reduced ? noMotion : { opacity: 0, y: 15 }}
+        initial={reduced ? noMotion : { opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="gradient-card rounded-2xl border border-accent/20 p-6 max-w-2xl mx-auto"
+        className="relative rounded-2xl border border-accent/20 p-6 max-w-2xl mx-auto overflow-hidden bg-card"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-9 h-9 rounded-lg gradient-accent flex items-center justify-center">
-            <Lightbulb className="w-4 h-4 text-accent-foreground" />
+        {/* Decorative background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/5" />
+        <div className="absolute top-0 left-0 w-32 h-32 bg-accent/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl" />
+
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center shadow-lg">
+              <Lightbulb className="w-5 h-5 text-accent-foreground" />
+            </div>
+            <div>
+              <h2 className="font-heading text-lg font-bold text-foreground">نصائح لتأشيرتك</h2>
+              <p className="text-[10px] text-muted-foreground">نصائح مهمة لنجاح ملفك</p>
+            </div>
           </div>
-          <h2 className="font-heading text-lg font-bold text-foreground">💡 نصائح لتأشيرتك</h2>
+          <ul className="space-y-3.5">
+            {tips.map((tip, i) => (
+              <motion.li
+                key={i}
+                initial={reduced ? noMotion : { opacity: 0, x: -10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 * i }}
+                className="flex items-start gap-3 text-sm text-muted-foreground group"
+              >
+                <div className="w-5 h-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-accent/20 transition-colors">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
+                </div>
+                <span className="leading-relaxed">{tip}</span>
+              </motion.li>
+            ))}
+          </ul>
         </div>
-        <ul className="space-y-3">
-          {tips.map((tip, i) => (
-            <motion.li
-              key={i}
-              initial={reduced ? noMotion : { opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 * i }}
-              className="flex items-start gap-2 text-sm text-muted-foreground"
-            >
-              <CheckCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-              <span>{tip}</span>
-            </motion.li>
-          ))}
-        </ul>
       </motion.div>
     </section>
   );
