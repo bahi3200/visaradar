@@ -15,6 +15,7 @@ interface SubscriptionData {
   starts_at: string;
   countries: string[];
   service_type: string;
+  package_id?: string;
   packages?: { name_ar: string } | null;
 }
 
