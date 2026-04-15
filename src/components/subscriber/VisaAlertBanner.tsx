@@ -25,7 +25,7 @@ interface Props {
   subscribedCountries: string[];
 }
 
-export default function VisaAlertBanner({ subscribedCountries }: Props) {
+const VisaAlertBanner = forwardRef<HTMLElement, Props>(function VisaAlertBanner({ subscribedCountries }, ref) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]);
   const playedRef = useRef(false);
@@ -182,4 +182,6 @@ export default function VisaAlertBanner({ subscribedCountries }: Props) {
       </AnimatePresence>
     </section>
   );
-}
+});
+
+export default VisaAlertBanner;
