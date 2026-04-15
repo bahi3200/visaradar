@@ -105,4 +105,6 @@ const QuickStats = forwardRef<HTMLElement, Props>(function QuickStats({ countrie
       </div>
     </section>
   );
-}
+});
+
+export default QuickStats;
