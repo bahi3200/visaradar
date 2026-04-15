@@ -4,12 +4,33 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+
+function playAlertSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    // Two-tone chime
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch {
+    // Audio not available
+  }
+}
 
 export default function AdminStats() {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0 };
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const prevPendingRef = useRef<number | null>(null);
 
   const { data: stats } = useQuery({
     queryKey: ["admin-home-stats"],
@@ -32,6 +53,16 @@ export default function AdminStats() {
       };
     },
   });
+
+  // Play sound when pending requests increase
+  useEffect(() => {
+    if (stats == null) return;
+    const current = stats.pendingRequests + stats.newMessages;
+    if (prevPendingRef.current !== null && current > prevPendingRef.current) {
+      playAlertSound();
+    }
+    prevPendingRef.current = current;
+  }, [stats?.pendingRequests, stats?.newMessages]);
 
   const alerts = [
     {
