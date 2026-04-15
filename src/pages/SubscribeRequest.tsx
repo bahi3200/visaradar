@@ -665,6 +665,8 @@ export default function SubscribeRequestPage() {
               {submitting ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
+                isRenewal || isAlreadySubscribed ? <RefreshCw className="w-4 h-4" /> :
+                isUpgrade || (activeSubscription && selectedPackageId && activeSubscription.package_id !== selectedPackageId) ? <ArrowUpCircle className="w-4 h-4" /> :
                 <Send className="w-4 h-4" />
               )}
               {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : activeSubscription && selectedPackageId && activeSubscription.package_id !== selectedPackageId ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
