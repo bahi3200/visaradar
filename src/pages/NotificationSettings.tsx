@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck } from "lucide-react";
+import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck, Play } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
