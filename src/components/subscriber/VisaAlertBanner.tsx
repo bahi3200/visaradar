@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, X, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const VISA_BOOKING_URLS: Record<string, { url: string; provider: string }> = {
   IT: { url: "https://visa.vfsglobal.com/dza/ar/ita/", provider: "VFS Global" },
@@ -28,6 +28,51 @@ interface Props {
 export default function VisaAlertBanner({ subscribedCountries }: Props) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const playedRef = useRef(false);
+
+  const playAlertSound = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+
+      // Three-tone urgent alert: ascending chime
+      const notes = [
+        { freq: 784, start: 0, dur: 0.12 },    // G5
+        { freq: 988, start: 0.13, dur: 0.12 },  // B5
+        { freq: 1319, start: 0.26, dur: 0.25 }, // E6
+      ];
+
+      for (const n of notes) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(n.freq, now + n.start);
+        gain.gain.setValueAtTime(0.35, now + n.start);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + n.start + n.dur);
+        osc.start(now + n.start);
+        osc.stop(now + n.start + n.dur + 0.05);
+      }
+
+      // Second chime (repeat) after a short pause
+      const pause = 0.55;
+      for (const n of notes) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(n.freq, now + pause + n.start);
+        gain.gain.setValueAtTime(0.25, now + pause + n.start);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + pause + n.start + n.dur);
+        osc.start(now + pause + n.start);
+        osc.stop(now + pause + n.start + n.dur + 0.05);
+      }
+    } catch {
+      // AudioContext not available
+    }
+  }, []);
 
   // Fetch recent visa notifications (last 2 hours)
   const { data: recentAlerts } = useQuery({
@@ -49,6 +94,20 @@ export default function VisaAlertBanner({ subscribedCountries }: Props) {
   });
 
   const visibleAlerts = recentAlerts?.filter((a) => !dismissed.includes(a.id)) || [];
+
+  // Play sound once when alerts first appear
+  useEffect(() => {
+    if (visibleAlerts.length > 0 && !playedRef.current) {
+      const soundEnabled = localStorage.getItem("notif_sound") !== "false";
+      if (soundEnabled) {
+        playAlertSound();
+      }
+      playedRef.current = true;
+    }
+    if (visibleAlerts.length === 0) {
+      playedRef.current = false;
+    }
+  }, [visibleAlerts.length, playAlertSound]);
 
   if (visibleAlerts.length === 0) return null;
 
