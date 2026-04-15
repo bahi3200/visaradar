@@ -71,12 +71,17 @@ export default function NotificationSettings() {
   });
 
   useEffect(() => {
+    if (isAdmin) {
+      // Admin always monitors all countries
+      setSelectedCountries(AVAILABLE_COUNTRIES.map(c => c.code));
+    } else if (prefs) {
+      setSelectedCountries(prefs.countries || ["IT", "FR", "ES"]);
+    }
     if (prefs) {
       setSoundEnabled(prefs.sound_enabled);
       setBrowserNotifications(prefs.browser_notifications);
-      setSelectedCountries(prefs.countries || ["IT", "FR", "ES"]);
     }
-  }, [prefs]);
+  }, [prefs, isAdmin]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
