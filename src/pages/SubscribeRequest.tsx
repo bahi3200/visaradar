@@ -508,6 +508,7 @@ export default function SubscribeRequestPage() {
             )}
 
             {selectedPackageId && needsCountry && (
+            !isAlreadySubscribed &&
               <div className="gradient-card rounded-2xl border border-border/50 p-6">
                 <label className="block text-sm font-medium text-foreground mb-3">
                   اختر الدول ({countries.length}/{maxCountries}) *
@@ -530,7 +531,7 @@ export default function SubscribeRequestPage() {
             )}
 
             {/* User Info Summary (read-only) */}
-            <div className="gradient-card rounded-2xl border border-border/50 p-5">
+            {!isAlreadySubscribed && <div className="gradient-card rounded-2xl border border-border/50 p-5">
               <label className="block text-sm font-medium text-foreground mb-3">معلوماتك المسجّلة</label>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground p-2.5 rounded-lg bg-muted/30">
@@ -548,7 +549,7 @@ export default function SubscribeRequestPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </div>}
 
             {/* Price summary for upgrade */}
             {isUpgrade && selectedPkg && activeSubscription && (
@@ -572,7 +573,7 @@ export default function SubscribeRequestPage() {
             )}
 
             {/* Payment Info - always visible */}
-            {paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
+            {!isAlreadySubscribed && paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
               <div className="gradient-card rounded-2xl border border-accent/20 p-6">
                 <label className="block text-sm font-bold text-foreground mb-4">معلومات الدفع</label>
                 {paymentSettings.account_holder && (
@@ -643,7 +644,7 @@ export default function SubscribeRequestPage() {
               </div>
             )}
 
-            <div className="gradient-card rounded-2xl border border-border/50 p-6">
+            {!isAlreadySubscribed && <div className="gradient-card rounded-2xl border border-border/50 p-6">
               <label className="block text-sm font-medium text-foreground mb-3">
                 وصل الدفع CCP * {isUpgrade && <span className="text-xs text-muted-foreground">(بمبلغ الفارق: {priceDifference} د.ج)</span>}
               </label>
@@ -666,10 +667,10 @@ export default function SubscribeRequestPage() {
                 <AlertTriangle className="w-3 h-3" />
                 سيتم فحص الوصل تلقائياً بالذكاء الاصطناعي
               </p>
-            </div>
+            </div>}
 
             {/* Submit */}
-            <button
+            {!isAlreadySubscribed && <button
               onClick={handleSubmit}
               disabled={submitting}
               className="w-full py-4 rounded-xl font-bold gradient-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
@@ -682,7 +683,7 @@ export default function SubscribeRequestPage() {
                 <Send className="w-4 h-4" />
               )}
               {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : isSelectingDifferentPkg ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
-            </button>
+            </button>}
           </div>
 
           {/* My Requests */}
