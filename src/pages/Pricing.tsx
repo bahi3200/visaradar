@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2 } from "lucide-react";
+import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -253,6 +253,12 @@ export default function PricingPage() {
                     الأكثر طلباً
                   </div>
                 )}
+                {action.mode === "current" && activeSubscription && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-xs font-bold px-4 py-1 rounded-full flex items-center gap-1 z-10">
+                    <ShieldCheck className="w-3 h-3" />
+                    باقتك الحالية
+                  </div>
+                )}
                 <h3 className="font-heading text-lg font-bold text-foreground mb-1">{pkg.name_ar}</h3>
                 <p className="text-sm text-muted-foreground mb-1">{pkg.duration_months} أشهر</p>
                 <div className="inline-flex items-center gap-1.5 mb-4">
@@ -265,6 +271,14 @@ export default function PricingPage() {
                   </span>
                 </div>
                 
+                {action.mode === "current" && activeSubscription && (
+                  <div className="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 mb-4 text-center">
+                    <p className="text-xs text-accent font-bold">
+                      ✓ مشترك — ينتهي {new Date(activeSubscription.expires_at).toLocaleDateString("ar", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   {pkg.price ? (
                     <div className="flex items-baseline gap-1">
@@ -403,6 +417,13 @@ export default function PricingPage() {
               <Crown className="w-4 h-4" />
               {action.label}
             </button>
+            {action.mode === "current" && activeSubscription && (
+              <div className="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 mt-4 text-center">
+                <p className="text-xs text-accent font-bold">
+                  ✓ مشترك حالياً — ينتهي {new Date(activeSubscription.expires_at).toLocaleDateString("ar", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+              </div>
+            )}
           </motion.div>
             );
           })()}
