@@ -88,8 +88,11 @@ export default function NotificationsBell() {
         (payload: any) => {
           const countryCode = payload.new?.country_code;
           
-          // Only notify if user is subscribed to this country (or has no subscription yet — show all)
-          if (subscribedCountries && subscribedCountries.length > 0 && !subscribedCountries.includes(countryCode)) {
+          // Privileged users (admin/moderator) see all countries; regular users only their subscribed ones
+          if (!isPrivileged && subscribedCountries && subscribedCountries.length > 0 && !subscribedCountries.includes(countryCode)) {
+            return;
+          }
+          if (!isPrivileged && (!subscribedCountries || subscribedCountries.length === 0)) {
             return;
           }
 
