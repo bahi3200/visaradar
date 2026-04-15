@@ -73,6 +73,8 @@ export default function HomePage() {
   }
 
   return (
+    <Layout>
+      {/* Hero */}
       <HeroSection user={user} />
 
       {/* Stats */}
