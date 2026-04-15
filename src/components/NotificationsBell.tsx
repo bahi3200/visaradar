@@ -129,19 +129,20 @@ export default function NotificationsBell() {
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 
-      // Build visa query — filter by subscribed countries if user has an active visa subscription
-      let visaQuery = supabase
-        .from("visa_notifications")
-        .select("id, country_code, message_ar, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      // Only fetch visa notifications if user has active visa subscription countries
+      const hasVisaSubscription = subscribedCountries && subscribedCountries.length > 0;
 
-      if (subscribedCountries && subscribedCountries.length > 0) {
-        visaQuery = visaQuery.in("country_code", subscribedCountries);
-      }
+      const visaPromise = hasVisaSubscription
+        ? supabase
+            .from("visa_notifications")
+            .select("id, country_code, message_ar, created_at")
+            .in("country_code", subscribedCountries!)
+            .order("created_at", { ascending: false })
+            .limit(10)
+        : Promise.resolve({ data: [] as any[], error: null });
 
       const [visaRes, requestsRes] = await Promise.all([
-        visaQuery,
+        visaPromise,
         supabase
           .from("subscription_requests")
           .select("id, status, updated_at, packages:package_id(name_ar)")
@@ -154,7 +155,7 @@ export default function NotificationsBell() {
       const items: NotificationItem[] = [];
 
       if (visaRes.data) {
-        for (const v of visaRes.data) {
+        for (const v of visaRes.data as any[]) {
           const countryName = COUNTRY_FLAGS[v.country_code] || v.country_code;
           items.push({
             id: `visa-${v.id}`,
