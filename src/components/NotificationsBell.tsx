@@ -125,26 +125,36 @@ export default function NotificationsBell() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient, subscribedCountries]);
+  }, [user?.id, queryClient, subscribedCountries, isPrivileged]);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["user-notifications", user?.id, lastReadAt, subscribedCountries],
+    queryKey: ["user-notifications", user?.id, lastReadAt, subscribedCountries, isPrivileged],
     enabled: !!user,
     staleTime: 3 * 60_000,
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 
-      // Only fetch visa notifications if user has active visa subscription countries
+      // Privileged users see ALL visa notifications; regular users only their subscribed countries
+      const canSeeAllVisa = isPrivileged;
       const hasVisaSubscription = subscribedCountries && subscribedCountries.length > 0;
 
-      const visaPromise = hasVisaSubscription
-        ? supabase
-            .from("visa_notifications")
-            .select("id, country_code, message_ar, created_at")
-            .in("country_code", subscribedCountries!)
-            .order("created_at", { ascending: false })
-            .limit(10)
-        : Promise.resolve({ data: [] as any[], error: null });
+      let visaPromise;
+      if (canSeeAllVisa) {
+        visaPromise = supabase
+          .from("visa_notifications")
+          .select("id, country_code, message_ar, created_at")
+          .order("created_at", { ascending: false })
+          .limit(20);
+      } else if (hasVisaSubscription) {
+        visaPromise = supabase
+          .from("visa_notifications")
+          .select("id, country_code, message_ar, created_at")
+          .in("country_code", subscribedCountries!)
+          .order("created_at", { ascending: false })
+          .limit(10);
+      } else {
+        visaPromise = Promise.resolve({ data: [] as any[], error: null });
+      }
 
       const [visaRes, requestsRes] = await Promise.all([
         visaPromise,
