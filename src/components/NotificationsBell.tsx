@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -30,6 +31,7 @@ type NotificationItem = {
 export default function NotificationsBell() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isPrivileged } = useIsAdmin();
   const [open, setOpen] = useState(false);
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const channelInstanceRef = useRef(`notifications-${crypto.randomUUID()}`);
@@ -86,8 +88,11 @@ export default function NotificationsBell() {
         (payload: any) => {
           const countryCode = payload.new?.country_code;
           
-          // Only notify if user is subscribed to this country (or has no subscription yet — show all)
-          if (subscribedCountries && subscribedCountries.length > 0 && !subscribedCountries.includes(countryCode)) {
+          // Privileged users (admin/moderator) see all countries; regular users only their subscribed ones
+          if (!isPrivileged && subscribedCountries && subscribedCountries.length > 0 && !subscribedCountries.includes(countryCode)) {
+            return;
+          }
+          if (!isPrivileged && (!subscribedCountries || subscribedCountries.length === 0)) {
             return;
           }
 
@@ -120,26 +125,36 @@ export default function NotificationsBell() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient, subscribedCountries]);
+  }, [user?.id, queryClient, subscribedCountries, isPrivileged]);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["user-notifications", user?.id, lastReadAt, subscribedCountries],
+    queryKey: ["user-notifications", user?.id, lastReadAt, subscribedCountries, isPrivileged],
     enabled: !!user,
     staleTime: 3 * 60_000,
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 
-      // Only fetch visa notifications if user has active visa subscription countries
+      // Privileged users see ALL visa notifications; regular users only their subscribed countries
+      const canSeeAllVisa = isPrivileged;
       const hasVisaSubscription = subscribedCountries && subscribedCountries.length > 0;
 
-      const visaPromise = hasVisaSubscription
-        ? supabase
-            .from("visa_notifications")
-            .select("id, country_code, message_ar, created_at")
-            .in("country_code", subscribedCountries!)
-            .order("created_at", { ascending: false })
-            .limit(10)
-        : Promise.resolve({ data: [] as any[], error: null });
+      let visaPromise;
+      if (canSeeAllVisa) {
+        visaPromise = supabase
+          .from("visa_notifications")
+          .select("id, country_code, message_ar, created_at")
+          .order("created_at", { ascending: false })
+          .limit(20);
+      } else if (hasVisaSubscription) {
+        visaPromise = supabase
+          .from("visa_notifications")
+          .select("id, country_code, message_ar, created_at")
+          .in("country_code", subscribedCountries!)
+          .order("created_at", { ascending: false })
+          .limit(10);
+      } else {
+        visaPromise = Promise.resolve({ data: [] as any[], error: null });
+      }
 
       const [visaRes, requestsRes] = await Promise.all([
         visaPromise,
@@ -244,11 +259,15 @@ export default function NotificationsBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border/50">
           <h4 className="text-sm font-semibold">الإشعارات</h4>
-          {subscribedCountries && subscribedCountries.length > 0 && (
+          {isPrivileged ? (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              🛡️ تنبيهات كل الدول (مسؤول)
+            </p>
+          ) : subscribedCountries && subscribedCountries.length > 0 ? (
             <p className="text-[10px] text-muted-foreground mt-0.5">
               تنبيهات: {subscribedCountries.map(c => COUNTRY_FLAGS[c]?.split(" ")[0] || c).join(" ")}
             </p>
-          )}
+          ) : null}
         </div>
         <ScrollArea className="max-h-72">
           {notifications.length === 0 ? (

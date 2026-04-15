@@ -80,10 +80,10 @@ export default function SubscriberHome({ subscription, fullName, isAdmin }: Prop
         </section>
       )}
 
-      {isSubscribed && (
+      {(isSubscribed || isAdmin) && (
         <QuickStats
-          countries={subscription!.countries}
-          serviceType={subscription!.service_type}
+          countries={isAdmin ? ["IT", "FR", "ES", "DE", "GR"] : subscription!.countries}
+          serviceType={isAdmin ? "both" : subscription!.service_type}
         />
       )}
 

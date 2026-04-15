@@ -54,7 +54,7 @@ export default function HomePage() {
     enabled: !!user,
   });
 
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isPrivileged } = useIsAdmin();
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
@@ -71,7 +71,7 @@ export default function HomePage() {
           packages: subscription.packages as any,
         } : null}
         fullName={profile?.full_name || null}
-        isAdmin={!!isAdmin}
+        isAdmin={!!isPrivileged}
       />
     );
   }

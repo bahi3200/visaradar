@@ -5,6 +5,7 @@ import { Search, Filter, X, MapPin, Building2, Banknote, Lock, Crown, Calendar, 
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import JobFilters from "@/components/jobs/JobFilters";
@@ -58,7 +59,8 @@ export default function JobsPage() {
     enabled: !!user,
   });
 
-  const hasAccess = !!subscription && (subscription.service_type === 'jobs' || subscription.service_type === 'both');
+  const { isPrivileged } = useIsAdmin();
+  const hasAccess = isPrivileged || (!!subscription && (subscription.service_type === 'jobs' || subscription.service_type === 'both'));
   const activeCount = (country ? 1 : 0) + (contract ? 1 : 0) + (salaryIdx > 0 ? 1 : 0);
 
   const filtered = useMemo(() => {
