@@ -414,7 +414,7 @@ export default function SubscribeRequestPage() {
                         <div>
                           <p className="font-bold text-foreground flex items-center gap-2">
                             {pkg.name_ar}
-                            {isCurrentPkg && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">الحالية</span>}
+                            {isCurrentPkg && !isUpgrade && !isRenewal && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">✓ مشترك</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {pkg.duration_months} أشهر • {pkg.max_countries > 1 ? `حتى ${pkg.max_countries} دول` : "دولة واحدة"}
