@@ -274,6 +274,12 @@ export default function AdminRequestsPage() {
                     className="w-full p-5 flex items-center justify-between text-right"
                   >
                     <div className="flex items-center gap-3">
+                      {req.admin_notes?.includes('ترقية') && (
+                        <span className="flex items-center gap-1 text-xs bg-accent/10 text-accent border border-accent/30 px-2 py-0.5 rounded-full">
+                          <ArrowRight className="w-3 h-3 rotate-180" />
+                          ترقية
+                        </span>
+                      )}
                       {req.ai_fraud_detected && <AlertTriangle className="w-5 h-5 text-destructive" />}
                       {(deviceCounts[req.user_id] || 0) > 1 && (
                         <span className="flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">
