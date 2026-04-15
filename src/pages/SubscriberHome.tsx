@@ -22,15 +22,16 @@ interface Props {
   subscription: SubscriptionData | null;
   fullName: string | null;
   isAdmin: boolean;
+  isLoading?: boolean;
 }
 
-export default function SubscriberHome({ subscription, fullName, isAdmin }: Props) {
+export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading }: Props) {
   const isSubscribed = !!subscription;
   const daysLeft = subscription
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const showSubscribeCTA = !isSubscribed && !isAdmin;
+  const showSubscribeCTA = !isSubscribed && !isAdmin && !isLoading;
 
   return (
     <Layout>
