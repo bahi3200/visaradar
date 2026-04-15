@@ -35,6 +35,7 @@ export default function SubscriberHome({ subscription, fullName }: Props) {
         countries={subscription.countries}
         serviceType={subscription.service_type}
       />
+      <RecentAlerts />
       <QuickLinks />
       <CityGallery />
       <VisaTips />
