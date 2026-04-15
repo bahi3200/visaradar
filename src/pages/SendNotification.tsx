@@ -195,14 +195,28 @@ export default function SendNotificationPage() {
                 <Activity className="w-5 h-5 text-primary" />
                 المراقبة التلقائية
               </h2>
-              <button
-                onClick={handleManualCheck}
-                disabled={checking}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} />
-                {checking ? "جاري الفحص..." : "فحص الآن"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleToggleMonitor}
+                  disabled={togglingMonitor}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
+                    monitorEnabled
+                      ? "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30"
+                      : "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30"
+                  }`}
+                >
+                  <Power className="w-4 h-4" />
+                  {togglingMonitor ? "..." : monitorEnabled ? "مفعّل" : "متوقف"}
+                </button>
+                <button
+                  onClick={handleManualCheck}
+                  disabled={checking}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} />
+                  {checking ? "جاري الفحص..." : "فحص الآن"}
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-3">
