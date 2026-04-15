@@ -299,7 +299,13 @@ export default function SubscribeRequestPage() {
                 {isUpgrade ? "الباقة الجديدة *" : "اختر الباقة *"}
               </label>
               <div className="grid gap-3">
-                {packages?.map((pkg) => {
+                {packages?.filter((pkg) => {
+                  // In upgrade mode, only show packages with higher price
+                  if (isUpgrade && activeSubscription?.packages?.price) {
+                    return (pkg.price || 0) > (activeSubscription.packages.price || 0);
+                  }
+                  return true;
+                }).map((pkg) => {
                   const upgradeDiff = isUpgrade && activeSubscription ? Math.max(0, (pkg.price || 0) - currentPrice) : null;
                   const isCurrentPkg = activeSubscription?.package_id === pkg.id;
                   return (
