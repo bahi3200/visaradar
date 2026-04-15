@@ -61,8 +61,8 @@ export function useDeviceCheck() {
 
   const checkDevice = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         setResult(null);
         setLoading(false);
         return;
