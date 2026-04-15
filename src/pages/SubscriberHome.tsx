@@ -7,7 +7,7 @@ import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SubscriptionData {
@@ -90,8 +90,64 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         />
       )}
 
+      {/* Renewal CTA when subscription is about to expire */}
+      {isSubscribed && !isAdmin && daysLeft <= 7 && (
+        <section className="container pb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            className={`relative rounded-2xl border p-5 overflow-hidden bg-card flex items-center gap-4 ${
+              daysLeft <= 2
+                ? "border-red-500/40"
+                : daysLeft <= 5
+                ? "border-orange-500/30"
+                : "border-yellow-500/30"
+            }`}
+          >
+            <div className={`absolute inset-0 ${
+              daysLeft <= 2
+                ? "bg-gradient-to-l from-red-500/10 via-transparent to-orange-500/5"
+                : "bg-gradient-to-l from-yellow-500/10 via-transparent to-accent/5"
+            }`} />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg relative ${
+              daysLeft <= 2 ? "bg-red-500/15" : "bg-yellow-500/15"
+            }`}>
+              {daysLeft <= 2 ? (
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              ) : (
+                <RefreshCw className="w-6 h-6 text-yellow-400" />
+              )}
+            </div>
+            <div className="relative flex-1 min-w-0">
+              <h3 className="font-heading text-sm font-bold text-foreground mb-0.5">
+                {daysLeft === 0
+                  ? "اشتراكك ينتهي اليوم!"
+                  : daysLeft <= 2
+                  ? `اشتراكك ينتهي خلال ${daysLeft} ${daysLeft === 1 ? "يوم" : "يومين"}`
+                  : `اشتراكك ينتهي خلال ${daysLeft} أيام`}
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                جدّد اشتراكك الآن لتستمر في تلقي التنبيهات بدون انقطاع
+              </p>
+            </div>
+            <Link
+              to={`/subscribe?renew=true&package=${subscription!.package_id || ""}`}
+              className={`relative inline-flex items-center gap-1.5 font-bold text-xs px-5 py-2.5 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 shrink-0 ${
+                daysLeft <= 2
+                  ? "bg-red-500 hover:bg-red-600 text-white"
+                  : "gradient-accent text-accent-foreground"
+              }`}
+            >
+              تجديد
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </Link>
+          </motion.div>
+        </section>
+      )}
+
       {/* Upgrade CTA for subscribers */}
-      {isSubscribed && !isAdmin && (
+      {isSubscribed && !isAdmin && daysLeft > 7 && (
         <section className="container pb-4">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
