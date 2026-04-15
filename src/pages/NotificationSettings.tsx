@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight } from "lucide-react";
+import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,34 @@ export default function NotificationSettings() {
   const [browserNotifications, setBrowserNotifications] = useState(true);
   const [selectedCountries, setSelectedCountries] = useState<string[]>(["IT", "FR", "ES"]);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Fetch subscription with package info to get max_countries
+  const { data: subscriptionInfo } = useQuery({
+    queryKey: ["subscription-limits", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const [{ data: sub }, { data: isAdmin }] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("*, packages(max_countries)")
+          .eq("user_id", user!.id)
+          .eq("status", "active")
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.rpc("has_role", { _user_id: user!.id, _role: "admin" }),
+      ]);
+      return {
+        maxCountries: isAdmin ? 999 : (sub?.packages as any)?.max_countries ?? 1,
+        subscriptionCountries: sub?.countries ?? [],
+        isAdmin: !!isAdmin,
+        hasSubscription: !!sub,
+      };
+    },
+  });
+
+  const maxCountries = subscriptionInfo?.maxCountries ?? 1;
+  const isAdmin = subscriptionInfo?.isAdmin ?? false;
 
   const { data: prefs, isLoading } = useQuery({
     queryKey: ["notification-preferences", user?.id],
@@ -74,7 +102,6 @@ export default function NotificationSettings() {
         if (error) throw error;
       }
 
-      // Sync sound preference to localStorage for NotificationsBell
       localStorage.setItem("notif_sound", soundEnabled ? "true" : "false");
     },
     onSuccess: () => {
@@ -88,9 +115,17 @@ export default function NotificationSettings() {
   });
 
   const toggleCountry = (code: string) => {
-    setSelectedCountries((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
+    setSelectedCountries((prev) => {
+      if (prev.includes(code)) {
+        return prev.filter((c) => c !== code);
+      }
+      // Enforce max_countries limit
+      if (prev.length >= maxCountries) {
+        toast.error(`اشتراكك يسمح بحد أقصى ${maxCountries} ${maxCountries === 1 ? "دولة" : "دول"} فقط`);
+        return prev;
+      }
+      return [...prev, code];
+    });
     setHasChanges(true);
   };
 
@@ -207,7 +242,7 @@ export default function NotificationSettings() {
             transition={{ delay: 0.15 }}
             className="gradient-card rounded-2xl border border-border/50 p-5"
           >
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Globe className="w-5 h-5 text-primary" />
               </div>
@@ -217,16 +252,31 @@ export default function NotificationSettings() {
               </div>
             </div>
 
+            {/* Limit indicator */}
+            {!isAdmin && (
+              <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
+                <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  اشتراكك يسمح بـ <strong className="text-foreground">{maxCountries}</strong> {maxCountries === 1 ? "دولة" : "دول"} كحد أقصى
+                  <span className="text-muted-foreground/70"> ({selectedCountries.length}/{maxCountries})</span>
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-2">
               {AVAILABLE_COUNTRIES.map((country) => {
                 const isSelected = selectedCountries.includes(country.code);
+                const isDisabled = !isSelected && selectedCountries.length >= maxCountries;
                 return (
                   <button
                     key={country.code}
                     onClick={() => toggleCountry(country.code)}
+                    disabled={isDisabled}
                     className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-medium transition-all ${
                       isSelected
                         ? "border-primary/50 bg-primary/10 text-foreground"
+                        : isDisabled
+                        ? "border-border/30 bg-background/30 text-muted-foreground/40 cursor-not-allowed opacity-50"
                         : "border-border/50 bg-background/50 text-muted-foreground hover:border-border"
                     }`}
                   >
@@ -236,6 +286,9 @@ export default function NotificationSettings() {
                       <Badge className="mr-auto text-[10px] bg-primary/20 text-primary border-0 px-1.5">
                         ✓
                       </Badge>
+                    )}
+                    {isDisabled && (
+                      <Lock className="mr-auto w-3 h-3 text-muted-foreground/40" />
                     )}
                   </button>
                 );
