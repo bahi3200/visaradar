@@ -268,7 +268,11 @@ export default function NotificationSettings() {
                   ? "bg-primary/10 border-primary/30" 
                   : "bg-accent/10 border-accent/30"
               }`}>
-                <Globe className={`w-3.5 h-3.5 ${isAdmin ? "text-primary" : "text-accent-foreground"}`} />
+                {isAdmin ? (
+                  <Crown className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <ShieldCheck className="w-3.5 h-3.5 text-accent-foreground" />
+                )}
                 <p className={`text-xs font-medium ${isAdmin ? "text-primary" : "text-accent-foreground"}`}>
                   {isAdmin 
                     ? `كمسؤول، أنت تراقب جميع الدول تلقائياً (${AVAILABLE_COUNTRIES.length} دول)`
