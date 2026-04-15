@@ -72,6 +72,7 @@ export default function HomePage() {
         } : null}
         fullName={profile?.full_name || null}
         isAdmin={!!isPrivileged}
+        isLoading={subLoading}
       />
     );
   }
