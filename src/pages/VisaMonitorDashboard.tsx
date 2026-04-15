@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw,
-  Globe, Eye, Filter, BellRing, X
+  Globe, Eye, Filter, BellRing, X, BarChart3, TrendingUp, Zap, ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -50,13 +50,135 @@ type StatusAlert = {
   time: string;
 };
 
+// ── Performance Stats Component ──
+function PerformanceStats({ checks }: { checks: any[] }) {
+  const stats = useMemo(() => {
+    if (!checks.length) return null;
+
+    const countryCodes = [...new Set(checks.map(c => c.country_code))];
+
+    // Per-country stats
+    const perCountry = countryCodes.map(code => {
+      const countryChecks = checks.filter(c => c.country_code === code);
+      const total = countryChecks.length;
+      const errors = countryChecks.filter(c => c.status === "error").length;
+      const opens = countryChecks.filter(c => c.status === "open").length;
+      const closed = countryChecks.filter(c => c.status === "closed").length;
+      const successRate = total > 0 ? ((total - errors) / total * 100) : 0;
+
+      // Status changes (transitions)
+      const changes = countryChecks.filter(c => c.previous_status && c.previous_status !== c.status).length;
+
+      return { code, total, errors, opens, closed, successRate, changes };
+    });
+
+    // Overall
+    const totalChecks = checks.length;
+    const totalErrors = checks.filter(c => c.status === "error").length;
+    const overallSuccessRate = totalChecks > 0 ? ((totalChecks - totalErrors) / totalChecks * 100) : 0;
+    const totalOpens = checks.filter(c => c.status === "open").length;
+
+    // Detection methods distribution
+    const methods: Record<string, number> = {};
+    checks.forEach(c => {
+      const method = c.detection_method || "unknown";
+      const key = method.split("(")[0].trim(); // simplify
+      methods[key] = (methods[key] || 0) + 1;
+    });
+
+    // Checks per day (last 7 days)
+    const now = Date.now();
+    const last24h = checks.filter(c => now - new Date(c.checked_at).getTime() < 86400000).length;
+    const last7d = checks.filter(c => now - new Date(c.checked_at).getTime() < 7 * 86400000).length;
+
+    return { perCountry, totalChecks, totalErrors, overallSuccessRate, totalOpens, methods, last24h, last7d };
+  }, [checks]);
+
+  if (!stats) return null;
+
+  return (
+    <div className="gradient-card rounded-2xl border border-border/50 p-6 mb-6">
+      <h2 className="font-heading text-lg font-bold text-foreground mb-5 flex items-center gap-2">
+        <BarChart3 className="w-5 h-5 text-primary" />
+        إحصائيات الأداء
+      </h2>
+
+      {/* Summary row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {[
+          { label: "نسبة النجاح", value: `${stats.overallSuccessRate.toFixed(1)}%`, icon: ShieldCheck, color: "text-green-400", bg: "bg-green-500/10" },
+          { label: "فحوصات اليوم", value: stats.last24h, icon: Zap, color: "text-primary", bg: "bg-primary/10" },
+          { label: "فحوصات 7 أيام", value: stats.last7d, icon: TrendingUp, color: "text-amber-400", bg: "bg-amber-500/10" },
+          { label: "مرات الفتح", value: stats.totalOpens, icon: CheckCircle, color: "text-green-400", bg: "bg-green-500/10" },
+        ].map((s, i) => (
+          <div key={i} className="rounded-xl border border-border/30 bg-secondary/20 p-3 text-center">
+            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-2`}>
+              <s.icon className={`w-4 h-4 ${s.color}`} />
+            </div>
+            <p className="font-heading text-xl font-black text-foreground">{s.value}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-country breakdown */}
+      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-1.5">
+        <Globe className="w-4 h-4 text-primary" />
+        تفاصيل كل دولة
+      </h3>
+      <div className="space-y-3 mb-5">
+        {stats.perCountry.map(c => (
+          <div key={c.code} className="rounded-xl border border-border/30 bg-secondary/10 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-foreground">{COUNTRY_NAMES[c.code] || c.code}</span>
+              <span className={`text-xs font-mono ${c.successRate >= 90 ? "text-green-400" : c.successRate >= 70 ? "text-amber-400" : "text-red-400"}`}>
+                {c.successRate.toFixed(0)}% نجاح
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-2 rounded-full bg-secondary/50 overflow-hidden mb-2">
+              <div
+                className={`h-full rounded-full transition-all ${c.successRate >= 90 ? "bg-green-500" : c.successRate >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                style={{ width: `${c.successRate}%` }}
+              />
+            </div>
+            <div className="flex gap-4 text-[10px] text-muted-foreground">
+              <span>إجمالي: {c.total}</span>
+              <span className="text-green-400/70">مفتوح: {c.opens}</span>
+              <span className="text-red-400/70">مغلق: {c.closed}</span>
+              <span className="text-red-400/70">أخطاء: {c.errors}</span>
+              <span className="text-blue-400/70">تغييرات: {c.changes}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Detection methods */}
+      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-1.5">
+        <Activity className="w-4 h-4 text-primary" />
+        طرق الكشف المستخدمة
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(stats.methods)
+          .sort(([, a], [, b]) => b - a)
+          .map(([method, count]) => (
+            <div key={method} className="rounded-lg border border-border/30 bg-secondary/20 px-3 py-1.5 text-xs">
+              <span className="text-muted-foreground">{method}</span>
+              <span className="font-bold text-foreground mr-1.5">{count}</span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Dashboard ──
 export default function VisaMonitorDashboard() {
   const queryClient = useQueryClient();
   const [countryFilter, setCountryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [alerts, setAlerts] = useState<StatusAlert[]>([]);
 
-  // Realtime: listen for new checks with status changes
   useEffect(() => {
     const channel = supabase
       .channel("visa-monitor-realtime")
@@ -68,7 +190,6 @@ export default function VisaMonitorDashboard() {
         const row = payload.new;
         queryClient.invalidateQueries({ queryKey: ["visa-monitor-checks"] });
 
-        // Detect closed → open change
         if (row.status === "open" && row.previous_status && row.previous_status !== "open") {
           const countryName = COUNTRY_NAMES[row.country_code] || row.country_code;
           const alert: StatusAlert = {
@@ -97,14 +218,13 @@ export default function VisaMonitorDashboard() {
         .from("visa_monitor_checks")
         .select("*")
         .order("checked_at", { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
       return data || [];
     },
     refetchInterval: 30000,
   });
 
-  // Latest check per country
   const latestByCountry = (checks || []).reduce((acc, check) => {
     if (!acc[check.country_code]) acc[check.country_code] = check;
     return acc;
@@ -112,13 +232,11 @@ export default function VisaMonitorDashboard() {
 
   const latestChecks = Object.values(latestByCountry);
 
-  // Stats
   const totalChecks = checks?.length || 0;
   const openCount = latestChecks.filter((c: any) => c.status === "open").length;
   const errorCount = latestChecks.filter((c: any) => c.status === "error" || c.error_message).length;
   const lastCheckTime = checks?.[0]?.checked_at;
 
-  // Filtered list
   const filteredChecks = (checks || []).filter((c) => {
     if (countryFilter !== "all" && c.country_code !== countryFilter) return false;
     if (statusFilter !== "all" && c.status !== statusFilter) return false;
@@ -136,7 +254,7 @@ export default function VisaMonitorDashboard() {
 
   return (
     <AdminLayout title="مراقبة التأشيرات" subtitle="سجل الفحوصات والحالات في الوقت الفعلي">
-      {/* Realtime status change alerts */}
+      {/* Realtime alerts */}
       <AnimatePresence>
         {alerts.map((alert) => (
           <motion.div
@@ -148,9 +266,7 @@ export default function VisaMonitorDashboard() {
           >
             <BellRing className="w-5 h-5 text-green-400 shrink-0 animate-pulse" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-green-300">
-                🚨 مواعيد مفتوحة — {alert.country}
-              </p>
+              <p className="text-sm font-bold text-green-300">🚨 مواعيد مفتوحة — {alert.country}</p>
               <p className="text-xs text-green-400/70 mt-0.5">
                 تغيّرت من "{STATUS_CONFIG[alert.previousStatus]?.label || alert.previousStatus}" → "مفتوح" • {timeAgo(alert.time)}
               </p>
@@ -165,7 +281,7 @@ export default function VisaMonitorDashboard() {
         ))}
       </AnimatePresence>
 
-      {/* Stats */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statCards.map((stat, i) => (
           <motion.div
@@ -183,6 +299,9 @@ export default function VisaMonitorDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Performance Analytics */}
+      {checks && checks.length > 0 && <PerformanceStats checks={checks} />}
 
       {/* Latest status per country */}
       <div className="mb-6">
@@ -205,15 +324,11 @@ export default function VisaMonitorDashboard() {
                   <Icon className={`w-6 h-6 ${cfg.color.split(" ")[1]}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground">
-                    {COUNTRY_NAMES[check.country_code] || check.country_code}
-                  </p>
+                  <p className="text-sm font-bold text-foreground">{COUNTRY_NAMES[check.country_code] || check.country_code}</p>
                   <p className="text-xs text-muted-foreground">{check.provider}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">{timeAgo(check.checked_at)}</p>
                 </div>
-                <Badge variant="outline" className={`${cfg.color} text-xs`}>
-                  {cfg.label}
-                </Badge>
+                <Badge variant="outline" className={`${cfg.color} text-xs`}>{cfg.label}</Badge>
               </motion.div>
             );
           })}
@@ -228,7 +343,7 @@ export default function VisaMonitorDashboard() {
         <div className="p-4 border-b border-border/30 flex flex-wrap items-center gap-3">
           <h3 className="font-heading text-sm font-bold text-foreground flex items-center gap-2 flex-1">
             <Activity className="w-4 h-4 text-primary" />
-            سجل الفحوصات
+            سجل الفحوصات ({filteredChecks.length})
           </h3>
           <div className="flex items-center gap-2">
             <Select value={countryFilter} onValueChange={setCountryFilter}>
@@ -272,8 +387,9 @@ export default function VisaMonitorDashboard() {
                 <TableHead className="text-right">الدولة</TableHead>
                 <TableHead className="text-right">المزوّد</TableHead>
                 <TableHead className="text-right">الحالة</TableHead>
-                <TableHead className="text-right">الحالة السابقة</TableHead>
+                <TableHead className="text-right">السابقة</TableHead>
                 <TableHead className="text-right">طريقة الكشف</TableHead>
+                <TableHead className="text-right">تنبيه</TableHead>
                 <TableHead className="text-right">الوقت</TableHead>
                 <TableHead className="text-right">الخطأ</TableHead>
               </TableRow>
@@ -281,13 +397,13 @@ export default function VisaMonitorDashboard() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filteredChecks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
                     لا توجد نتائج
                   </TableCell>
                 </TableRow>
@@ -302,20 +418,25 @@ export default function VisaMonitorDashboard() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{check.provider}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`${cfg.color} text-xs`}>
-                          {cfg.label}
-                        </Badge>
+                        <Badge variant="outline" className={`${cfg.color} text-xs`}>{cfg.label}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {check.previous_status ? (STATUS_CONFIG[check.previous_status]?.label || check.previous_status) : "—"}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={detectionMethod}>
+                      <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate" title={detectionMethod}>
                         {detectionMethod}
+                      </TableCell>
+                      <TableCell>
+                        {check.notified ? (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30 text-[10px]">✓</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/40">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {timeAgo(check.checked_at)}
                       </TableCell>
-                      <TableCell className="text-xs text-red-400 max-w-[200px] truncate">
+                      <TableCell className="text-xs text-red-400 max-w-[180px] truncate" title={check.error_message || ""}>
                         {check.error_message || "—"}
                       </TableCell>
                     </TableRow>
