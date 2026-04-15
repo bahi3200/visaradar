@@ -397,7 +397,8 @@ export default function SubscribeRequestPage() {
                   return (
                     <button
                       key={pkg.id}
-                      onClick={() => { setSelectedPackageId(pkg.id); setCountries([]); }}
+                      disabled={isCurrentPkg && !isUpgrade && !isRenewal}
+                      onClick={() => { if (isCurrentPkg && !isUpgrade && !isRenewal) return; setSelectedPackageId(pkg.id); setCountries([]); }}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
                         isSelectedCurrentPkg
                           ? "border-accent bg-accent/5 ring-1 ring-accent/30"
