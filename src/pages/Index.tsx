@@ -12,6 +12,7 @@ import HowItWorksSection from "@/components/home/HowItWorksSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import SubscriberHome from "@/pages/SubscriberHome";
 
 const visaCountries = [
   { flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
@@ -38,8 +39,38 @@ export default function HomePage() {
     enabled: !!user,
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
+
+  // Show subscriber home if user has active subscription
+  if (subscription) {
+    return (
+      <SubscriberHome
+        subscription={{
+          expires_at: subscription.expires_at,
+          starts_at: subscription.starts_at,
+          countries: subscription.countries,
+          service_type: subscription.service_type,
+          packages: subscription.packages as any,
+        }}
+        fullName={profile?.full_name || null}
+      />
+    );
+  }
 
   return (
     <Layout>
