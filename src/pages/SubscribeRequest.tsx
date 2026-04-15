@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -9,11 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const countryOptions = [
   { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
-  { code: "FR", flag: "🇫🇷", name: "فرنسا", provider: "TLScontact" },
-  { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International" },
+  { code: "FR", flag: "🇫🇷", name: "فرنسا", provider: "Capago (TLScontact)" },
+  { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International Algeria" },
   { code: "DE", flag: "🇩🇪", name: "ألمانيا", provider: "VFS Global" },
   { code: "GR", flag: "🇬🇷", name: "اليونان", provider: "VFS Global" },
 ];
@@ -23,6 +24,7 @@ type ServiceType = "visa" | "jobs" | "both";
 export default function SubscribeRequestPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isPrivileged } = useIsAdmin();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isUpgrade = searchParams.get("upgrade") === "true";
