@@ -70,11 +70,11 @@ export default function SubscribeRequestPage() {
   });
 
   const { data: paymentSettings } = useQuery({
-    queryKey: ["payment-settings"],
+    queryKey: ["payment-info"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payment_settings").select("*").limit(1).maybeSingle();
+      const { data, error } = await supabase.rpc("get_payment_info");
       if (error) throw error;
-      return data;
+      return data?.[0] ?? null;
     },
   });
 

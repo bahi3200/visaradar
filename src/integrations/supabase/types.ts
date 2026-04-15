@@ -684,6 +684,15 @@ export type Database = {
     }
     Functions: {
       count_active_devices: { Args: { _user_id: string }; Returns: number }
+      get_payment_info: {
+        Args: never
+        Returns: {
+          account_holder: string
+          ccp_key: string
+          ccp_number: string
+          rip_number: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
