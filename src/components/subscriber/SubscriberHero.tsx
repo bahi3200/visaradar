@@ -79,7 +79,7 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
             </p>
           </motion.div>
 
-          {isSubscribed && (
+          {isSubscribed && !isAdmin && (
             <motion.div
               initial={reduced ? noMotion : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
