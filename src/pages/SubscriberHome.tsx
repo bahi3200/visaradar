@@ -20,13 +20,17 @@ interface SubscriptionData {
 interface Props {
   subscription: SubscriptionData | null;
   fullName: string | null;
+  isAdmin: boolean;
 }
 
-export default function SubscriberHome({ subscription, fullName }: Props) {
+export default function SubscriberHome({ subscription, fullName, isAdmin }: Props) {
   const isSubscribed = !!subscription;
   const daysLeft = subscription
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
+
+  // Admins don't need subscription CTA
+  const showSubscribeCTA = !isSubscribed && !isAdmin;
 
   return (
     <Layout>
@@ -36,10 +40,11 @@ export default function SubscriberHome({ subscription, fullName }: Props) {
         daysLeft={daysLeft}
         expiresAt={subscription?.expires_at || ""}
         isSubscribed={isSubscribed}
+        isAdmin={isAdmin}
       />
 
-      {/* Subscribe CTA for non-subscribers */}
-      {!isSubscribed && (
+      {/* Subscribe CTA for non-subscribers (not admins) */}
+      {showSubscribeCTA && (
         <section className="container py-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
