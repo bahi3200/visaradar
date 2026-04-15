@@ -91,6 +91,7 @@ export default function NotificationsBell() {
   const { data: notifications = [] } = useQuery({
     queryKey: ["user-notifications", user?.id, lastReadAt],
     enabled: !!user,
+    staleTime: 3 * 60_000,
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 

@@ -30,6 +30,7 @@ export default function RecentAlerts() {
         .limit(5);
       return data || [];
     },
+    staleTime: 5 * 60_000,
   });
 
   const timeAgo = (date: string) => {
