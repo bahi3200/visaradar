@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/AdminLayout";
 import { motion } from "framer-motion";
-import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle, Power } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,38 @@ export default function SendNotificationPage() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [togglingMonitor, setTogglingMonitor] = useState(false);
+
+  const { data: monitorEnabled, refetch: refetchMonitorStatus } = useQuery({
+    queryKey: ["auto-monitor-enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "auto_monitor_enabled")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value !== "false"; // default true
+    },
+  });
+
+  const handleToggleMonitor = async () => {
+    setTogglingMonitor(true);
+    try {
+      const newValue = monitorEnabled ? "false" : "true";
+      const { error } = await supabase
+        .from("site_settings")
+        .update({ value: newValue })
+        .eq("key", "auto_monitor_enabled");
+      if (error) throw error;
+      toast.success(newValue === "true" ? "تم تفعيل المراقبة التلقائية" : "تم إيقاف المراقبة التلقائية");
+      refetchMonitorStatus();
+    } catch (err: any) {
+      toast.error(err.message || "حدث خطأ");
+    } finally {
+      setTogglingMonitor(false);
+    }
+  };
 
   const selectedInfo = countries.find((c) => c.code === selectedCountry)!;
 
