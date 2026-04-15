@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Link } from "react-router-dom";
 import { Clock, CheckCircle2, XCircle, Snowflake, ArrowRight, Package, MapPin, Calendar, AlertTriangle, RefreshCw, ArrowUpCircle } from "lucide-react";
 
@@ -18,6 +19,7 @@ const countryNames: Record<string, string> = { IT: "إيطاليا", FR: "فرن
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
+  const { isPrivileged } = useIsAdmin();
 
   const { data: requests, isLoading, refetch } = useQuery({
     queryKey: ["my-subscription-requests", user?.id],
@@ -104,13 +106,15 @@ export default function MyRequestsPage() {
                       <span className="text-xs text-muted-foreground">
                         نوع الخدمة: {sub.service_type === "visa" ? "تنبيهات الفيزا" : sub.service_type === "jobs" ? "عقود العمل" : "الباقة الشاملة"}
                       </span>
-                      <Link
-                        to={`/subscribe?upgrade=true&service=${sub.service_type}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
-                      >
-                        <ArrowUpCircle className="w-3.5 h-3.5" />
-                        ترقية الباقة
-                      </Link>
+                      {!isPrivileged && (
+                        <Link
+                          to={`/subscribe?upgrade=true&service=${sub.service_type}`}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+                        >
+                          <ArrowUpCircle className="w-3.5 h-3.5" />
+                          ترقية الباقة
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}
