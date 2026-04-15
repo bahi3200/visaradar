@@ -83,6 +83,7 @@ export default function HomePage() {
           packages: subscription.packages as any,
         } : null}
         fullName={profile?.full_name || null}
+        isAdmin={!!isAdmin}
       />
     );
   }
