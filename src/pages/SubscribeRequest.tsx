@@ -84,6 +84,7 @@ export default function SubscribeRequestPage() {
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*, packages(name_ar, price, duration_months)")
+        .eq("user_id", user!.id)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
