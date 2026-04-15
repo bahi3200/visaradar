@@ -476,6 +476,15 @@ export default function SubscribeRequestPage() {
                           <ArrowUpCircle className="w-3.5 h-3.5" />
                           ترقية لباقة أعلى
                         </Link>
+                        {daysLeft <= 15 && (
+                          <Link
+                            to={`/subscribe?renew=true&package=${activeSubscription!.package_id}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold bg-secondary/50 text-foreground px-4 py-2 rounded-xl border border-border/50 hover:bg-secondary/70 transition-colors mr-2"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            تجديد الاشتراك
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <>
