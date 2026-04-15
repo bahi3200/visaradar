@@ -169,7 +169,7 @@ export default function ManageUsersPage() {
     </button>
   );
 
-  const dialogConfig = {
+  const dialogConfig: Record<string, any> = {
     delete: {
       title: "حذف المستخدم نهائياً",
       description: (name: string) =>
@@ -190,6 +190,20 @@ export default function ManageUsersPage() {
         `هل تريد إعادة تفعيل حساب "${name}"؟ سيتمكن المستخدم من تسجيل الدخول مجدداً.`,
       confirmLabel: "تفعيل",
       confirmClass: "bg-green-600 hover:bg-green-700 text-white",
+    },
+    assign_moderator: {
+      title: "تعيين كمشرف",
+      description: (name: string) =>
+        `هل تريد تعيين "${name}" كمشرف؟ سيتمكن من مراجعة طلبات الاشتراك واقتراح إجراءات تحت إشرافك.`,
+      confirmLabel: "تعيين مشرف",
+      confirmClass: "bg-blue-600 hover:bg-blue-700 text-white",
+    },
+    remove_moderator: {
+      title: "إزالة صلاحيات المشرف",
+      description: (name: string) =>
+        `هل تريد إزالة صلاحيات المشرف من "${name}"؟ لن يتمكن من الوصول للوحة الإدارة.`,
+      confirmLabel: "إزالة",
+      confirmClass: "bg-orange-600 hover:bg-orange-700 text-white",
     },
   };
 
