@@ -268,7 +268,6 @@ export default function NotificationsBell() {
               تنبيهات: {subscribedCountries.map(c => COUNTRY_FLAGS[c]?.split(" ")[0] || c).join(" ")}
             </p>
           ) : null}
-          )}
         </div>
         <ScrollArea className="max-h-72">
           {notifications.length === 0 ? (
