@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import SubscriberHero from "@/components/subscriber/SubscriberHero";
+import VisaAlertBanner from "@/components/subscriber/VisaAlertBanner";
 import QuickStats from "@/components/subscriber/QuickStats";
 import CityGallery from "@/components/subscriber/CityGallery";
 import QuickLinks from "@/components/subscriber/QuickLinks";
@@ -48,6 +49,13 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
 
       {/* Admin stats - overlapping hero */}
       {isAdmin && <AdminStats />}
+
+      {/* Visa Alert Banner — shows when there are recent open appointments */}
+      {(isSubscribed || isAdmin) && (
+        <VisaAlertBanner
+          subscribedCountries={isAdmin ? ["IT", "FR", "ES", "DE", "GR"] : subscription!.countries}
+        />
+      )}
 
       {/* Subscribe CTA */}
       {showSubscribeCTA && (
