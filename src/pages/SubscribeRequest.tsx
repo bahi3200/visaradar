@@ -667,7 +667,7 @@ export default function SubscribeRequestPage() {
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              {submitting ? "جاري الإرسال..." : isUpgrade ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
+              {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : activeSubscription && selectedPackageId && activeSubscription.package_id !== selectedPackageId ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
             </button>
           </div>
 
