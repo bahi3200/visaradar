@@ -152,6 +152,14 @@ export default function SubscribeRequestPage() {
       toast.error("يرجى اختيار دولة واحدة على الأقل");
       return;
     }
+    if (isAlreadySubscribed) {
+      toast.error("أنت مشترك بالفعل في هذه الباقة. يمكنك الترقية لباقة أعلى.");
+      return;
+    }
+    if (hasPendingRequest) {
+      toast.error("لديك طلب قيد المراجعة لنفس الباقة. انتظر حتى يتم معالجته.");
+      return;
+    }
 
     setSubmitting(true);
     try {
