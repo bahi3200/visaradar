@@ -17,16 +17,16 @@ import SubscriberHome from "@/pages/SubscriberHome";
 
 const visaCountries = [
   { flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
-  { flag: "🇫🇷", name: "فرنسا", provider: "TLScontact" },
-  { flag: "🇪🇸", name: "إسبانيا", provider: "BLS International" },
+  { flag: "🇫🇷", name: "فرنسا", provider: "Capago (TLScontact)" },
+  { flag: "🇪🇸", name: "إسبانيا", provider: "BLS International Algeria" },
 ];
 
 export default function HomePage() {
   const { user } = useAuth();
   const reduced = useReducedMotion();
 
-  const { data: subscription, isLoading: subLoading } = useQuery({
-    queryKey: ["my-subscription", user?.id],
+  const { data: subscriptions, isLoading: subLoading } = useQuery({
+    queryKey: ["my-subscriptions-all", user?.id],
     queryFn: async () => {
       if (!user) return null;
       const { data } = await supabase
@@ -34,11 +34,22 @@ export default function HomePage() {
         .select("*, packages(*)")
         .eq("user_id", user.id)
         .eq("status", "active")
-        .maybeSingle();
-      return data;
+        .order("expires_at", { ascending: false });
+      return data && data.length > 0 ? data : null;
     },
     enabled: !!user,
   });
+
+  // Merge all active subscriptions into a single view
+  const mergedSubscription = subscriptions ? {
+    expires_at: subscriptions.reduce((latest, s) => s.expires_at > latest ? s.expires_at : latest, subscriptions[0].expires_at),
+    starts_at: subscriptions[0].starts_at,
+    countries: [...new Set(subscriptions.flatMap((s: any) => s.countries || []))],
+    service_type: subscriptions.some((s: any) => s.service_type === 'both') ? 'both' 
+      : (subscriptions.some((s: any) => s.service_type === 'visa') && subscriptions.some((s: any) => s.service_type === 'jobs')) ? 'both'
+      : subscriptions[0].service_type,
+    packages: subscriptions[0].packages,
+  } : null;
 
   const { data: profile } = useQuery({
     queryKey: ["my-profile", user?.id],
@@ -56,20 +67,13 @@ export default function HomePage() {
 
   const { isAdmin, isPrivileged } = useIsAdmin();
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
 
   // Show personalized home for any logged-in user
   if (user) {
     return (
       <SubscriberHome
-        subscription={subscription ? {
-          expires_at: subscription.expires_at,
-          starts_at: subscription.starts_at,
-          countries: subscription.countries,
-          service_type: subscription.service_type,
-          packages: subscription.packages as any,
-        } : null}
+        subscription={mergedSubscription}
         fullName={profile?.full_name || null}
         isAdmin={!!isPrivileged}
         isLoading={subLoading}
@@ -84,40 +88,6 @@ export default function HomePage() {
 
       {/* Stats */}
       <StatsSection />
-
-      {/* Active Subscription Info */}
-      {subscription && (
-        <section className="container pb-8">
-          <motion.div
-            initial={reduced ? noMotion : { opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="gradient-card rounded-2xl border border-accent/30 p-6 shadow-card max-w-2xl mx-auto"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center">
-                <Crown className="w-5 h-5 text-accent-foreground" />
-              </div>
-              <div>
-                <h3 className="font-heading text-base font-bold text-foreground">اشتراكك الحالي</h3>
-                <span className="text-xs text-accent font-bold">{(subscription as any).packages?.name_ar}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-muted/50 rounded-xl p-3 text-center">
-                <Calendar className="w-4 h-4 text-primary mx-auto mb-1" />
-                <p className="text-[10px] text-muted-foreground mb-0.5">بداية الاشتراك</p>
-                <p className="text-sm font-bold text-foreground">{formatDate(subscription.starts_at)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-xl p-3 text-center">
-                <Calendar className="w-4 h-4 text-destructive mx-auto mb-1" />
-                <p className="text-[10px] text-muted-foreground mb-0.5">نهاية الاشتراك</p>
-                <p className="text-sm font-bold text-foreground">{formatDate(subscription.expires_at)}</p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-      )}
 
       {/* Monitored Countries */}
       <section className="container py-14">
@@ -202,7 +172,7 @@ export default function HomePage() {
         {/* Subscribe CTA */}
         <motion.div initial={reduced ? noMotion : { opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={reduced ? { duration: 0 } : { delay: 0.2 }} className="text-center mt-8">
           <Link
-            to={user ? "/pricing" : "/auth/register"}
+            to="/auth/register"
             className="inline-flex items-center gap-3 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base px-8 py-3.5 rounded-full transition-all shadow-lg hover:-translate-y-0.5"
           >
             اشترك الآن — باقات 3، 6، و 12 شهر
@@ -236,10 +206,10 @@ export default function HomePage() {
             </motion.p>
             <motion.div initial={reduced ? noMotion : { opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={reduced ? { duration: 0 } : { delay: 0.3 }}>
               <Link
-                to={user ? "/pricing" : "/auth/register"}
+                to="/auth/register"
                 className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground font-bold px-8 py-3.5 rounded-full transition-all shadow-lg"
               >
-                {user ? "عرض الباقات" : "إنشاء حساب مجاني"}
+                إنشاء حساب مجاني
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </motion.div>
