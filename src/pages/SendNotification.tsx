@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/AdminLayout";
 import { motion } from "framer-motion";
-import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle, Power } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,38 @@ export default function SendNotificationPage() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [togglingMonitor, setTogglingMonitor] = useState(false);
+
+  const { data: monitorEnabled, refetch: refetchMonitorStatus } = useQuery({
+    queryKey: ["auto-monitor-enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "auto_monitor_enabled")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value !== "false"; // default true
+    },
+  });
+
+  const handleToggleMonitor = async () => {
+    setTogglingMonitor(true);
+    try {
+      const newValue = monitorEnabled ? "false" : "true";
+      const { error } = await supabase
+        .from("site_settings")
+        .update({ value: newValue })
+        .eq("key", "auto_monitor_enabled");
+      if (error) throw error;
+      toast.success(newValue === "true" ? "تم تفعيل المراقبة التلقائية" : "تم إيقاف المراقبة التلقائية");
+      refetchMonitorStatus();
+    } catch (err: any) {
+      toast.error(err.message || "حدث خطأ");
+    } finally {
+      setTogglingMonitor(false);
+    }
+  };
 
   const selectedInfo = countries.find((c) => c.code === selectedCountry)!;
 
@@ -102,7 +134,9 @@ export default function SendNotificationPage() {
   const handleManualCheck = async () => {
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("monitor-visa-sites");
+      const { data, error } = await supabase.functions.invoke("monitor-visa-sites", {
+        body: { force: true },
+      });
       if (error) throw error;
       toast.success(`تم فحص ${data?.checked?.length || 0} مواقع بنجاح`);
       queryClient.invalidateQueries({ queryKey: ["monitor-checks"] });
@@ -161,14 +195,28 @@ export default function SendNotificationPage() {
                 <Activity className="w-5 h-5 text-primary" />
                 المراقبة التلقائية
               </h2>
-              <button
-                onClick={handleManualCheck}
-                disabled={checking}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} />
-                {checking ? "جاري الفحص..." : "فحص الآن"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleToggleMonitor}
+                  disabled={togglingMonitor}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
+                    monitorEnabled
+                      ? "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30"
+                      : "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30"
+                  }`}
+                >
+                  <Power className="w-4 h-4" />
+                  {togglingMonitor ? "..." : monitorEnabled ? "مفعّل" : "متوقف"}
+                </button>
+                <button
+                  onClick={handleManualCheck}
+                  disabled={checking}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} />
+                  {checking ? "جاري الفحص..." : "فحص الآن"}
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-3">
@@ -203,9 +251,11 @@ export default function SendNotificationPage() {
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+            <p className={`text-xs mt-3 flex items-center gap-1 ${monitorEnabled ? "text-muted-foreground" : "text-red-400/70"}`}>
               <Activity className="w-3 h-3" />
-              يتم الفحص تلقائياً كل 5 دقائق وإرسال تنبيه فوري عند اكتشاف فتح مواعيد
+              {monitorEnabled
+                ? "يتم الفحص تلقائياً كل 5 دقائق وإرسال تنبيه فوري عند اكتشاف فتح مواعيد"
+                : "المراقبة التلقائية متوقفة — يمكنك الفحص يدوياً فقط"}
             </p>
           </div>
 

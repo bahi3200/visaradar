@@ -728,6 +728,31 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if auto-monitoring is enabled (skip check for manual invocations with force=true)
+    const url = new URL(req.url);
+    const force = url.searchParams.get('force') === 'true';
+    let bodyData: any = null;
+    try { bodyData = await req.clone().json(); } catch { /* no body */ }
+    const isForced = force || bodyData?.force === true;
+
+    if (!isForced) {
+      const { data: setting } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'auto_monitor_enabled')
+        .maybeSingle();
+
+      if (setting && setting.value === 'false') {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          skipped: true, 
+          reason: 'Auto-monitoring is disabled' 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
     // Stagger checks with random delays
