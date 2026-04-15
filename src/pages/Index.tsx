@@ -12,6 +12,7 @@ import StatsSection from "@/components/home/StatsSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
+import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import SubscriberHome from "@/pages/SubscriberHome";
 
@@ -196,6 +197,9 @@ export default function HomePage() {
 
       {/* Testimonials */}
       <TestimonialsSection />
+
+      {/* Social Media */}
+      <SocialMediaSection />
 
       {/* FAQ */}
       <FAQSection />

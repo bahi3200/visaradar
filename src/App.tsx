@@ -36,6 +36,7 @@ import VisaCountries from "./pages/VisaCountries";
 import CountryVisa from "./pages/CountryVisa";
 import ManageReviews from "./pages/ManageReviews";
 import ManageReferrals from "./pages/ManageReferrals";
+import SiteSettings from "./pages/SiteSettings";
 
 const queryClient = new QueryClient();
 
@@ -67,13 +68,14 @@ const App = () => (
       <Route path="/dashboard/jobs" element={<AdminRoute><ManageJobs /></AdminRoute>} />
       <Route path="/dashboard/notifications" element={<AdminRoute><SendNotification /></AdminRoute>} />
       <Route path="/dashboard/requests" element={<AdminRoute><AdminRequests /></AdminRoute>} />
-      <Route path="/dashboard/users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
-      <Route path="/dashboard/email-log" element={<AdminRoute><EmailLog /></AdminRoute>} />
+      <Route path="/dashboard/users" element={<AdminRoute adminOnly><ManageUsers /></AdminRoute>} />
+      <Route path="/dashboard/email-log" element={<AdminRoute adminOnly><EmailLog /></AdminRoute>} />
       <Route path="/dashboard/contact-messages" element={<AdminRoute><ContactMessages /></AdminRoute>} />
-      <Route path="/dashboard/payment-settings" element={<AdminRoute><PaymentSettings /></AdminRoute>} />
+      <Route path="/dashboard/payment-settings" element={<AdminRoute adminOnly><PaymentSettings /></AdminRoute>} />
       <Route path="/dashboard/visa-monitor" element={<AdminRoute><VisaMonitorDashboard /></AdminRoute>} />
       <Route path="/dashboard/reviews" element={<AdminRoute><ManageReviews /></AdminRoute>} />
-      <Route path="/dashboard/referrals" element={<AdminRoute><ManageReferrals /></AdminRoute>} />
+      <Route path="/dashboard/referrals" element={<AdminRoute adminOnly><ManageReferrals /></AdminRoute>} />
+      <Route path="/dashboard/site-settings" element={<AdminRoute adminOnly><SiteSettings /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />

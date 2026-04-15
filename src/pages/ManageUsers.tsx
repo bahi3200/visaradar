@@ -41,13 +41,13 @@ type UserInfo = {
 };
 
 type FilterState = {
-  role: "all" | "admin" | "user";
+  role: "all" | "admin" | "moderator" | "user";
   subscription: "all" | "subscribed" | "golden" | "none";
   sort: "newest" | "oldest" | "name";
 };
 
 type PendingAction = {
-  type: "delete" | "disable" | "enable";
+  type: "delete" | "disable" | "enable" | "assign_moderator" | "remove_moderator";
   user: UserInfo;
 } | null;
 
@@ -93,12 +93,14 @@ export default function ManageUsersPage() {
       if (res.error) throw res.error;
       if (res.data?.error) throw new Error(res.data.error);
 
-      const messages = {
+      const messages: Record<string, string> = {
         delete: `تم حذف حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
         disable: `تم تعطيل حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
         enable: `تم تفعيل حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
+        assign_moderator: `تم تعيين ${pendingAction.user.full_name || pendingAction.user.email} كمشرف`,
+        remove_moderator: `تم إزالة صلاحيات المشرف من ${pendingAction.user.full_name || pendingAction.user.email}`,
       };
-      toast.success(messages[pendingAction.type]);
+      toast.success(messages[pendingAction.type] || "تم تنفيذ العملية");
       await fetchUsers();
     } catch (err: any) {
       const errorMsg = err.message?.includes("own account")
@@ -131,7 +133,8 @@ export default function ManageUsersPage() {
       const matchesRole =
         filters.role === "all" ||
         (filters.role === "admin" && u.roles.includes("admin")) ||
-        (filters.role === "user" && !u.roles.includes("admin"));
+        (filters.role === "moderator" && u.roles.includes("moderator")) ||
+        (filters.role === "user" && !u.roles.includes("admin") && !u.roles.includes("moderator"));
       const matchesSub =
         filters.subscription === "all" ||
         (filters.subscription === "subscribed" && u.subscription) ||
@@ -167,7 +170,7 @@ export default function ManageUsersPage() {
     </button>
   );
 
-  const dialogConfig = {
+  const dialogConfig: Record<string, any> = {
     delete: {
       title: "حذف المستخدم نهائياً",
       description: (name: string) =>
@@ -188,6 +191,20 @@ export default function ManageUsersPage() {
         `هل تريد إعادة تفعيل حساب "${name}"؟ سيتمكن المستخدم من تسجيل الدخول مجدداً.`,
       confirmLabel: "تفعيل",
       confirmClass: "bg-green-600 hover:bg-green-700 text-white",
+    },
+    assign_moderator: {
+      title: "تعيين كمشرف",
+      description: (name: string) =>
+        `هل تريد تعيين "${name}" كمشرف؟ سيتمكن من مراجعة طلبات الاشتراك واقتراح إجراءات تحت إشرافك.`,
+      confirmLabel: "تعيين مشرف",
+      confirmClass: "bg-blue-600 hover:bg-blue-700 text-white",
+    },
+    remove_moderator: {
+      title: "إزالة صلاحيات المشرف",
+      description: (name: string) =>
+        `هل تريد إزالة صلاحيات المشرف من "${name}"؟ لن يتمكن من الوصول للوحة الإدارة.`,
+      confirmLabel: "إزالة",
+      confirmClass: "bg-orange-600 hover:bg-orange-700 text-white",
     },
   };
 
@@ -270,6 +287,7 @@ export default function ManageUsersPage() {
               <div className="flex flex-wrap gap-2">
                 <FilterChip label="الكل" active={filters.role === "all"} onClick={() => setFilters(f => ({ ...f, role: "all" }))} />
                 <FilterChip label="مسؤول" active={filters.role === "admin"} onClick={() => setFilters(f => ({ ...f, role: "admin" }))} />
+                <FilterChip label="مشرف" active={filters.role === "moderator"} onClick={() => setFilters(f => ({ ...f, role: "moderator" as any }))} />
                 <FilterChip label="مستخدم عادي" active={filters.role === "user"} onClick={() => setFilters(f => ({ ...f, role: "user" }))} />
               </div>
             </div>
@@ -352,6 +370,11 @@ export default function ManageUsersPage() {
                               مسؤول
                             </span>
                           )}
+                          {user.roles.includes("moderator") && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                              مشرف
+                            </span>
+                          )}
                           {banned && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">
                               معطّل
@@ -396,7 +419,27 @@ export default function ManageUsersPage() {
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuContent align="end" className="w-48">
+                          {/* Moderator role toggle */}
+                          {!user.roles.includes("admin") && (
+                            user.roles.includes("moderator") ? (
+                              <DropdownMenuItem
+                                onClick={() => setPendingAction({ type: "remove_moderator", user })}
+                                className="text-blue-400 focus:text-blue-400 gap-2"
+                              >
+                                <Shield className="w-4 h-4" />
+                                إزالة صلاحيات المشرف
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => setPendingAction({ type: "assign_moderator", user })}
+                                className="text-blue-400 focus:text-blue-400 gap-2"
+                              >
+                                <Shield className="w-4 h-4" />
+                                تعيين كمشرف
+                              </DropdownMenuItem>
+                            )
+                          )}
                           {banned ? (
                             <DropdownMenuItem
                               onClick={() => setPendingAction({ type: "enable", user })}
