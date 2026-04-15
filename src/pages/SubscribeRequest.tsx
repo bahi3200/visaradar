@@ -370,7 +370,63 @@ export default function SubscribeRequestPage() {
               </div>
             </div>
 
-            {/* Country Selection */}
+            {/* Active subscription or pending request warning */}
+            {selectedPackageId && (isAlreadySubscribed || hasPendingRequest) && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-2xl border p-5 ${
+                  isAlreadySubscribed
+                    ? "bg-accent/5 border-accent/30"
+                    : "bg-yellow-500/5 border-yellow-500/30"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    isAlreadySubscribed ? "bg-accent/10" : "bg-yellow-500/10"
+                  }`}>
+                    {isAlreadySubscribed ? (
+                      <Check className="w-5 h-5 text-accent" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    {isAlreadySubscribed ? (
+                      <>
+                        <p className="font-bold text-foreground text-sm mb-1">أنت مشترك بالفعل في هذه الباقة ✓</p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          اشتراكك في "{selectedPkg?.name_ar}" ساري حتى{" "}
+                          {new Date(activeSubscription!.expires_at).toLocaleDateString("ar", { day: "numeric", month: "long", year: "numeric" })}
+                        </p>
+                        <Link
+                          to="/subscribe?upgrade=true"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold gradient-primary text-primary-foreground px-4 py-2 rounded-xl"
+                        >
+                          <ArrowUpCircle className="w-3.5 h-3.5" />
+                          ترقية لباقة أعلى
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold text-foreground text-sm mb-1">لديك طلب قيد المراجعة لهذه الباقة</p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          طلبك السابق لباقة "{selectedPkg?.name_ar}" لا يزال قيد المراجعة. سيتم إشعارك عند معالجته.
+                        </p>
+                        <Link
+                          to="/my-requests"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold bg-secondary/50 text-foreground px-4 py-2 rounded-xl border border-border/50 hover:bg-secondary/70 transition-colors"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                          عرض طلباتي
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {selectedPackageId && needsCountry && (
               <div className="gradient-card rounded-2xl border border-border/50 p-6">
                 <label className="block text-sm font-medium text-foreground mb-3">
