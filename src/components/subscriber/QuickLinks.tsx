@@ -3,13 +3,13 @@ import { Bell, Briefcase, FileText, Smartphone, CreditCard, Settings, LayoutDash
 import { Link } from "react-router-dom";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-const userLinks = [
-  { icon: Bell, label: "تنبيهات التأشيرات", to: "/notification-settings", gradient: "from-accent/20 to-accent/5", iconBg: "gradient-accent", iconColor: "text-accent-foreground", border: "border-accent/20" },
-  { icon: Briefcase, label: "عقود العمل", to: "/jobs", gradient: "from-primary/20 to-primary/5", iconBg: "gradient-primary", iconColor: "text-primary-foreground", border: "border-primary/20" },
-  { icon: FileText, label: "طلباتي", to: "/my-requests", gradient: "from-orange-500/20 to-orange-500/5", iconBg: "bg-orange-500", iconColor: "text-white", border: "border-orange-500/20" },
-  { icon: Smartphone, label: "أجهزتي", to: "/my-devices", gradient: "from-green-500/20 to-green-500/5", iconBg: "bg-green-500", iconColor: "text-white", border: "border-green-500/20" },
-  { icon: CreditCard, label: "الباقات", to: "/pricing", gradient: "from-purple-500/20 to-purple-500/5", iconBg: "bg-purple-500", iconColor: "text-white", border: "border-purple-500/20" },
-  { icon: Settings, label: "الملف الشخصي", to: "/profile", gradient: "from-blue-400/20 to-blue-400/5", iconBg: "bg-blue-400", iconColor: "text-white", border: "border-blue-400/20" },
+const allUserLinks = [
+  { icon: Bell, label: "تنبيهات التأشيرات", to: "/notification-settings", gradient: "from-accent/20 to-accent/5", iconBg: "gradient-accent", iconColor: "text-accent-foreground", border: "border-accent/20", adminHidden: false },
+  { icon: Briefcase, label: "عقود العمل", to: "/jobs", gradient: "from-primary/20 to-primary/5", iconBg: "gradient-primary", iconColor: "text-primary-foreground", border: "border-primary/20", adminHidden: false },
+  { icon: FileText, label: "طلباتي", to: "/my-requests", gradient: "from-orange-500/20 to-orange-500/5", iconBg: "bg-orange-500", iconColor: "text-white", border: "border-orange-500/20", adminHidden: true },
+  { icon: Smartphone, label: "أجهزتي", to: "/my-devices", gradient: "from-green-500/20 to-green-500/5", iconBg: "bg-green-500", iconColor: "text-white", border: "border-green-500/20", adminHidden: false },
+  { icon: CreditCard, label: "الباقات", to: "/pricing", gradient: "from-purple-500/20 to-purple-500/5", iconBg: "bg-purple-500", iconColor: "text-white", border: "border-purple-500/20", adminHidden: true },
+  { icon: Settings, label: "الملف الشخصي", to: "/profile", gradient: "from-blue-400/20 to-blue-400/5", iconBg: "bg-blue-400", iconColor: "text-white", border: "border-blue-400/20", adminHidden: false },
 ];
 
 const adminLink = { icon: LayoutDashboard, label: "لوحة التحكم", to: "/dashboard", gradient: "from-red-500/20 to-red-500/5", iconBg: "bg-red-500", iconColor: "text-white", border: "border-red-500/20" };
@@ -21,6 +21,7 @@ interface Props {
 export default function QuickLinks({ isAdmin }: Props) {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0, scale: 1 };
+  const userLinks = isAdmin ? allUserLinks.filter((l) => !l.adminHidden) : allUserLinks;
   const links = isAdmin ? [adminLink, ...userLinks] : userLinks;
 
   return (
