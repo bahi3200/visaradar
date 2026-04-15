@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Crown, Calendar, Clock, User, Shield } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import europeVideo from "@/assets/cities/europe-hero.mp4.asset.json";
+import { useRef } from "react";
 
 interface Props {
   fullName: string | null;
@@ -15,19 +16,29 @@ interface Props {
 export default function SubscriberHero({ fullName, packageName, daysLeft, expiresAt, isSubscribed, isAdmin }: Props) {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0, scale: 1 };
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+
+  const videoY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const videoScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.2]);
 
   const badgeLabel = isAdmin ? "مسؤول" : isSubscribed ? (packageName || "مشترك") : "عضو مسجل";
   const BadgeIcon = isAdmin ? Shield : isSubscribed ? Crown : User;
 
   return (
-    <section className="relative h-[55vh] min-h-[380px] overflow-hidden">
-      <video
+    <section ref={sectionRef} className="relative h-[55vh] min-h-[380px] overflow-hidden">
+      <motion.video
         src={europeVideo.url}
         autoPlay
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-cover scale-105"
+        style={reduced ? {} : { y: videoY, scale: videoScale }}
+        className="absolute inset-0 w-full h-full object-cover"
       />
       {/* Multi-layer gradient for depth */}
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
