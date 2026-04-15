@@ -259,10 +259,15 @@ export default function NotificationsBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border/50">
           <h4 className="text-sm font-semibold">الإشعارات</h4>
-          {subscribedCountries && subscribedCountries.length > 0 && (
+          {isPrivileged ? (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              🛡️ تنبيهات كل الدول (مسؤول)
+            </p>
+          ) : subscribedCountries && subscribedCountries.length > 0 ? (
             <p className="text-[10px] text-muted-foreground mt-0.5">
               تنبيهات: {subscribedCountries.map(c => COUNTRY_FLAGS[c]?.split(" ")[0] || c).join(" ")}
             </p>
+          ) : null}
           )}
         </div>
         <ScrollArea className="max-h-72">
