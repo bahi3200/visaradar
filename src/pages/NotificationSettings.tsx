@@ -60,6 +60,8 @@ export default function NotificationSettings() {
 
   const maxCountries = subscriptionInfo?.maxCountries ?? 1;
   const isAdmin = subscriptionInfo?.isAdmin ?? false;
+  const isModerator = subscriptionInfo?.isModerator ?? false;
+  const isPrivileged = subscriptionInfo?.isPrivileged ?? false;
 
   const { data: prefs, isLoading } = useQuery({
     queryKey: ["notification-preferences", user?.id],
