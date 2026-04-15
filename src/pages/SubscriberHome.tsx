@@ -5,6 +5,7 @@ import CityGallery from "@/components/subscriber/CityGallery";
 import QuickLinks from "@/components/subscriber/QuickLinks";
 import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
+import AdminStats from "@/components/subscriber/AdminStats";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
