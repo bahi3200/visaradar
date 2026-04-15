@@ -133,7 +133,8 @@ export default function ManageUsersPage() {
       const matchesRole =
         filters.role === "all" ||
         (filters.role === "admin" && u.roles.includes("admin")) ||
-        (filters.role === "user" && !u.roles.includes("admin"));
+        (filters.role === "moderator" && u.roles.includes("moderator")) ||
+        (filters.role === "user" && !u.roles.includes("admin") && !u.roles.includes("moderator"));
       const matchesSub =
         filters.subscription === "all" ||
         (filters.subscription === "subscribed" && u.subscription) ||
