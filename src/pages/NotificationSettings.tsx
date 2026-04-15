@@ -44,6 +44,7 @@ export default function NotificationSettings() {
           .limit(1)
           .maybeSingle(),
         supabase.rpc("has_role", { _user_id: user!.id, _role: "admin" }),
+        supabase.rpc("has_role", { _user_id: user!.id, _role: "moderator" }),
       ]);
       return {
         maxCountries: isAdmin ? 999 : (sub?.packages as any)?.max_countries ?? 1,
