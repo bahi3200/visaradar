@@ -1,0 +1,538 @@
+import Layout from "@/components/Layout";
+import { motion } from "framer-motion";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy } from "lucide-react";
+import baridimobLogo from "@/assets/baridimob-logo.png";
+import ccpLogo from "@/assets/ccp-logo.png";
+import { useState } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+
+const countryOptions = [
+  { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
+  { code: "FR", flag: "🇫🇷", name: "فرنسا", provider: "TLScontact" },
+  { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International" },
+];
+
+type ServiceType = "visa" | "jobs" | "both";
+
+export default function SubscribeRequestPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const isUpgrade = searchParams.get("upgrade") === "true";
+
+  const [serviceType, setServiceType] = useState<ServiceType>(
+    (searchParams.get("service") as ServiceType) || "both"
+  );
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [countries, setCountries] = useState<string[]>([]);
+  // Use stored user data directly - no need to ask again
+  const fullName = user?.user_metadata?.full_name || "";
+  const phone = user?.user_metadata?.phone || "";
+  const email = user?.email || "";
+
+  // Fetch telegram_id from profiles table
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile-telegram", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("telegram_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+  const telegramChatId = profile?.telegram_id || "";
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const { data: packages } = useQuery({
+    queryKey: ["packages"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("packages").select("*").eq("is_active", true).order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: paymentSettings } = useQuery({
+    queryKey: ["payment-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("payment_settings").select("*").limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: activeSubscription } = useQuery({
+    queryKey: ["my-active-sub", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*, packages(name_ar, price, duration_months)")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: myRequests } = useQuery({
+    queryKey: ["my-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscription_requests")
+        .select("*, packages(name_ar)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const selectedPkg = packages?.find((p) => p.id === selectedPackageId);
+  const maxCountries = selectedPkg?.max_countries || 1;
+  const needsCountry = serviceType === "visa" || serviceType === "both";
+
+  // Calculate upgrade price difference
+  const currentPrice = activeSubscription?.packages?.price || 0;
+  const newPrice = selectedPkg?.price || 0;
+  const priceDifference = isUpgrade && activeSubscription ? Math.max(0, newPrice - currentPrice) : newPrice;
+
+  const toggleCountry = (code: string) => {
+    setCountries((prev) => {
+      if (prev.includes(code)) return prev.filter((c) => c !== code);
+      if (prev.length >= maxCountries) {
+        toast.error(`الحد الأقصى ${maxCountries} دول لهذه الباقة`);
+        return prev;
+      }
+      return [...prev, code];
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("حجم الملف يجب أن لا يتجاوز 5 ميغابايت");
+      return;
+    }
+    setReceiptFile(file);
+    setReceiptPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedPackageId || !fullName.trim() || !receiptFile) {
+      toast.error("يرجى ملء جميع الحقول المطلوبة ورفع وصل الدفع");
+      return;
+    }
+    if (needsCountry && countries.length === 0) {
+      toast.error("يرجى اختيار دولة واحدة على الأقل");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        toast.error("يجب تسجيل الدخول أولاً");
+        navigate("/auth/login");
+        return;
+      }
+
+      const fileExt = receiptFile.name.split(".").pop();
+      const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from("receipts").upload(filePath, receiptFile);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(filePath);
+
+      const { data: request, error: insertError } = await supabase
+        .from("subscription_requests")
+        .insert({
+          user_id: currentUser.id,
+          package_id: selectedPackageId,
+          countries: needsCountry ? countries : [],
+          full_name: fullName,
+          phone,
+          email: email || currentUser.email,
+          telegram_chat_id: telegramChatId,
+          service_type: serviceType,
+          receipt_url: publicUrl,
+          admin_notes: isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
+        } as any)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        throw insertError;
+      }
+
+      supabase.functions.invoke("verify-receipt", {
+        body: { requestId: (request as any).id, receiptUrl: publicUrl },
+      }).catch((err) => console.error("AI verification error:", err));
+
+      toast.success(isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
+      queryClient.invalidateQueries({ queryKey: ["my-requests"] });
+      setSelectedPackageId("");
+      setCountries([]);
+      setReceiptFile(null);
+      setReceiptPreview("");
+    } catch (err: any) {
+      toast.error(err.message || "حدث خطأ أثناء الإرسال");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const statusLabels: Record<string, { text: string; cls: string }> = {
+    pending: { text: "قيد المراجعة", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" },
+    approved: { text: "مقبول ✓", cls: "bg-green-500/10 text-green-400 border-green-500/30" },
+    rejected: { text: "مرفوض ✗", cls: "bg-red-500/10 text-red-400 border-red-500/30" },
+    frozen: { text: "مجمّد ❄", cls: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
+  };
+
+  const inputClass = "w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50";
+
+  return (
+    <Layout>
+      <div className="container py-10 max-w-2xl">
+        <Link to="/my-requests" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+          <ArrowRight className="w-4 h-4" />
+          طلباتي
+        </Link>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+            {isUpgrade ? <><ArrowUpCircle className="w-6 h-6 text-accent" /> ترقية الاشتراك</> : "طلب اشتراك"}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            {isUpgrade
+              ? "اختر الباقة الجديدة وأرفق وصل دفع الفارق"
+              : "اختر نوع الخدمة والباقة وأرفق وصل الدفع CCP للمراجعة"}
+          </p>
+
+          {/* Current subscription info for upgrades */}
+          {isUpgrade && activeSubscription && (
+            <div className="gradient-card rounded-2xl border border-accent/20 p-5 mb-6">
+              <p className="text-xs text-muted-foreground mb-1">اشتراكك الحالي</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-foreground">{activeSubscription.packages?.name_ar}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeSubscription.service_type === "visa" ? "تنبيهات الفيزا" : activeSubscription.service_type === "jobs" ? "عقود العمل" : "الباقة الشاملة"}
+                    {" • "}ينتهي {new Date(activeSubscription.expires_at).toLocaleDateString("ar")}
+                  </p>
+                </div>
+                <span className="font-bold text-foreground">{currentPrice} د.ج</span>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Service Type */}
+            <div className="gradient-card rounded-2xl border border-border/50 p-6">
+              <label className="block text-sm font-medium text-foreground mb-3">نوع الخدمة *</label>
+              <div className="grid grid-cols-3 gap-3">
+                {(["visa", "jobs", "both"] as ServiceType[]).map((key) => {
+                  const labels: Record<ServiceType, { label: string; icon: React.ReactNode }> = {
+                    visa: { label: "فيزا", icon: <Bell className="w-4 h-4" /> },
+                    jobs: { label: "عقود عمل", icon: <Briefcase className="w-4 h-4" /> },
+                    both: { label: "الاثنان", icon: <Layers className="w-4 h-4" /> },
+                  };
+                  const { label, icon } = labels[key];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setServiceType(key); setCountries([]); }}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-center ${
+                        serviceType === key
+                          ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/30"
+                          : "border-border/50 text-muted-foreground hover:border-primary/30"
+                      }`}
+                    >
+                      {icon}
+                      <span className="text-xs font-bold">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Package Selection */}
+            <div className="gradient-card rounded-2xl border border-border/50 p-6">
+              <label className="block text-sm font-medium text-foreground mb-3">
+                {isUpgrade ? "الباقة الجديدة *" : "اختر الباقة *"}
+              </label>
+              <div className="grid gap-3">
+                {packages?.map((pkg) => {
+                  const upgradeDiff = isUpgrade && activeSubscription ? Math.max(0, (pkg.price || 0) - currentPrice) : null;
+                  const isCurrentPkg = activeSubscription?.package_id === pkg.id;
+                  return (
+                    <button
+                      key={pkg.id}
+                      onClick={() => { if (!isCurrentPkg) { setSelectedPackageId(pkg.id); setCountries([]); } }}
+                      disabled={isCurrentPkg}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
+                        isCurrentPkg
+                          ? "border-border/30 bg-muted/20 opacity-60 cursor-not-allowed"
+                          : selectedPackageId === pkg.id
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border/50 hover:border-primary/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {pkg.is_golden && <Crown className="w-5 h-5 text-accent" />}
+                        <div>
+                          <p className="font-bold text-foreground flex items-center gap-2">
+                            {pkg.name_ar}
+                            {isCurrentPkg && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">الحالية</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {pkg.duration_months} أشهر • {pkg.max_countries > 1 ? `حتى ${pkg.max_countries} دول` : "دولة واحدة"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-left">
+                        {pkg.price ? (
+                          <>
+                            <span className="font-bold text-foreground block">{pkg.price} د.ج</span>
+                            {upgradeDiff !== null && !isCurrentPkg && upgradeDiff > 0 && (
+                              <span className="text-xs text-accent flex items-center gap-1">
+                                <TrendingUp className="w-3 h-3" />
+                                فارق: {upgradeDiff} د.ج
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-accent font-bold">قريباً</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Country Selection */}
+            {selectedPackageId && needsCountry && (
+              <div className="gradient-card rounded-2xl border border-border/50 p-6">
+                <label className="block text-sm font-medium text-foreground mb-3">
+                  اختر الدول ({countries.length}/{maxCountries}) *
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                  {countryOptions.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => toggleCountry(c.code)}
+                      className={`flex flex-col items-center gap-1 px-5 py-3 rounded-xl border transition-all ${
+                        countries.includes(c.code) ? "border-primary bg-primary/10 text-primary" : "border-border/50 text-muted-foreground hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-xl">{c.flag}</span>
+                      <span className="text-sm font-medium">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* User Info Summary (read-only) */}
+            <div className="gradient-card rounded-2xl border border-border/50 p-5">
+              <label className="block text-sm font-medium text-foreground mb-3">معلوماتك المسجّلة</label>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground p-2.5 rounded-lg bg-muted/30">
+                  <span className="font-medium text-foreground min-w-[80px]">الاسم:</span> {fullName || "—"}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground p-2.5 rounded-lg bg-muted/30">
+                  <span className="font-medium text-foreground min-w-[80px]">الهاتف:</span> {phone || "—"}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground p-2.5 rounded-lg bg-muted/30">
+                  <span className="font-medium text-foreground min-w-[80px]">البريد:</span> {email || "—"}
+                </div>
+                {telegramChatId && (
+                  <div className="flex items-center gap-2 text-muted-foreground p-2.5 rounded-lg bg-muted/30">
+                    <span className="font-medium text-foreground min-w-[80px]">تليغرام:</span> {telegramChatId}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Price summary for upgrade */}
+            {isUpgrade && selectedPkg && activeSubscription && (
+              <div className="gradient-card rounded-2xl border border-accent/20 p-5">
+                <p className="text-sm font-bold text-foreground mb-3">ملخص الترقية</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>الباقة الحالية</span>
+                    <span>{activeSubscription.packages?.name_ar} — {currentPrice} د.ج</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>الباقة الجديدة</span>
+                    <span>{selectedPkg.name_ar} — {newPrice} د.ج</span>
+                  </div>
+                  <div className="border-t border-border/50 pt-2 flex justify-between font-bold text-foreground">
+                    <span>المبلغ المطلوب (الفارق)</span>
+                    <span className="text-accent">{priceDifference} د.ج</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Info - always visible */}
+            {paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
+              <div className="gradient-card rounded-2xl border border-accent/20 p-6">
+                <label className="block text-sm font-bold text-foreground mb-4">معلومات الدفع</label>
+                {paymentSettings.account_holder && (
+                  <p className="text-xs text-muted-foreground mb-3 text-center">صاحب الحساب: <span className="font-bold text-foreground">{paymentSettings.account_holder}</span></p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  {/* CCP */}
+                  {paymentSettings.ccp_number && (
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center gap-3">
+                      <img src={ccpLogo} alt="CCP" className="h-12 w-auto object-contain" loading="lazy" />
+                      <div className="text-center w-full space-y-2">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-0.5">رقم الحساب CCP</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-mono font-bold text-foreground tracking-wider text-sm">{paymentSettings.ccp_number}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(paymentSettings.ccp_number); toast.success("تم نسخ رقم CCP"); }}
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                              title="نسخ"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {paymentSettings.ccp_key && (
+                          <div>
+                            <p className="text-[10px] text-muted-foreground mb-0.5">المفتاح Clé</p>
+                            <span className="font-mono font-bold text-foreground text-sm">{paymentSettings.ccp_key}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* BaridiMob */}
+                  {paymentSettings.rip_number && (
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center gap-3">
+                      <img src={baridimobLogo} alt="BaridiMob" className="h-12 w-auto object-contain" loading="lazy" />
+                      <div className="text-center w-full space-y-2">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-0.5">رقم RIP</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-mono font-bold text-foreground tracking-wider text-[11px] break-all">{paymentSettings.rip_number}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(paymentSettings.rip_number); toast.success("تم نسخ رقم RIP"); }}
+                              className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                              title="نسخ"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {selectedPkg ? (
+                  <div className="rounded-lg bg-accent/10 border border-accent/20 p-3 text-center">
+                    <p className="text-xs text-accent font-bold">
+                      المبلغ المطلوب: {isUpgrade ? priceDifference : (selectedPkg?.price || 0)} د.ج
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">قم بتحويل المبلغ ثم أرفق صورة الوصل أدناه</p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-muted/30 border border-border/50 p-3 text-center">
+                    <p className="text-xs text-muted-foreground">اختر الباقة أعلاه لمعرفة المبلغ المطلوب</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="gradient-card rounded-2xl border border-border/50 p-6">
+              <label className="block text-sm font-medium text-foreground mb-3">
+                وصل الدفع CCP * {isUpgrade && <span className="text-xs text-muted-foreground">(بمبلغ الفارق: {priceDifference} د.ج)</span>}
+              </label>
+              <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/40 transition-colors">
+                {receiptPreview ? (
+                  <div className="space-y-3">
+                    <img src={receiptPreview} alt="Receipt" className="max-h-48 mx-auto rounded-lg" />
+                    <button onClick={() => { setReceiptFile(null); setReceiptPreview(""); }} className="text-xs text-destructive hover:underline">إزالة</button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer space-y-2 block">
+                    <FileImage className="w-10 h-10 text-muted-foreground mx-auto" />
+                    <p className="text-sm text-muted-foreground">اضغط لتحميل صورة الوصل</p>
+                    <p className="text-xs text-muted-foreground/60">JPG, PNG - حد أقصى 5MB</p>
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                سيتم فحص الوصل تلقائياً بالذكاء الاصطناعي
+              </p>
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full py-4 rounded-xl font-bold gradient-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {submitting ? (
+                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {submitting ? "جاري الإرسال..." : isUpgrade ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
+            </button>
+          </div>
+
+          {/* My Requests */}
+          {myRequests && myRequests.length > 0 && (
+            <div className="mt-10">
+              <h2 className="font-heading text-xl font-bold text-foreground mb-4">طلباتي</h2>
+              <div className="space-y-3">
+                {myRequests.map((req: any) => {
+                  const st = statusLabels[req.status] || statusLabels.pending;
+                  return (
+                    <div key={req.id} className="gradient-card rounded-xl border border-border/50 p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">{req.packages?.name_ar}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {req.countries?.map((c: string) => countryOptions.find((co) => co.code === c)?.flag).join(" ")} •{" "}
+                          {new Date(req.created_at).toLocaleDateString("ar")}
+                        </p>
+                        {req.ai_fraud_detected && (
+                          <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            تم اكتشاف مشكلة في الوصل
+                          </p>
+                        )}
+                      </div>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full border ${st.cls}`}>{st.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </Layout>
+  );
+}

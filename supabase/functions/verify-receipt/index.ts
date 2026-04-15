@@ -1,0 +1,191 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://esm.sh/zod@3.25.76';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const BodySchema = z.object({
+  requestId: z.string().uuid(),
+  receiptUrl: z.string().url(),
+});
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate auth
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json();
+    const parsed = BodySchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { requestId, receiptUrl } = parsed.data;
+
+    // Call AI to analyze the receipt image
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a CCP (Compte Courant Postal) receipt verification expert for Algeria Post. Your job is to analyze receipt images and detect potential fraud or forgery.
+
+Analyze the receipt image and check for:
+1. Is this a genuine CCP receipt from Algeria Post (Algérie Poste)?
+2. Are the fonts, layout, and formatting consistent with real CCP receipts?
+3. Are there signs of digital manipulation (inconsistent shadows, misaligned text, artifacts)?
+4. Is the amount clearly readable?
+5. Is there a valid date and transaction reference?
+6. Any signs of copy-paste, Photoshop manipulation, or AI generation?
+
+Respond ONLY in valid JSON with this exact structure:
+{
+  "is_genuine": true/false,
+  "confidence": 0-100,
+  "amount_detected": "amount or null",
+  "date_detected": "date or null",
+  "reference_detected": "reference or null",
+  "fraud_indicators": ["list of any suspicious findings"],
+  "analysis_summary_ar": "ملخص التحليل بالعربية",
+  "recommendation": "approve" | "review" | "reject"
+}`
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze this CCP payment receipt for authenticity. Check for any signs of forgery or manipulation.',
+              },
+              {
+                type: 'image_url',
+                image_url: { url: receiptUrl },
+              },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'verify_receipt',
+              description: 'Return the receipt verification result',
+              parameters: {
+                type: 'object',
+                properties: {
+                  is_genuine: { type: 'boolean', description: 'Whether the receipt appears genuine' },
+                  confidence: { type: 'number', description: 'Confidence score 0-100' },
+                  amount_detected: { type: 'string', description: 'Amount detected on receipt' },
+                  date_detected: { type: 'string', description: 'Date detected on receipt' },
+                  reference_detected: { type: 'string', description: 'Transaction reference if found' },
+                  fraud_indicators: { type: 'array', items: { type: 'string' }, description: 'List of suspicious findings' },
+                  analysis_summary_ar: { type: 'string', description: 'Arabic summary of analysis' },
+                  recommendation: { type: 'string', enum: ['approve', 'review', 'reject'], description: 'Recommendation' },
+                },
+                required: ['is_genuine', 'confidence', 'fraud_indicators', 'analysis_summary_ar', 'recommendation'],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: 'function', function: { name: 'verify_receipt' } },
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error('AI gateway error:', aiResponse.status, errText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: 'تم تجاوز حد الطلبات، حاول مرة أخرى لاحقاً' }), {
+          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: 'رصيد غير كافٍ، يرجى إعادة الشحن' }), {
+          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: 'AI verification failed' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const aiData = await aiResponse.json();
+    let verificationResult: any;
+
+    // Extract from tool call response
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        verificationResult = JSON.parse(toolCall.function.arguments);
+      } catch {
+        verificationResult = { is_genuine: false, confidence: 0, fraud_indicators: ['Failed to parse AI response'], analysis_summary_ar: 'فشل في تحليل الوصل', recommendation: 'review' };
+      }
+    } else {
+      // Fallback: try parsing content as JSON
+      const content = aiData.choices?.[0]?.message?.content || '';
+      try {
+        verificationResult = JSON.parse(content);
+      } catch {
+        verificationResult = { is_genuine: false, confidence: 0, fraud_indicators: ['No structured response'], analysis_summary_ar: 'لم يتمكن النظام من تحليل الوصل', recommendation: 'review' };
+      }
+    }
+
+    const fraudDetected = verificationResult.recommendation === 'reject' || 
+      (!verificationResult.is_genuine && verificationResult.confidence > 60);
+
+    // Update the subscription request with AI results
+    await supabase
+      .from('subscription_requests')
+      .update({
+        ai_verification_result: verificationResult,
+        ai_fraud_detected: fraudDetected,
+      })
+      .eq('id', requestId);
+
+    return new Response(JSON.stringify({
+      success: true,
+      verification: verificationResult,
+      fraudDetected,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

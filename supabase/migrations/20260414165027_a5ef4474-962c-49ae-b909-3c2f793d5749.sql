@@ -1,0 +1,1 @@
+ALTER TABLE public.visa_monitor_checks ADD COLUMN detection_method text DEFAULT 'unknown';
