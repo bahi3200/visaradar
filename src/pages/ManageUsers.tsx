@@ -419,7 +419,27 @@ export default function ManageUsersPage() {
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuContent align="end" className="w-48">
+                          {/* Moderator role toggle */}
+                          {!user.roles.includes("admin") && (
+                            user.roles.includes("moderator") ? (
+                              <DropdownMenuItem
+                                onClick={() => setPendingAction({ type: "remove_moderator", user })}
+                                className="text-blue-400 focus:text-blue-400 gap-2"
+                              >
+                                <Shield className="w-4 h-4" />
+                                إزالة صلاحيات المشرف
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => setPendingAction({ type: "assign_moderator", user })}
+                                className="text-blue-400 focus:text-blue-400 gap-2"
+                              >
+                                <Shield className="w-4 h-4" />
+                                تعيين كمشرف
+                              </DropdownMenuItem>
+                            )
+                          )}
                           {banned ? (
                             <DropdownMenuItem
                               onClick={() => setPendingAction({ type: "enable", user })}
