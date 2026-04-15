@@ -234,10 +234,12 @@ export default function RegisterPage() {
               variant="outline"
               className="w-full mt-3 h-11 rounded-xl gap-2"
               onClick={async () => {
-                await supabase.auth.signInWithOAuth({
-                  provider: "google",
-                  options: { redirectTo: window.location.origin + "/pricing" },
+                const result = await lovable.auth.signInWithOAuth("google", {
+                  redirect_uri: window.location.origin,
                 });
+                if (result.error) {
+                  toast.error("فشل التسجيل بحساب Google");
+                }
               }}
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
