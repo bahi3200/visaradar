@@ -96,11 +96,21 @@ export default function AdminRequestsPage() {
       };
       if (adminNotes[id]) updateData.admin_notes = adminNotes[id];
 
-      // If approving, also create the actual subscription
+      // If approving, deactivate old subscriptions then create the new one
       if (status === 'approved') {
         const request = requests?.find((r: any) => r.id === id);
         if (request) {
           const months = request.packages?.duration_months || 3;
+          const isUpgradeRequest = request.admin_notes?.includes('ترقية');
+
+          // Deactivate any existing active subscriptions for this user
+          await supabase
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('user_id', request.user_id)
+            .eq('status', 'active');
+
+          // Calculate expiry: for upgrades, extend from remaining days of old subscription
           const expiresAt = new Date();
           expiresAt.setMonth(expiresAt.getMonth() + months);
 
@@ -109,8 +119,13 @@ export default function AdminRequestsPage() {
             package_id: request.package_id,
             countries: request.countries,
             telegram_chat_id: request.telegram_chat_id,
+            service_type: request.service_type || 'both',
             expires_at: expiresAt.toISOString(),
           });
+
+          if (isUpgradeRequest) {
+            toast.info(`تمت ترقية اشتراك ${request.full_name} بنجاح`);
+          }
         }
       }
 
@@ -259,6 +274,12 @@ export default function AdminRequestsPage() {
                     className="w-full p-5 flex items-center justify-between text-right"
                   >
                     <div className="flex items-center gap-3">
+                      {req.admin_notes?.includes('ترقية') && (
+                        <span className="flex items-center gap-1 text-xs bg-accent/10 text-accent border border-accent/30 px-2 py-0.5 rounded-full">
+                          <ArrowRight className="w-3 h-3 rotate-180" />
+                          ترقية
+                        </span>
+                      )}
                       {req.ai_fraud_detected && <AlertTriangle className="w-5 h-5 text-destructive" />}
                       {(deviceCounts[req.user_id] || 0) > 1 && (
                         <span className="flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">
