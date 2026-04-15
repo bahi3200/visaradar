@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Radar, Eye, EyeOff, AlertTriangle, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 
 export default function RegisterPage() {
@@ -233,10 +234,12 @@ export default function RegisterPage() {
               variant="outline"
               className="w-full mt-3 h-11 rounded-xl gap-2"
               onClick={async () => {
-                await supabase.auth.signInWithOAuth({
-                  provider: "google",
-                  options: { redirectTo: window.location.origin + "/pricing" },
+                const result = await lovable.auth.signInWithOAuth("google", {
+                  redirect_uri: window.location.origin,
                 });
+                if (result.error) {
+                  toast.error("فشل التسجيل بحساب Google");
+                }
               }}
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
