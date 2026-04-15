@@ -41,13 +41,13 @@ type UserInfo = {
 };
 
 type FilterState = {
-  role: "all" | "admin" | "user";
+  role: "all" | "admin" | "moderator" | "user";
   subscription: "all" | "subscribed" | "golden" | "none";
   sort: "newest" | "oldest" | "name";
 };
 
 type PendingAction = {
-  type: "delete" | "disable" | "enable";
+  type: "delete" | "disable" | "enable" | "assign_moderator" | "remove_moderator";
   user: UserInfo;
 } | null;
 
@@ -93,12 +93,14 @@ export default function ManageUsersPage() {
       if (res.error) throw res.error;
       if (res.data?.error) throw new Error(res.data.error);
 
-      const messages = {
+      const messages: Record<string, string> = {
         delete: `تم حذف حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
         disable: `تم تعطيل حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
         enable: `تم تفعيل حساب ${pendingAction.user.full_name || pendingAction.user.email} بنجاح`,
+        assign_moderator: `تم تعيين ${pendingAction.user.full_name || pendingAction.user.email} كمشرف`,
+        remove_moderator: `تم إزالة صلاحيات المشرف من ${pendingAction.user.full_name || pendingAction.user.email}`,
       };
-      toast.success(messages[pendingAction.type]);
+      toast.success(messages[pendingAction.type] || "تم تنفيذ العملية");
       await fetchUsers();
     } catch (err: any) {
       const errorMsg = err.message?.includes("own account")
