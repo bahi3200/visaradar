@@ -110,18 +110,20 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     name: 'France',
     nameAr: 'فرنسا',
     flag: '🇫🇷',
-    provider: 'TLScontact',
-    checkUrl: 'https://visas-fr.tlscontact.com/appointment/gb/gbLON2fr/table',
-    officialUrl: 'https://visas-fr.tlscontact.com/',
+    provider: 'Capago (TLScontact)',
+    checkUrl: 'https://fr.capago.net/rendez-vous/dz/',
+    officialUrl: 'https://fr.capago.net/rendez-vous/dz/',
     apiEndpoints: [
-      { url: 'https://visas-fr.tlscontact.com/api/appointment/gb/gbLON2fr/slots', method: 'GET' },
+      { url: 'https://fr.capago.net/api/rendez-vous/dz/slots', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
       { keyword: 'créneau disponible', weight: 3 },
+      { keyword: 'rendez-vous disponible', weight: 3 },
       { keyword: 'select a date', weight: 3 },
       { keyword: 'choose your appointment', weight: 3 },
       { keyword: 'available time', weight: 3 },
+      { keyword: 'prendre rendez-vous', weight: 3 },
       { keyword: 'book', weight: 1 },
       { keyword: 'disponible', weight: 2 },
       { keyword: 'متاح', weight: 2 },
@@ -129,6 +131,7 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     closedIndicators: [
       { keyword: 'no appointment available', weight: 5 },
       { keyword: 'aucun créneau disponible', weight: 5 },
+      { keyword: 'aucun rendez-vous disponible', weight: 5 },
       { keyword: 'no timeslot available', weight: 5 },
       { keyword: 'indisponible', weight: 4 },
       { keyword: 'complet', weight: 4 },
@@ -143,18 +146,18 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
       { regex: '"timeslots"\\s*:\\s*\\[\\s*\\]', closedMatch: '[]', weight: 4 },
     ],
     statusCodeHints: [
-      { code: 403, meaning: 'closed' }, // TLS often returns 403 when no slots
+      { code: 403, meaning: 'closed' },
     ],
   },
   ES: {
     name: 'Spain',
     nameAr: 'إسبانيا',
     flag: '🇪🇸',
-    provider: 'BLS International',
-    checkUrl: 'https://www.blsspainvisa.com/DZ/book_appointment.php',
-    officialUrl: 'https://www.blsspainvisa.com/',
+    provider: 'BLS International Algeria',
+    checkUrl: 'https://algeria.blsspainvisa.com/book_appointment.php',
+    officialUrl: 'https://algeria.blsspainvisa.com/',
     apiEndpoints: [
-      { url: 'https://www.blsspainvisa.com/DZ/api/check_availability.php', method: 'GET' },
+      { url: 'https://algeria.blsspainvisa.com/api/check_availability.php', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
