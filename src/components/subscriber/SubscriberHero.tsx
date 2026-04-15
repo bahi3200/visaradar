@@ -1,12 +1,7 @@
 import { motion } from "framer-motion";
 import { Crown, Calendar, Clock } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import parisImg from "@/assets/cities/paris.jpg";
-import romeImg from "@/assets/cities/rome.jpg";
-import madridImg from "@/assets/cities/madrid.jpg";
-import { useState, useEffect } from "react";
-
-const heroImages = [parisImg, romeImg, madridImg];
+import europeVideo from "@/assets/cities/europe-hero.mp4.asset.json";
 
 interface Props {
   fullName: string | null;
@@ -18,29 +13,19 @@ interface Props {
 export default function SubscriberHero({ fullName, packageName, daysLeft, expiresAt }: Props) {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0, scale: 1 };
-  const [currentImg, setCurrentImg] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImg((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <section className="relative h-[50vh] min-h-[340px] overflow-hidden">
-      {heroImages.map((img, i) => (
-        <motion.div
-          key={i}
-          className="absolute inset-0"
-          animate={{ opacity: currentImg === i ? 1 : 0 }}
-          transition={{ duration: 1.2 }}
-        >
-          <img src={img} alt="" className="w-full h-full object-cover" />
-        </motion.div>
-      ))}
+      <video
+        src={europeVideo.url}
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-      
+
       <div className="absolute inset-0 flex items-end">
         <div className="container pb-8">
           <motion.div
