@@ -7,7 +7,7 @@ import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SubscriptionData {
@@ -30,7 +30,6 @@ export default function SubscriberHome({ subscription, fullName, isAdmin }: Prop
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  // Admins don't need subscription CTA
   const showSubscribeCTA = !isSubscribed && !isAdmin;
 
   return (
@@ -44,28 +43,39 @@ export default function SubscriberHome({ subscription, fullName, isAdmin }: Prop
         isAdmin={isAdmin}
       />
 
-      {/* Subscribe CTA for non-subscribers (not admins) */}
+      {/* Admin stats - overlapping hero */}
+      {isAdmin && <AdminStats />}
+
+      {/* Subscribe CTA */}
       {showSubscribeCTA && (
-        <section className="container py-6">
+        <section className="container py-8 -mt-4">
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="gradient-card rounded-2xl border border-accent/30 p-6 text-center max-w-lg mx-auto"
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            className="relative rounded-2xl border border-accent/30 p-8 text-center max-w-lg mx-auto overflow-hidden bg-card"
           >
-            <Sparkles className="w-8 h-8 text-accent mx-auto mb-3" />
-            <h2 className="font-heading text-lg font-bold text-foreground mb-2">
-              فعّل اشتراكك الآن!
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              اشترك للحصول على تنبيهات فورية لمواعيد التأشيرات وعقود العمل الحصرية
-            </p>
-            <Link
-              to="/pricing"
-              className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm px-6 py-3 rounded-full transition-all shadow-lg hover:-translate-y-0.5"
-            >
-              اشترك الآن
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/15 via-transparent to-primary/10" />
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-accent/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl gradient-accent flex items-center justify-center mx-auto mb-4 shadow-xl">
+                <Rocket className="w-7 h-7 text-accent-foreground" />
+              </div>
+              <h2 className="font-heading text-xl font-black text-foreground mb-2">
+                فعّل اشتراكك الآن!
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto leading-relaxed">
+                اشترك للحصول على تنبيهات فورية لمواعيد التأشيرات وعقود العمل الحصرية
+              </p>
+              <Link
+                to="/pricing"
+                className="inline-flex items-center gap-2 gradient-accent text-accent-foreground font-bold text-sm px-8 py-3.5 rounded-full transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+              >
+                اشترك الآن
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </div>
           </motion.div>
         </section>
       )}
@@ -77,7 +87,6 @@ export default function SubscriberHome({ subscription, fullName, isAdmin }: Prop
         />
       )}
 
-      {isAdmin && <AdminStats />}
       <RecentAlerts />
       <QuickLinks isAdmin={isAdmin} />
       <CityGallery />
