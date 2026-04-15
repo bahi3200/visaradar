@@ -12,6 +12,8 @@ const countryOptions = [
   { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global", url: "https://visa.vfsglobal.com/dza/ar/ita/" },
   { code: "FR", flag: "🇫🇷", name: "فرنسا", provider: "TLScontact", url: "https://visas-fr.tlscontact.com/" },
   { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International", url: "https://www.blsspainvisa.com/" },
+  { code: "DE", flag: "🇩🇪", name: "ألمانيا", provider: "VFS Global", url: "https://visa.vfsglobal.com/dza/ar/deu/" },
+  { code: "GR", flag: "🇬🇷", name: "اليونان", provider: "VFS Global", url: "https://visa.vfsglobal.com/dza/ar/grc/" },
 ];
 
 type ServiceType = "visa" | "jobs" | "both";
