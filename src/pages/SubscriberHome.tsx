@@ -23,9 +23,10 @@ interface Props {
   fullName: string | null;
   isAdmin: boolean;
   isLoading?: boolean;
+  countryExpiries?: Record<string, string>;
 }
 
-export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading }: Props) {
+export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading, countryExpiries = {} }: Props) {
   const isSubscribed = !!subscription;
   const daysLeft = subscription
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -85,6 +86,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         <QuickStats
           countries={isAdmin ? ["IT", "FR", "ES", "DE", "GR"] : subscription!.countries}
           serviceType={isAdmin ? "both" : subscription!.service_type}
+          countryExpiries={countryExpiries}
         />
       )}
 

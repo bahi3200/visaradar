@@ -51,6 +51,18 @@ export default function HomePage() {
     packages: subscriptions[0].packages,
   } : null;
 
+  // Build per-country expiry map
+  const countryExpiries: Record<string, string> = {};
+  if (subscriptions) {
+    subscriptions.forEach((s: any) => {
+      (s.countries || []).forEach((c: string) => {
+        if (!countryExpiries[c] || s.expires_at > countryExpiries[c]) {
+          countryExpiries[c] = s.expires_at;
+        }
+      });
+    });
+  }
+
   const { data: profile } = useQuery({
     queryKey: ["my-profile", user?.id],
     queryFn: async () => {
@@ -77,6 +89,7 @@ export default function HomePage() {
         fullName={profile?.full_name || null}
         isAdmin={!!isPrivileged}
         isLoading={subLoading}
+        countryExpiries={countryExpiries}
       />
     );
   }
