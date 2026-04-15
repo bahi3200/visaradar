@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -28,11 +28,13 @@ export default function SubscribeRequestPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isUpgrade = searchParams.get("upgrade") === "true";
+  const isRenewal = searchParams.get("renew") === "true";
+  const renewPackageId = searchParams.get("package") || "";
 
   const [serviceType, setServiceType] = useState<ServiceType>(
     (searchParams.get("service") as ServiceType) || "both"
   );
-  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string>(renewPackageId);
   const [countries, setCountries] = useState<string[]>([]);
   // Use stored user data directly - no need to ask again
   const fullName = user?.user_metadata?.full_name || "";
@@ -108,11 +110,12 @@ export default function SubscribeRequestPage() {
   const maxCountries = selectedPkg?.max_countries || 1;
   const needsCountry = serviceType === "visa" || serviceType === "both";
 
-  // Check if user already has this exact package active
-  const isAlreadySubscribed = !isUpgrade && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
+  // Check if user already has this exact package active (allow if renewal mode)
+  const daysLeft = activeSubscription ? Math.max(0, Math.ceil((new Date(activeSubscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 999;
+  const isAlreadySubscribed = !isUpgrade && !isRenewal && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
 
   // Check if user has a pending request for the same package
-  const hasPendingRequest = !isUpgrade && myRequests?.some(
+  const hasPendingRequest = myRequests?.some(
     (r) => r.package_id === selectedPackageId && r.status === "pending"
   );
 
@@ -189,7 +192,7 @@ export default function SubscribeRequestPage() {
           telegram_chat_id: telegramChatId,
           service_type: serviceType,
           receipt_url: publicUrl,
-          admin_notes: isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
+          admin_notes: isRenewal ? `تجديد اشتراك — الباقة: "${selectedPkg?.name_ar}" — ينتهي الاشتراك الحالي: ${activeSubscription ? new Date(activeSubscription.expires_at).toLocaleDateString("ar") : "—"}` : isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
         } as any)
         .select()
         .single();
@@ -203,7 +206,7 @@ export default function SubscribeRequestPage() {
         body: { requestId: (request as any).id, receiptUrl: publicUrl },
       }).catch((err) => console.error("AI verification error:", err));
 
-      toast.success(isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
+      toast.success(isRenewal ? "تم إرسال طلب التجديد بنجاح!" : isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       setSelectedPackageId("");
       setCountries([]);
@@ -254,13 +257,35 @@ export default function SubscribeRequestPage() {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-heading text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-            {isUpgrade ? <><ArrowUpCircle className="w-6 h-6 text-accent" /> ترقية الاشتراك</> : "طلب اشتراك"}
+            {isRenewal ? <><RefreshCw className="w-6 h-6 text-accent" /> تجديد الاشتراك</> : isUpgrade ? <><ArrowUpCircle className="w-6 h-6 text-accent" /> ترقية الاشتراك</> : "طلب اشتراك"}
           </h1>
           <p className="text-sm text-muted-foreground mb-8">
-            {isUpgrade
+            {isRenewal
+              ? "جدّد اشتراكك في نفس الباقة وأرفق وصل الدفع"
+              : isUpgrade
               ? "اختر الباقة الجديدة وأرفق وصل دفع الفارق"
               : "اختر نوع الخدمة والباقة وأرفق وصل الدفع CCP للمراجعة"}
           </p>
+
+          {/* Current subscription info for renewals */}
+          {isRenewal && activeSubscription && (
+            <div className="gradient-card rounded-2xl border border-yellow-500/20 p-5 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="w-4 h-4 text-yellow-400" />
+                <p className="text-xs font-bold text-yellow-400">تجديد الاشتراك</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-foreground">{activeSubscription.packages?.name_ar}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {daysLeft === 0 ? "ينتهي اليوم" : daysLeft <= 0 ? "منتهي" : `متبقي ${daysLeft} ${daysLeft === 1 ? "يوم" : daysLeft === 2 ? "يومان" : daysLeft <= 10 ? "أيام" : "يوم"}`}
+                    {" • "}ينتهي {new Date(activeSubscription.expires_at).toLocaleDateString("ar")}
+                  </p>
+                </div>
+                <span className="font-bold text-foreground">{currentPrice} د.ج</span>
+              </div>
+            </div>
+          )}
 
           {/* Current subscription info for upgrades */}
           {isUpgrade && activeSubscription && (
