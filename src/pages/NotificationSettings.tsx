@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck } from "lucide-react";
+import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck, Play } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -152,6 +152,26 @@ export default function NotificationSettings() {
     }
   };
 
+  const playTestSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+      toast.success("تم تشغيل صوت الاختبار");
+    } catch {
+      toast.error("تعذّر تشغيل الصوت");
+    }
+  };
+
   const requestPermission = async () => {
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
@@ -207,6 +227,15 @@ export default function NotificationSettings() {
               </div>
               <Switch checked={soundEnabled} onCheckedChange={handleSoundChange} />
             </div>
+            {soundEnabled && (
+              <button
+                onClick={playTestSound}
+                className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" />
+                اختبار الصوت
+              </button>
+            )}
           </motion.div>
 
           {/* Browser notifications */}
