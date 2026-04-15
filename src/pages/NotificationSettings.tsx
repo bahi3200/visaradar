@@ -50,7 +50,9 @@ export default function NotificationSettings() {
       return {
         maxCountries: isPrivileged ? 999 : (sub?.packages as any)?.max_countries ?? 1,
         subscriptionCountries: sub?.countries ?? [],
-        isAdmin: isPrivileged,
+        isAdmin: !!isAdmin,
+        isModerator: !!isModerator,
+        isPrivileged,
         hasSubscription: !!sub,
       };
     },
@@ -58,6 +60,8 @@ export default function NotificationSettings() {
 
   const maxCountries = subscriptionInfo?.maxCountries ?? 1;
   const isAdmin = subscriptionInfo?.isAdmin ?? false;
+  const isModerator = subscriptionInfo?.isModerator ?? false;
+  const isPrivileged = subscriptionInfo?.isPrivileged ?? false;
 
   const { data: prefs, isLoading } = useQuery({
     queryKey: ["notification-preferences", user?.id],
@@ -73,8 +77,7 @@ export default function NotificationSettings() {
   });
 
   useEffect(() => {
-    if (isAdmin) {
-      // Admin always monitors all countries
+    if (isPrivileged) {
       setSelectedCountries(AVAILABLE_COUNTRIES.map(c => c.code));
     } else if (prefs) {
       setSelectedCountries(prefs.countries || ["IT", "FR", "ES"]);
@@ -83,7 +86,7 @@ export default function NotificationSettings() {
       setSoundEnabled(prefs.sound_enabled);
       setBrowserNotifications(prefs.browser_notifications);
     }
-  }, [prefs, isAdmin]);
+  }, [prefs, isPrivileged]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -259,11 +262,18 @@ export default function NotificationSettings() {
               </div>
             </div>
 
-            {isAdmin ? (
-              <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30">
-                <Globe className="w-3.5 h-3.5 text-primary" />
-                <p className="text-xs text-primary font-medium">
-                  كمسؤول، أنت تراقب جميع الدول تلقائياً ({AVAILABLE_COUNTRIES.length} دول)
+            {isPrivileged ? (
+              <div className={`flex items-center gap-1.5 mb-4 px-3 py-2 rounded-lg border ${
+                isAdmin 
+                  ? "bg-primary/10 border-primary/30" 
+                  : "bg-accent/10 border-accent/30"
+              }`}>
+                <Globe className={`w-3.5 h-3.5 ${isAdmin ? "text-primary" : "text-accent-foreground"}`} />
+                <p className={`text-xs font-medium ${isAdmin ? "text-primary" : "text-accent-foreground"}`}>
+                  {isAdmin 
+                    ? `كمسؤول، أنت تراقب جميع الدول تلقائياً (${AVAILABLE_COUNTRIES.length} دول)`
+                    : `كمشرف، يمكنك مراقبة جميع الدول لمتابعة الطلبات (${AVAILABLE_COUNTRIES.length} دول)`
+                  }
                 </p>
               </div>
             ) : (
@@ -279,11 +289,11 @@ export default function NotificationSettings() {
             <div className="grid grid-cols-2 gap-2">
               {AVAILABLE_COUNTRIES.map((country) => {
                 const isSelected = selectedCountries.includes(country.code);
-                const isDisabled = isAdmin || (!isSelected && selectedCountries.length >= maxCountries);
+                const isDisabled = isPrivileged || (!isSelected && selectedCountries.length >= maxCountries);
                 return (
                   <button
                     key={country.code}
-                    onClick={() => !isAdmin && toggleCountry(country.code)}
+                    onClick={() => !isPrivileged && toggleCountry(country.code)}
                     disabled={isDisabled}
                     className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-medium transition-all ${
                       isSelected
@@ -300,7 +310,7 @@ export default function NotificationSettings() {
                         ✓
                       </Badge>
                     )}
-                    {!isSelected && !isAdmin && isDisabled && (
+                    {!isSelected && !isPrivileged && isDisabled && (
                       <Lock className="mr-auto w-3 h-3 text-muted-foreground/40" />
                     )}
                   </button>
