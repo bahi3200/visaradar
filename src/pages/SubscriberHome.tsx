@@ -109,7 +109,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
               <p className="text-xs text-muted-foreground leading-relaxed">أضف دولاً جديدة أو انتقل لباقة أعلى للاستفادة من مزايا أكثر</p>
             </div>
             <Link
-              to="/subscribe"
+              to="/subscribe?upgrade=true"
               className="relative inline-flex items-center gap-1.5 gradient-primary text-primary-foreground font-bold text-xs px-5 py-2.5 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 shrink-0"
             >
               ترقية
