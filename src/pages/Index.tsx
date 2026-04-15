@@ -53,6 +53,21 @@ export default function HomePage() {
     enabled: !!user,
   });
 
+  const { data: isAdmin } = useQuery({
+    queryKey: ["user-role-home", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
   const formatDate = (d: string) => new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
 
