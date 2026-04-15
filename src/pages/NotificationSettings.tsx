@@ -77,8 +77,7 @@ export default function NotificationSettings() {
   });
 
   useEffect(() => {
-    if (isAdmin) {
-      // Admin always monitors all countries
+    if (isPrivileged) {
       setSelectedCountries(AVAILABLE_COUNTRIES.map(c => c.code));
     } else if (prefs) {
       setSelectedCountries(prefs.countries || ["IT", "FR", "ES"]);
@@ -87,7 +86,7 @@ export default function NotificationSettings() {
       setSoundEnabled(prefs.sound_enabled);
       setBrowserNotifications(prefs.browser_notifications);
     }
-  }, [prefs, isAdmin]);
+  }, [prefs, isPrivileged]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
