@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 import { Globe, Bell, Shield, Calendar } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -16,7 +17,7 @@ const countryNames: Record<string, string> = {
   GR: "🇬🇷 اليونان",
 };
 
-export default function QuickStats({ countries, serviceType, countryExpiries = {} }: Props) {
+const QuickStats = forwardRef<HTMLElement, Props>(function QuickStats({ countries, serviceType, countryExpiries = {} }, ref) {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0 };
 
