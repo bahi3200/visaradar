@@ -196,6 +196,7 @@ export default function SubscribeRequestPage() {
           service_type: serviceType,
           receipt_url: publicUrl,
           admin_notes: isRenewal ? `تجديد اشتراك — الباقة: "${selectedPkg?.name_ar}" — ينتهي الاشتراك الحالي: ${activeSubscription ? new Date(activeSubscription.expires_at).toLocaleDateString("ar") : "—"}` : isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
+          // Note: isSelectingDifferentPkg auto-detected upgrade is handled via admin_notes above when isUpgrade is true
         } as any)
         .select()
         .single();
