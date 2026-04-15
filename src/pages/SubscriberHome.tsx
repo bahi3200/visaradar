@@ -4,6 +4,7 @@ import QuickStats from "@/components/subscriber/QuickStats";
 import CityGallery from "@/components/subscriber/CityGallery";
 import QuickLinks from "@/components/subscriber/QuickLinks";
 import VisaTips from "@/components/subscriber/VisaTips";
+import RecentAlerts from "@/components/subscriber/RecentAlerts";
 
 interface Props {
   subscription: {
