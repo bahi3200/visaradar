@@ -7,7 +7,7 @@ import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Rocket } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SubscriptionData {
@@ -88,6 +88,35 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
           serviceType={isAdmin ? "both" : subscription!.service_type}
           countryExpiries={countryExpiries}
         />
+      )}
+
+      {/* Upgrade CTA for subscribers */}
+      {isSubscribed && !isAdmin && (
+        <section className="container pb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            className="relative rounded-2xl border border-primary/30 p-5 overflow-hidden bg-card flex items-center gap-4"
+          >
+            <div className="absolute inset-0 bg-gradient-to-l from-primary/10 via-transparent to-accent/5" />
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shrink-0 shadow-lg relative">
+              <ArrowUpCircle className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div className="relative flex-1 min-w-0">
+              <h3 className="font-heading text-sm font-bold text-foreground mb-0.5">ترقية باقتك</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">أضف دولاً جديدة أو انتقل لباقة أعلى للاستفادة من مزايا أكثر</p>
+            </div>
+            <Link
+              to="/subscribe"
+              className="relative inline-flex items-center gap-1.5 gradient-primary text-primary-foreground font-bold text-xs px-5 py-2.5 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 shrink-0"
+            >
+              ترقية
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </Link>
+          </motion.div>
+        </section>
       )}
 
       <RecentAlerts />
