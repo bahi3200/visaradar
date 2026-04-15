@@ -257,8 +257,14 @@ export default function NotificationSettings() {
               </div>
             </div>
 
-            {/* Limit indicator */}
-            {!isAdmin && (
+            {isAdmin ? (
+              <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30">
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                <p className="text-xs text-primary font-medium">
+                  كمسؤول، أنت تراقب جميع الدول تلقائياً ({AVAILABLE_COUNTRIES.length} دول)
+                </p>
+              </div>
+            ) : (
               <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
                 <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
@@ -271,11 +277,11 @@ export default function NotificationSettings() {
             <div className="grid grid-cols-2 gap-2">
               {AVAILABLE_COUNTRIES.map((country) => {
                 const isSelected = selectedCountries.includes(country.code);
-                const isDisabled = !isSelected && selectedCountries.length >= maxCountries;
+                const isDisabled = isAdmin || (!isSelected && selectedCountries.length >= maxCountries);
                 return (
                   <button
                     key={country.code}
-                    onClick={() => toggleCountry(country.code)}
+                    onClick={() => !isAdmin && toggleCountry(country.code)}
                     disabled={isDisabled}
                     className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-medium transition-all ${
                       isSelected
@@ -292,7 +298,7 @@ export default function NotificationSettings() {
                         ✓
                       </Badge>
                     )}
-                    {isDisabled && (
+                    {!isSelected && !isAdmin && isDisabled && (
                       <Lock className="mr-auto w-3 h-3 text-muted-foreground/40" />
                     )}
                   </button>
