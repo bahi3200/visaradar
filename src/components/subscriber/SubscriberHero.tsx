@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Crown, Calendar, Clock, User, Shield } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import europeVideo from "@/assets/cities/europe-hero.mp4.asset.json";
+import { useRef } from "react";
 
 interface Props {
   fullName: string | null;
