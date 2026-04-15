@@ -3,23 +3,32 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ClipboardList, Users, Briefcase, Bell, Mail, LogOut,
-  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift
+  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 
-const navItems = [
+type NavItem = {
+  path: string;
+  label: string;
+  icon: any;
+  adminOnly?: boolean; // hidden from moderators
+};
+
+const navItems: NavItem[] = [
   { path: "/dashboard", label: "نظرة عامة", icon: LayoutDashboard },
   { path: "/dashboard/requests", label: "طلبات الاشتراك", icon: ClipboardList },
-  { path: "/dashboard/users", label: "المستخدمين", icon: Users },
+  { path: "/dashboard/users", label: "المستخدمين", icon: Users, adminOnly: true },
   { path: "/dashboard/jobs", label: "إدارة الوظائف", icon: Briefcase },
   { path: "/dashboard/notifications", label: "الإشعارات", icon: Bell },
-  { path: "/dashboard/email-log", label: "سجل البريد", icon: Mail },
+  { path: "/dashboard/email-log", label: "سجل البريد", icon: Mail, adminOnly: true },
   { path: "/dashboard/contact-messages", label: "رسائل التواصل", icon: MessageCircle },
-  { path: "/dashboard/payment-settings", label: "إعدادات الدفع", icon: CreditCard },
+  { path: "/dashboard/payment-settings", label: "إعدادات الدفع", icon: CreditCard, adminOnly: true },
   { path: "/dashboard/visa-monitor", label: "مراقبة التأشيرات", icon: Activity },
   { path: "/dashboard/reviews", label: "المراجعات", icon: Star },
-  { path: "/dashboard/referrals", label: "الإحالات", icon: Gift },
+  { path: "/dashboard/referrals", label: "الإحالات", icon: Gift, adminOnly: true },
+  { path: "/dashboard/site-settings", label: "إعدادات الموقع", icon: Settings, adminOnly: true },
 ];
 
 interface AdminLayoutProps {
@@ -32,6 +41,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -41,6 +51,9 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
   };
 
   const fullName = user?.user_metadata?.full_name || user?.email || "مسؤول";
+
+  // Filter nav items based on role
+  const visibleNav = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -52,14 +65,16 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           </div>
           <div>
             <p className="font-heading font-bold text-sm text-foreground">VisaRadar</p>
-            <p className="text-[10px] text-muted-foreground">لوحة الإدارة</p>
+            <p className="text-[10px] text-muted-foreground">
+              {isAdmin ? "لوحة الإدارة" : "لوحة المشرف"}
+            </p>
           </div>
         </Link>
       </div>
 
       {/* Nav Items */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleNav.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link

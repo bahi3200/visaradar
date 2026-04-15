@@ -2,9 +2,14 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
-export default function AdminRoute({ children }: { children: React.ReactNode }) {
+interface Props {
+  children: React.ReactNode;
+  adminOnly?: boolean; // If true, only admin (not moderator) can access
+}
+
+export default function AdminRoute({ children, adminOnly = false }: Props) {
   const { user, loading } = useAuth();
-  const { isAdmin, isLoading: roleLoading } = useIsAdmin();
+  const { isAdmin, isPrivileged, isLoading: roleLoading } = useIsAdmin();
 
   if (loading || roleLoading) {
     return (
@@ -18,7 +23,11 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (!isAdmin) {
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!adminOnly && !isPrivileged) {
     return <Navigate to="/" replace />;
   }
 
