@@ -267,6 +267,26 @@ export default function SubscribeRequestPage() {
               : "اختر نوع الخدمة والباقة وأرفق وصل الدفع CCP للمراجعة"}
           </p>
 
+          {/* Current subscription info for renewals */}
+          {isRenewal && activeSubscription && (
+            <div className="gradient-card rounded-2xl border border-yellow-500/20 p-5 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="w-4 h-4 text-yellow-400" />
+                <p className="text-xs font-bold text-yellow-400">تجديد الاشتراك</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-foreground">{activeSubscription.packages?.name_ar}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {daysLeft === 0 ? "ينتهي اليوم" : daysLeft <= 0 ? "منتهي" : `متبقي ${daysLeft} ${daysLeft === 1 ? "يوم" : daysLeft === 2 ? "يومان" : daysLeft <= 10 ? "أيام" : "يوم"}`}
+                    {" • "}ينتهي {new Date(activeSubscription.expires_at).toLocaleDateString("ar")}
+                  </p>
+                </div>
+                <span className="font-bold text-foreground">{currentPrice} د.ج</span>
+              </div>
+            </div>
+          )}
+
           {/* Current subscription info for upgrades */}
           {isUpgrade && activeSubscription && (
             <div className="gradient-card rounded-2xl border border-accent/20 p-5 mb-6">
