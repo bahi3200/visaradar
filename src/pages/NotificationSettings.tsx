@@ -152,6 +152,26 @@ export default function NotificationSettings() {
     }
   };
 
+  const playTestSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+      toast.success("تم تشغيل صوت الاختبار");
+    } catch {
+      toast.error("تعذّر تشغيل الصوت");
+    }
+  };
+
   const requestPermission = async () => {
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
