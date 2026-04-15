@@ -397,12 +397,13 @@ export default function SubscribeRequestPage() {
                   return (
                     <button
                       key={pkg.id}
-                      onClick={() => { setSelectedPackageId(pkg.id); setCountries([]); }}
+                      disabled={isCurrentPkg && !isUpgrade && !isRenewal}
+                      onClick={() => { if (isCurrentPkg && !isUpgrade && !isRenewal) return; setSelectedPackageId(pkg.id); setCountries([]); }}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
-                        isSelectedCurrentPkg
+                        isCurrentPkg && !isUpgrade && !isRenewal
+                          ? "border-muted bg-muted/30 opacity-60 cursor-not-allowed"
+                          : isSelectedCurrentPkg
                           ? "border-accent bg-accent/5 ring-1 ring-accent/30"
-                          : isCurrentPkg && !isUpgrade && !isRenewal
-                          ? "border-accent/30 bg-accent/5 hover:border-accent/50"
                           : selectedPackageId === pkg.id
                           ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                           : "border-border/50 hover:border-primary/30"
@@ -413,7 +414,7 @@ export default function SubscribeRequestPage() {
                         <div>
                           <p className="font-bold text-foreground flex items-center gap-2">
                             {pkg.name_ar}
-                            {isCurrentPkg && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">الحالية</span>}
+                            {isCurrentPkg && !isUpgrade && !isRenewal && <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">✓ مشترك</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {pkg.duration_months} أشهر • {pkg.max_countries > 1 ? `حتى ${pkg.max_countries} دول` : "دولة واحدة"}
