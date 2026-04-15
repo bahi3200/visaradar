@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ClipboardList, Users, Briefcase, Bell, Mail, LogOut,
-  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings
+  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings, AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
