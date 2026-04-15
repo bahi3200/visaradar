@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const countryOptions = [
   { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global", url: "https://visa.vfsglobal.com/dza/ar/ita/" },
@@ -25,6 +26,7 @@ const serviceTypes: { value: ServiceType; label: string; icon: React.ReactNode; 
 ];
 
 export default function PricingPage() {
+  const { user } = useAuth();
   const [serviceType, setServiceType] = useState<ServiceType>("both");
   const [selectedCountry, setSelectedCountry] = useState<string>("IT");
   const [selectedGoldenCountries, setSelectedGoldenCountries] = useState<string[]>(["IT"]);
@@ -42,6 +44,24 @@ export default function PricingPage() {
     },
   });
 
+  const { data: activeSubscription } = useQuery({
+    queryKey: ["pricing-active-sub", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("package_id, expires_at, packages(price, name_ar)")
+        .eq("user_id", user!.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const toggleGoldenCountry = (code: string) => {
     setSelectedGoldenCountries((prev) => {
       if (prev.includes(code)) return prev.filter((c) => c !== code);
@@ -54,8 +74,61 @@ export default function PricingPage() {
   };
 
   const navigate = useNavigate();
-  const handleSubscribe = (serviceT?: ServiceType) => {
-    navigate(`/subscribe?service=${serviceT || serviceType}`);
+  const hasActiveSubscription = !!activeSubscription && new Date(activeSubscription.expires_at) > new Date();
+  const daysLeft = hasActiveSubscription
+    ? Math.max(0, Math.ceil((new Date(activeSubscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 999;
+  const currentPackagePrice = activeSubscription?.packages?.price || 0;
+
+  const getPackageAction = (pkg: any) => {
+    const isCurrentPackage = hasActiveSubscription && activeSubscription?.package_id === pkg.id;
+    const isUpgradeAvailable = hasActiveSubscription && !isCurrentPackage && (pkg.price || 0) > currentPackagePrice;
+    const canRenew = isCurrentPackage && daysLeft <= 15;
+
+    if (!hasActiveSubscription) {
+      return { label: "اشترك الآن", disabled: false, mode: "subscribe" as const };
+    }
+
+    if (canRenew) {
+      return { label: "جدد الاشتراك", disabled: false, mode: "renew" as const };
+    }
+
+    if (isCurrentPackage) {
+      return { label: "مشترك حالياً", disabled: true, mode: "current" as const };
+    }
+
+    if (isUpgradeAvailable) {
+      return { label: "ترقية الآن", disabled: false, mode: "upgrade" as const };
+    }
+
+    return { label: "غير متاح حالياً", disabled: true, mode: "blocked" as const };
+  };
+
+  const handleSubscribe = (pkgId: string, serviceT?: ServiceType) => {
+    const selectedService = serviceT || serviceType;
+    const pkg = packages?.find((item) => item.id === pkgId);
+    if (!pkg) return;
+
+    const action = getPackageAction(pkg);
+
+    if (action.disabled) {
+      if (action.mode === "current") {
+        toast.error("أنت مشترك بالفعل في هذه الباقة");
+      }
+      return;
+    }
+
+    if (action.mode === "renew") {
+      navigate(`/subscribe?renew=true&package=${pkgId}&service=${selectedService}`);
+      return;
+    }
+
+    if (action.mode === "upgrade") {
+      navigate(`/subscribe?upgrade=true&package=${pkgId}&service=${selectedService}`);
+      return;
+    }
+
+    navigate(`/subscribe?package=${pkgId}&service=${selectedService}`);
   };
 
   if (isLoading) {
@@ -161,6 +234,7 @@ export default function PricingPage() {
         <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {regularPackages.map((pkg, i) => {
             const features = getFeatures(pkg, serviceType);
+            const action = getPackageAction(pkg);
             return (
               <motion.div
                 key={pkg.id}
@@ -212,15 +286,19 @@ export default function PricingPage() {
                 </ul>
 
                 <button
-                  onClick={() => handleSubscribe()}
+                  type="button"
+                  disabled={action.disabled}
+                  onClick={() => handleSubscribe(pkg.id)}
                   className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                    i === 1
+                    action.disabled
+                      ? "border border-border/50 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-70"
+                      : i === 1
                       ? "gradient-primary text-primary-foreground hover:opacity-90"
                       : "border border-border/60 text-foreground hover:bg-secondary"
                   }`}
                 >
                   <Send className="w-4 h-4" />
-                  اشترك الآن
+                  {action.label}
                 </button>
               </motion.div>
             );
@@ -244,6 +322,9 @@ export default function PricingPage() {
       {/* Golden Package */}
       {goldenPackage && (
         <section className="container pb-16">
+          {(() => {
+            const action = getPackageAction(goldenPackage);
+            return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -310,13 +391,21 @@ export default function PricingPage() {
             </ul>
 
             <button
-              onClick={() => handleSubscribe("both")}
-              className="w-full py-3.5 rounded-xl font-bold gradient-accent text-accent-foreground hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              type="button"
+              disabled={action.disabled}
+              onClick={() => handleSubscribe(goldenPackage.id, "both")}
+              className={`w-full py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                action.disabled
+                  ? "border border-border/50 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-70"
+                  : "gradient-accent text-accent-foreground hover:opacity-90"
+              }`}
             >
               <Crown className="w-4 h-4" />
-              اشترك في الباقة الذهبية
+              {action.label}
             </button>
           </motion.div>
+            );
+          })()}
 
           {/* Upgrade path */}
           <div className="max-w-2xl mx-auto mt-8">
