@@ -690,6 +690,7 @@ export type Database = {
           account_holder: string
           ccp_key: string
           ccp_number: string
+          rip_number: string
         }[]
       }
       has_role: {
