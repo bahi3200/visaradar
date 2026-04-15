@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -55,7 +56,8 @@ export default function JobDetailsPage() {
     enabled: !!user,
   });
 
-  const hasAccess = !!subscription && (subscription.service_type === 'jobs' || subscription.service_type === 'both');
+  const { isPrivileged } = useIsAdmin();
+  const hasAccess = isPrivileged || (!!subscription && (subscription.service_type === 'jobs' || subscription.service_type === 'both'));
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
