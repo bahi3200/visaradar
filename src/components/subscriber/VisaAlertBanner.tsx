@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, X, Zap } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
 
 const VISA_BOOKING_URLS: Record<string, { url: string; provider: string }> = {
   IT: { url: "https://visa.vfsglobal.com/dza/ar/ita/", provider: "VFS Global" },
@@ -25,7 +25,7 @@ interface Props {
   subscribedCountries: string[];
 }
 
-export default function VisaAlertBanner({ subscribedCountries }: Props) {
+const VisaAlertBanner = forwardRef<HTMLElement, Props>(function VisaAlertBanner({ subscribedCountries }, ref) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]);
   const playedRef = useRef(false);
@@ -182,4 +182,6 @@ export default function VisaAlertBanner({ subscribedCountries }: Props) {
       </AnimatePresence>
     </section>
   );
-}
+});
+
+export default VisaAlertBanner;
