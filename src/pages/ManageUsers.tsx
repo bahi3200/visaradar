@@ -393,19 +393,21 @@ export default function ManageUsersPage() {
                         <Smartphone className="w-3 h-3" />
                         <span>{user.active_devices}/2</span>
                       </div>
-                      {user.subscription ? (
-                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border ${
-                          user.subscription.is_golden
-                            ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                            : "bg-green-500/10 text-green-400 border-green-500/20"
-                        }`}>
-                          <Crown className="w-3 h-3" />
-                          <span>{user.subscription.package_name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded-lg bg-secondary/30 text-muted-foreground">
-                          بدون اشتراك
-                        </span>
+                      {!user.roles.includes("admin") && !user.roles.includes("moderator") && (
+                        user.subscription ? (
+                          <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border ${
+                            user.subscription.is_golden
+                              ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                              : "bg-green-500/10 text-green-400 border-green-500/20"
+                          }`}>
+                            <Crown className="w-3 h-3" />
+                            <span>{user.subscription.package_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-lg bg-secondary/30 text-muted-foreground">
+                            بدون اشتراك
+                          </span>
+                        )
                       )}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
@@ -469,7 +471,7 @@ export default function ManageUsersPage() {
                     </div>
                   </div>
 
-                  {user.subscription && (
+                  {user.subscription && !user.roles.includes("admin") && !user.roles.includes("moderator") && (
                     <div className="mt-3 pt-3 border-t border-border/30 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span>الدول: {user.subscription.countries.join("، ") || "—"}</span>
                       <span>•</span>
