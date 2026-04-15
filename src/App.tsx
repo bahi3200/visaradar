@@ -22,6 +22,7 @@ import AdminRequests from "./pages/AdminRequests";
 import ManageUsers from "./pages/ManageUsers";
 import MyRequests from "./pages/MyRequests";
 import EmailLog from "./pages/EmailLog";
+import ErrorLog from "./pages/ErrorLog";
 import MyDevices from "./pages/MyDevices";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
