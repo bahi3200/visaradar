@@ -41,7 +41,34 @@ export default function NotificationsBell() {
     }
   }, [user]);
 
-  // Realtime subscriptions
+  // Fetch user's subscribed countries
+  const { data: subscribedCountries } = useQuery({
+    queryKey: ["my-subscription-countries", user?.id],
+    enabled: !!user,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<string[]> => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("subscriptions")
+        .select("countries, service_type")
+        .eq("user_id", user.id)
+        .eq("status", "active");
+      
+      if (!data || data.length === 0) return [];
+      
+      // Collect all countries from active subscriptions that include visa service
+      const countries = new Set<string>();
+      for (const sub of data) {
+        if (sub.service_type === "visa" || sub.service_type === "both") {
+          for (const c of sub.countries || []) {
+            countries.add(c);
+          }
+        }
+      }
+      return Array.from(countries);
+    },
+  });
+
   // Request browser notification permission
   useEffect(() => {
     if (user && "Notification" in window && Notification.permission === "default") {
@@ -49,6 +76,7 @@ export default function NotificationsBell() {
     }
   }, [user]);
 
+  // Realtime subscriptions
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel(channelInstanceRef.current);
@@ -56,9 +84,15 @@ export default function NotificationsBell() {
     channel
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "visa_notifications" },
         (payload: any) => {
+          const countryCode = payload.new?.country_code;
+          
+          // Only notify if user is subscribed to this country (or has no subscription yet — show all)
+          if (subscribedCountries && subscribedCountries.length > 0 && !subscribedCountries.includes(countryCode)) {
+            return;
+          }
+
           queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
           
-          const countryCode = payload.new?.country_code;
           const countryName = COUNTRY_FLAGS[countryCode] || countryCode;
           toast.success(`🚨 مواعيد مفتوحة! ${countryName}`, {
             description: payload.new?.message_ar || "تم اكتشاف فتح مواعيد تأشيرة",
@@ -86,21 +120,28 @@ export default function NotificationsBell() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient]);
+  }, [user?.id, queryClient, subscribedCountries]);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["user-notifications", user?.id, lastReadAt],
+    queryKey: ["user-notifications", user?.id, lastReadAt, subscribedCountries],
     enabled: !!user,
     staleTime: 3 * 60_000,
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 
+      // Build visa query — filter by subscribed countries if user has an active visa subscription
+      let visaQuery = supabase
+        .from("visa_notifications")
+        .select("id, country_code, message_ar, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (subscribedCountries && subscribedCountries.length > 0) {
+        visaQuery = visaQuery.in("country_code", subscribedCountries);
+      }
+
       const [visaRes, requestsRes] = await Promise.all([
-        supabase
-          .from("visa_notifications")
-          .select("id, country_code, message_ar, created_at")
-          .order("created_at", { ascending: false })
-          .limit(10),
+        visaQuery,
         supabase
           .from("subscription_requests")
           .select("id, status, updated_at, packages:package_id(name_ar)")
@@ -114,10 +155,11 @@ export default function NotificationsBell() {
 
       if (visaRes.data) {
         for (const v of visaRes.data) {
+          const countryName = COUNTRY_FLAGS[v.country_code] || v.country_code;
           items.push({
             id: `visa-${v.id}`,
             type: "visa",
-            title: `🔔 تنبيه فيزا — ${v.country_code}`,
+            title: `🔔 تنبيه فيزا — ${countryName}`,
             description: v.message_ar,
             date: v.created_at,
             isNew: lastReadAt ? v.created_at > lastReadAt : true,
@@ -201,6 +243,11 @@ export default function NotificationsBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border/50">
           <h4 className="text-sm font-semibold">الإشعارات</h4>
+          {subscribedCountries && subscribedCountries.length > 0 && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              تنبيهات: {subscribedCountries.map(c => COUNTRY_FLAGS[c]?.split(" ")[0] || c).join(" ")}
+            </p>
+          )}
         </div>
         <ScrollArea className="max-h-72">
           {notifications.length === 0 ? (
