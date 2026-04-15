@@ -129,16 +129,8 @@ export default function NotificationsBell() {
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!user) return [];
 
-      // Build visa query — filter by subscribed countries if user has an active visa subscription
-      let visaQuery = supabase
-        .from("visa_notifications")
-        .select("id, country_code, message_ar, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (subscribedCountries && subscribedCountries.length > 0) {
-        visaQuery = visaQuery.in("country_code", subscribedCountries);
-      }
+      // Only fetch visa notifications if user has active visa subscription countries
+      const hasVisaSubscription = subscribedCountries && subscribedCountries.length > 0;
 
       const [visaRes, requestsRes] = await Promise.all([
         visaQuery,
