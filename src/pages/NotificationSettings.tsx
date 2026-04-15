@@ -34,7 +34,7 @@ export default function NotificationSettings() {
     queryKey: ["subscription-limits", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const [{ data: sub }, { data: isAdmin }] = await Promise.all([
+      const [{ data: sub }, { data: isAdmin }, { data: isModerator }] = await Promise.all([
         supabase
           .from("subscriptions")
           .select("*, packages(max_countries)")
@@ -46,10 +46,11 @@ export default function NotificationSettings() {
         supabase.rpc("has_role", { _user_id: user!.id, _role: "admin" }),
         supabase.rpc("has_role", { _user_id: user!.id, _role: "moderator" }),
       ]);
+      const isPrivileged = !!isAdmin || !!isModerator;
       return {
-        maxCountries: isAdmin ? 999 : (sub?.packages as any)?.max_countries ?? 1,
+        maxCountries: isPrivileged ? 999 : (sub?.packages as any)?.max_countries ?? 1,
         subscriptionCountries: sub?.countries ?? [],
-        isAdmin: !!isAdmin,
+        isAdmin: isPrivileged,
         hasSubscription: !!sub,
       };
     },
