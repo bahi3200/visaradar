@@ -77,7 +77,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin }: Prop
       )}
 
       <RecentAlerts />
-      <QuickLinks />
+      <QuickLinks isAdmin={isAdmin} />
       <CityGallery />
       <VisaTips />
     </Layout>

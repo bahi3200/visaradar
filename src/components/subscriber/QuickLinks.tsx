@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import { Bell, Briefcase, FileText, Smartphone, CreditCard, Settings } from "lucide-react";
+import { Bell, Briefcase, FileText, Smartphone, CreditCard, Settings, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-const links = [
+const userLinks = [
   { icon: Bell, label: "تنبيهات التأشيرات", to: "/notification-settings", color: "text-accent", bg: "bg-accent/10" },
   { icon: Briefcase, label: "عقود العمل", to: "/jobs", color: "text-primary", bg: "bg-primary/10" },
   { icon: FileText, label: "طلباتي", to: "/my-requests", color: "text-orange-500", bg: "bg-orange-500/10" },
@@ -12,9 +12,16 @@ const links = [
   { icon: Settings, label: "الملف الشخصي", to: "/profile", color: "text-blue-400", bg: "bg-blue-400/10" },
 ];
 
-export default function QuickLinks() {
+const adminLink = { icon: LayoutDashboard, label: "لوحة التحكم", to: "/dashboard", color: "text-red-500", bg: "bg-red-500/10" };
+
+interface Props {
+  isAdmin?: boolean;
+}
+
+export default function QuickLinks({ isAdmin }: Props) {
   const reduced = useReducedMotion();
   const noMotion = { opacity: 1, y: 0, scale: 1 };
+  const links = isAdmin ? [adminLink, ...userLinks] : userLinks;
 
   return (
     <section className="container py-6">
