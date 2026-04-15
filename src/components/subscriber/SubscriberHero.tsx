@@ -46,7 +46,10 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
 
-      <div className="absolute inset-0 flex items-end">
+      <motion.div
+        className="absolute inset-0 flex items-end"
+        style={reduced ? {} : { opacity: contentOpacity, y: contentY }}
+      >
         <div className="container pb-8">
           <motion.div
             initial={reduced ? noMotion : { opacity: 0, y: 24 }}
