@@ -3,6 +3,7 @@ import ReferralSection from "@/components/referral/ReferralSection";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2 } from "lucide-react";
@@ -14,6 +15,15 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("has_role", { _user_id: user!.id, _role: "admin" });
+      return !!data;
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -220,8 +230,8 @@ export default function ProfilePage() {
             حفظ التغييرات
           </Button>
 
-          {/* Referral Section */}
-          <ReferralSection />
+          {/* Referral Section - hidden for admins */}
+          {!isAdmin && <ReferralSection />}
         </motion.div>
       </div>
     </Layout>
