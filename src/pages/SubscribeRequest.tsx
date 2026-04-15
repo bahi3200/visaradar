@@ -390,14 +390,16 @@ export default function SubscribeRequestPage() {
                 }).map((pkg) => {
                   const upgradeDiff = isUpgrade && activeSubscription ? Math.max(0, (pkg.price || 0) - currentPrice) : null;
                   const isCurrentPkg = activeSubscription?.package_id === pkg.id;
+                  const isSelectedCurrentPkg = isCurrentPkg && selectedPackageId === pkg.id && !isUpgrade && !isRenewal;
                   return (
                     <button
                       key={pkg.id}
-                      onClick={() => { if (!isCurrentPkg) { setSelectedPackageId(pkg.id); setCountries([]); } }}
-                      disabled={isCurrentPkg}
+                      onClick={() => { setSelectedPackageId(pkg.id); setCountries([]); }}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
-                        isCurrentPkg
-                          ? "border-border/30 bg-muted/20 opacity-60 cursor-not-allowed"
+                        isSelectedCurrentPkg
+                          ? "border-accent bg-accent/5 ring-1 ring-accent/30"
+                          : isCurrentPkg && !isUpgrade && !isRenewal
+                          ? "border-accent/30 bg-accent/5 hover:border-accent/50"
                           : selectedPackageId === pkg.id
                           ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                           : "border-border/50 hover:border-primary/30"
