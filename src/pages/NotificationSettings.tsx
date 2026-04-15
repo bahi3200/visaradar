@@ -50,7 +50,9 @@ export default function NotificationSettings() {
       return {
         maxCountries: isPrivileged ? 999 : (sub?.packages as any)?.max_countries ?? 1,
         subscriptionCountries: sub?.countries ?? [],
-        isAdmin: isPrivileged,
+        isAdmin: !!isAdmin,
+        isModerator: !!isModerator,
+        isPrivileged,
         hasSubscription: !!sub,
       };
     },
