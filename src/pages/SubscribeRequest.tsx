@@ -400,10 +400,10 @@ export default function SubscribeRequestPage() {
                       disabled={isCurrentPkg && !isUpgrade && !isRenewal}
                       onClick={() => { if (isCurrentPkg && !isUpgrade && !isRenewal) return; setSelectedPackageId(pkg.id); setCountries([]); }}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
-                        isSelectedCurrentPkg
+                        isCurrentPkg && !isUpgrade && !isRenewal
+                          ? "border-muted bg-muted/30 opacity-60 cursor-not-allowed"
+                          : isSelectedCurrentPkg
                           ? "border-accent bg-accent/5 ring-1 ring-accent/30"
-                          : isCurrentPkg && !isUpgrade && !isRenewal
-                          ? "border-accent/30 bg-accent/5 hover:border-accent/50"
                           : selectedPackageId === pkg.id
                           ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                           : "border-border/50 hover:border-primary/30"
