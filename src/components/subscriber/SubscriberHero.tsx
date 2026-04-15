@@ -25,6 +25,8 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
 
   const videoY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const videoScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.2]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
+  const contentY = useTransform(scrollYProgress, [0, 0.4], [0, -30]);
 
   const badgeLabel = isAdmin ? "مسؤول" : isSubscribed ? (packageName || "مشترك") : "عضو مسجل";
   const BadgeIcon = isAdmin ? Shield : isSubscribed ? Crown : User;
@@ -44,7 +46,10 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
 
-      <div className="absolute inset-0 flex items-end">
+      <motion.div
+        className="absolute inset-0 flex items-end"
+        style={reduced ? {} : { opacity: contentOpacity, y: contentY }}
+      >
         <div className="container pb-8">
           <motion.div
             initial={reduced ? noMotion : { opacity: 0, y: 24 }}
@@ -106,7 +111,7 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
             </motion.div>
           )}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
