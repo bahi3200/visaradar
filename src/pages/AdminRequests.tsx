@@ -142,7 +142,7 @@ export default function AdminRequestsPage() {
           const expiresAt = new Date();
           expiresAt.setMonth(expiresAt.getMonth() + months);
 
-          await supabase.from('subscriptions').insert({
+          const { error: subError } = await supabase.from('subscriptions').insert({
             user_id: request.user_id,
             package_id: request.package_id,
             countries: request.countries,
@@ -151,8 +151,20 @@ export default function AdminRequestsPage() {
             expires_at: expiresAt.toISOString(),
           });
 
-          if (isUpgradeRequest) {
-            toast.info(`تمت ترقية اشتراك ${request.full_name} — الاشتراك القديم يبقى نشطاً`);
+          if (subError) {
+            console.error('فشل إنشاء الاشتراك:', subError);
+            // Log the error to email_notifications as an error record for admin visibility
+            await supabase.from('email_notifications').insert({
+              recipient_email: 'admin@system',
+              subject: `⚠️ فشل إنشاء اشتراك - ${request.full_name}`,
+              html_body: `<p>فشل إنشاء الاشتراك للمستخدم <b>${request.full_name}</b> (${request.user_id})</p><p>الطلب: ${id}</p><p>الباقة: ${request.packages?.name_ar}</p><p>الخطأ: ${subError.message}</p><p>التفاصيل: ${JSON.stringify(subError)}</p>`,
+              status: 'error',
+            });
+            toast.error(`تم قبول الطلب لكن فشل إنشاء الاشتراك: ${subError.message}`);
+          } else {
+            if (isUpgradeRequest) {
+              toast.info(`تمت ترقية اشتراك ${request.full_name} — الاشتراك القديم يبقى نشطاً`);
+            }
           }
         }
       }
