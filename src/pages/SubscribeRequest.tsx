@@ -192,7 +192,7 @@ export default function SubscribeRequestPage() {
           telegram_chat_id: telegramChatId,
           service_type: serviceType,
           receipt_url: publicUrl,
-          admin_notes: isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
+          admin_notes: isRenewal ? `تجديد اشتراك — الباقة: "${selectedPkg?.name_ar}" — ينتهي الاشتراك الحالي: ${activeSubscription ? new Date(activeSubscription.expires_at).toLocaleDateString("ar") : "—"}` : isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
         } as any)
         .select()
         .single();
@@ -257,10 +257,12 @@ export default function SubscribeRequestPage() {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-heading text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-            {isUpgrade ? <><ArrowUpCircle className="w-6 h-6 text-accent" /> ترقية الاشتراك</> : "طلب اشتراك"}
+            {isRenewal ? <><RefreshCw className="w-6 h-6 text-accent" /> تجديد الاشتراك</> : isUpgrade ? <><ArrowUpCircle className="w-6 h-6 text-accent" /> ترقية الاشتراك</> : "طلب اشتراك"}
           </h1>
           <p className="text-sm text-muted-foreground mb-8">
-            {isUpgrade
+            {isRenewal
+              ? "جدّد اشتراكك في نفس الباقة وأرفق وصل الدفع"
+              : isUpgrade
               ? "اختر الباقة الجديدة وأرفق وصل دفع الفارق"
               : "اختر نوع الخدمة والباقة وأرفق وصل الدفع CCP للمراجعة"}
           </p>
