@@ -12,6 +12,7 @@ import HowItWorksSection from "@/components/home/HowItWorksSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import SubscriberHome from "@/pages/SubscriberHome";
 
 const visaCountries = [
   { flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
