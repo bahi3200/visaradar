@@ -19,20 +19,34 @@ const VISA_SOURCES: Record<string, { name: string; nameAr: string; flag: string;
     name: 'France',
     nameAr: 'فرنسا',
     flag: '🇫🇷',
-    provider: 'TLScontact',
-    officialUrl: 'https://visas-fr.tlscontact.com/',
+    provider: 'Capago (TLScontact)',
+    officialUrl: 'https://fr.capago.net/rendez-vous/dz/',
   },
   ES: {
     name: 'Spain',
     nameAr: 'إسبانيا',
     flag: '🇪🇸',
-    provider: 'BLS International',
-    officialUrl: 'https://www.blsspainvisa.com/',
+    provider: 'BLS International Algeria',
+    officialUrl: 'https://algeria.blsspainvisa.com/',
+  },
+  DE: {
+    name: 'Germany',
+    nameAr: 'ألمانيا',
+    flag: '🇩🇪',
+    provider: 'VFS Global',
+    officialUrl: 'https://visa.vfsglobal.com/dza/ar/deu/',
+  },
+  GR: {
+    name: 'Greece',
+    nameAr: 'اليونان',
+    flag: '🇬🇷',
+    provider: 'VFS Global',
+    officialUrl: 'https://visa.vfsglobal.com/dza/ar/grc/',
   },
 };
 
 const BodySchema = z.object({
-  countryCode: z.enum(['IT', 'FR', 'ES']),
+  countryCode: z.enum(['IT', 'FR', 'ES', 'DE', 'GR']),
   messageAr: z.string().min(1).max(2000),
 });
 
