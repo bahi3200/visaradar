@@ -25,6 +25,8 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
 
   const videoY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const videoScale = useTransform(scrollYProgress, [0, 1], [1.05, 1.2]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
+  const contentY = useTransform(scrollYProgress, [0, 0.4], [0, -30]);
 
   const badgeLabel = isAdmin ? "مسؤول" : isSubscribed ? (packageName || "مشترك") : "عضو مسجل";
   const BadgeIcon = isAdmin ? Shield : isSubscribed ? Crown : User;
