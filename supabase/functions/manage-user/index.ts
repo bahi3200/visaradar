@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -34,16 +33,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
-    const { data: roleData } = await anonClient
+    // Check caller role
+    const { data: callerRoles } = await anonClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      .eq("user_id", caller.id);
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+    const roles = (callerRoles || []).map((r: any) => r.role);
+    const isAdmin = roles.includes("admin");
+
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Forbidden - Admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -59,7 +59,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Prevent self-action
     if (user_id === caller.id) {
       return new Response(JSON.stringify({ error: "Cannot modify your own account" }), {
         status: 400,
@@ -70,16 +69,12 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     if (action === "delete") {
-      // Delete user's related data first
       await adminClient.from("user_devices").delete().eq("user_id", user_id);
       await adminClient.from("subscriptions").delete().eq("user_id", user_id);
       await adminClient.from("subscription_requests").delete().eq("user_id", user_id);
       await adminClient.from("user_roles").delete().eq("user_id", user_id);
-
-      // Delete the auth user
       const { error } = await adminClient.auth.admin.deleteUser(user_id);
       if (error) throw error;
-
       return new Response(JSON.stringify({ success: true, message: "User deleted" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -87,10 +82,9 @@ Deno.serve(async (req) => {
 
     if (action === "disable") {
       const { error } = await adminClient.auth.admin.updateUserById(user_id, {
-        ban_duration: "876000h", // ~100 years
+        ban_duration: "876000h",
       });
       if (error) throw error;
-
       return new Response(JSON.stringify({ success: true, message: "User disabled" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -101,8 +95,31 @@ Deno.serve(async (req) => {
         ban_duration: "none",
       });
       if (error) throw error;
-
       return new Response(JSON.stringify({ success: true, message: "User enabled" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Assign moderator role
+    if (action === "assign_moderator") {
+      const { error } = await adminClient
+        .from("user_roles")
+        .insert({ user_id, role: "moderator" });
+      if (error && error.code !== "23505") throw error; // ignore duplicate
+      return new Response(JSON.stringify({ success: true, message: "Moderator role assigned" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Remove moderator role
+    if (action === "remove_moderator") {
+      const { error } = await adminClient
+        .from("user_roles")
+        .delete()
+        .eq("user_id", user_id)
+        .eq("role", "moderator");
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, message: "Moderator role removed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
