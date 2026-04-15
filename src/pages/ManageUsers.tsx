@@ -286,6 +286,7 @@ export default function ManageUsersPage() {
               <div className="flex flex-wrap gap-2">
                 <FilterChip label="الكل" active={filters.role === "all"} onClick={() => setFilters(f => ({ ...f, role: "all" }))} />
                 <FilterChip label="مسؤول" active={filters.role === "admin"} onClick={() => setFilters(f => ({ ...f, role: "admin" }))} />
+                <FilterChip label="مشرف" active={filters.role === "moderator"} onClick={() => setFilters(f => ({ ...f, role: "moderator" as any }))} />
                 <FilterChip label="مستخدم عادي" active={filters.role === "user"} onClick={() => setFilters(f => ({ ...f, role: "user" }))} />
               </div>
             </div>
@@ -366,6 +367,11 @@ export default function ManageUsersPage() {
                           {user.roles.includes("admin") && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium">
                               مسؤول
+                            </span>
+                          )}
+                          {user.roles.includes("moderator") && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                              مشرف
                             </span>
                           )}
                           {banned && (
