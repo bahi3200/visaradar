@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -30,6 +31,7 @@ type NotificationItem = {
 export default function NotificationsBell() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isPrivileged } = useIsAdmin();
   const [open, setOpen] = useState(false);
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const channelInstanceRef = useRef(`notifications-${crypto.randomUUID()}`);
