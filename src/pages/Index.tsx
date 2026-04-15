@@ -25,8 +25,8 @@ export default function HomePage() {
   const { user } = useAuth();
   const reduced = useReducedMotion();
 
-  const { data: subscription, isLoading: subLoading } = useQuery({
-    queryKey: ["my-subscription", user?.id],
+  const { data: subscriptions, isLoading: subLoading } = useQuery({
+    queryKey: ["my-subscriptions-all", user?.id],
     queryFn: async () => {
       if (!user) return null;
       const { data } = await supabase
@@ -34,11 +34,22 @@ export default function HomePage() {
         .select("*, packages(*)")
         .eq("user_id", user.id)
         .eq("status", "active")
-        .maybeSingle();
-      return data;
+        .order("expires_at", { ascending: false });
+      return data && data.length > 0 ? data : null;
     },
     enabled: !!user,
   });
+
+  // Merge all active subscriptions into a single view
+  const mergedSubscription = subscriptions ? {
+    expires_at: subscriptions.reduce((latest, s) => s.expires_at > latest ? s.expires_at : latest, subscriptions[0].expires_at),
+    starts_at: subscriptions[0].starts_at,
+    countries: [...new Set(subscriptions.flatMap((s: any) => s.countries || []))],
+    service_type: subscriptions.some((s: any) => s.service_type === 'both') ? 'both' 
+      : (subscriptions.some((s: any) => s.service_type === 'visa') && subscriptions.some((s: any) => s.service_type === 'jobs')) ? 'both'
+      : subscriptions[0].service_type,
+    packages: subscriptions[0].packages,
+  } : null;
 
   const { data: profile } = useQuery({
     queryKey: ["my-profile", user?.id],
