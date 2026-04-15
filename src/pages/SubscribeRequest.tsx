@@ -206,7 +206,7 @@ export default function SubscribeRequestPage() {
         body: { requestId: (request as any).id, receiptUrl: publicUrl },
       }).catch((err) => console.error("AI verification error:", err));
 
-      toast.success(isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
+      toast.success(isRenewal ? "تم إرسال طلب التجديد بنجاح!" : isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       setSelectedPackageId("");
       setCountries([]);
