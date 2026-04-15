@@ -28,11 +28,13 @@ export default function SubscribeRequestPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isUpgrade = searchParams.get("upgrade") === "true";
+  const isRenewal = searchParams.get("renew") === "true";
+  const renewPackageId = searchParams.get("package") || "";
 
   const [serviceType, setServiceType] = useState<ServiceType>(
     (searchParams.get("service") as ServiceType) || "both"
   );
-  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string>(renewPackageId);
   const [countries, setCountries] = useState<string[]>([]);
   // Use stored user data directly - no need to ask again
   const fullName = user?.user_metadata?.full_name || "";
