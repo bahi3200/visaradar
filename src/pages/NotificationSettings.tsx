@@ -227,6 +227,15 @@ export default function NotificationSettings() {
               </div>
               <Switch checked={soundEnabled} onCheckedChange={handleSoundChange} />
             </div>
+            {soundEnabled && (
+              <button
+                onClick={playTestSound}
+                className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" />
+                اختبار الصوت
+              </button>
+            )}
           </motion.div>
 
           {/* Browser notifications */}
