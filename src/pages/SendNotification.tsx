@@ -134,7 +134,9 @@ export default function SendNotificationPage() {
   const handleManualCheck = async () => {
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("monitor-visa-sites");
+      const { data, error } = await supabase.functions.invoke("monitor-visa-sites", {
+        body: { force: true },
+      });
       if (error) throw error;
       toast.success(`تم فحص ${data?.checked?.length || 0} مواقع بنجاح`);
       queryClient.invalidateQueries({ queryKey: ["monitor-checks"] });
