@@ -19,6 +19,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
   GR: "🇬🇷 اليونان",
 };
 
+const VISA_BOOKING_URLS: Record<string, string> = {
+  IT: "https://visa.vfsglobal.com/dza/ar/ita/",
+  FR: "https://fr.capago.net/rendez-vous/dz/",
+  ES: "https://algeria.blsspainvisa.com/",
+  DE: "https://visa.vfsglobal.com/dza/ar/deu/",
+  GR: "https://visa.vfsglobal.com/dza/ar/grc/",
+};
+
 type NotificationItem = {
   id: string;
   type: "visa" | "request";
@@ -105,11 +113,20 @@ export default function NotificationsBell() {
           });
 
           if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`🚨 تنبيه فيزا — ${countryName}`, {
+            const notif = new Notification(`🚨 تنبيه فيزا — ${countryName}`, {
               body: payload.new?.message_ar || "تم اكتشاف فتح مواعيد تأشيرة!",
               icon: "/favicon.ico",
               tag: `visa-${countryCode}`,
+              requireInteraction: true,
             });
+            notif.onclick = () => {
+              window.focus();
+              const bookingUrl = VISA_BOOKING_URLS[countryCode];
+              if (bookingUrl) {
+                window.open(bookingUrl, "_blank");
+              }
+              notif.close();
+            };
           }
         })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "subscription_requests", filter: `user_id=eq.${user.id}` },
