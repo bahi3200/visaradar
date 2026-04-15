@@ -2,9 +2,10 @@ import AdminLayout from "@/components/AdminLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, X, Snowflake, RotateCcw, Eye, AlertTriangle, Shield, ArrowRight, Search,
-  ChevronDown, FileImage, Brain, Monitor, Trash2
+  ChevronDown, FileImage, Brain, Monitor, Trash2, UserCheck, Clock
 } from "lucide-react";
 import { useState } from "react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ const countryNames: Record<string, { flag: string; name: string }> = {
 
 export default function AdminRequestsPage() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useIsAdmin();
+  const isModerator = !isAdmin; // if not admin, must be moderator (AdminRoute guards access)
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
