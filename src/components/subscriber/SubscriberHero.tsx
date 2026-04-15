@@ -111,7 +111,7 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
             </motion.div>
           )}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
