@@ -251,9 +251,11 @@ export default function SendNotificationPage() {
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+            <p className={`text-xs mt-3 flex items-center gap-1 ${monitorEnabled ? "text-muted-foreground" : "text-red-400/70"}`}>
               <Activity className="w-3 h-3" />
-              يتم الفحص تلقائياً كل 5 دقائق وإرسال تنبيه فوري عند اكتشاف فتح مواعيد
+              {monitorEnabled
+                ? "يتم الفحص تلقائياً كل 5 دقائق وإرسال تنبيه فوري عند اكتشاف فتح مواعيد"
+                : "المراقبة التلقائية متوقفة — يمكنك الفحص يدوياً فقط"}
             </p>
           </div>
 
