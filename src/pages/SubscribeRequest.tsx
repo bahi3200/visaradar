@@ -110,11 +110,12 @@ export default function SubscribeRequestPage() {
   const maxCountries = selectedPkg?.max_countries || 1;
   const needsCountry = serviceType === "visa" || serviceType === "both";
 
-  // Check if user already has this exact package active
-  const isAlreadySubscribed = !isUpgrade && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
+  // Check if user already has this exact package active (allow if renewal mode)
+  const daysLeft = activeSubscription ? Math.max(0, Math.ceil((new Date(activeSubscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 999;
+  const isAlreadySubscribed = !isUpgrade && !isRenewal && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
 
   // Check if user has a pending request for the same package
-  const hasPendingRequest = !isUpgrade && myRequests?.some(
+  const hasPendingRequest = myRequests?.some(
     (r) => r.package_id === selectedPackageId && r.status === "pending"
   );
 
