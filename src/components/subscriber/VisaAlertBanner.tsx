@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, X, Zap } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
 
 const VISA_BOOKING_URLS: Record<string, { url: string; provider: string }> = {
   IT: { url: "https://visa.vfsglobal.com/dza/ar/ita/", provider: "VFS Global" },
