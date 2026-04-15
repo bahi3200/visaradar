@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import NotificationsBell from "@/components/NotificationsBell";
 
 const navLinks = [
