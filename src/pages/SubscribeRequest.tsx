@@ -114,6 +114,8 @@ export default function SubscribeRequestPage() {
   // Check if user already has this exact package active (allow if renewal mode)
   const daysLeft = activeSubscription ? Math.max(0, Math.ceil((new Date(activeSubscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 999;
   const isAlreadySubscribed = !isUpgrade && !isRenewal && activeSubscription && activeSubscription.package_id === selectedPackageId && new Date(activeSubscription.expires_at) > new Date();
+  const hasActiveSubscription = !isUpgrade && !isRenewal && !!activeSubscription && new Date(activeSubscription.expires_at) > new Date();
+  const isSelectingDifferentPkg = hasActiveSubscription && selectedPackageId && activeSubscription?.package_id !== selectedPackageId;
 
   // Check if user has a pending request for the same package
   const hasPendingRequest = myRequests?.some(
@@ -194,6 +196,7 @@ export default function SubscribeRequestPage() {
           service_type: serviceType,
           receipt_url: publicUrl,
           admin_notes: isRenewal ? `تجديد اشتراك — الباقة: "${selectedPkg?.name_ar}" — ينتهي الاشتراك الحالي: ${activeSubscription ? new Date(activeSubscription.expires_at).toLocaleDateString("ar") : "—"}` : isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
+          // Note: isSelectingDifferentPkg auto-detected upgrade is handled via admin_notes above when isUpgrade is true
         } as any)
         .select()
         .single();
@@ -474,6 +477,15 @@ export default function SubscribeRequestPage() {
                           <ArrowUpCircle className="w-3.5 h-3.5" />
                           ترقية لباقة أعلى
                         </Link>
+                        {daysLeft <= 15 && (
+                          <Link
+                            to={`/subscribe?renew=true&package=${activeSubscription!.package_id}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold bg-secondary/50 text-foreground px-4 py-2 rounded-xl border border-border/50 hover:bg-secondary/70 transition-colors mr-2"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            تجديد الاشتراك
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <>
@@ -666,10 +678,10 @@ export default function SubscribeRequestPage() {
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 isRenewal || isAlreadySubscribed ? <RefreshCw className="w-4 h-4" /> :
-                isUpgrade || (activeSubscription && selectedPackageId && activeSubscription.package_id !== selectedPackageId) ? <ArrowUpCircle className="w-4 h-4" /> :
+                isUpgrade || isSelectingDifferentPkg ? <ArrowUpCircle className="w-4 h-4" /> :
                 <Send className="w-4 h-4" />
               )}
-              {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : activeSubscription && selectedPackageId && activeSubscription.package_id !== selectedPackageId ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
+              {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : isSelectingDifferentPkg ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
             </button>
           </div>
 
