@@ -404,6 +404,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       subscription_requests: {
         Row: {
           admin_notes: string | null
@@ -414,6 +435,9 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          moderator_action: string | null
+          moderator_action_at: string | null
+          moderator_id: string | null
           package_id: string
           phone: string | null
           receipt_url: string | null
@@ -434,6 +458,9 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          moderator_action?: string | null
+          moderator_action_at?: string | null
+          moderator_id?: string | null
           package_id: string
           phone?: string | null
           receipt_url?: string | null
@@ -454,6 +481,9 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          moderator_action?: string | null
+          moderator_action_at?: string | null
+          moderator_id?: string | null
           package_id?: string
           phone?: string | null
           receipt_url?: string | null
