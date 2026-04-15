@@ -267,6 +267,46 @@ export default function SubscribeRequestPage() {
               : "اختر نوع الخدمة والباقة وأرفق وصل الدفع CCP للمراجعة"}
           </p>
 
+          {/* Active subscription info - shown when user already has a subscription in normal mode */}
+          {!isUpgrade && !isRenewal && activeSubscription && new Date(activeSubscription.expires_at) > new Date() && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-accent/30 bg-accent/5 p-5 mb-6"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <Check className="w-5 h-5 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-foreground text-sm mb-1">لديك اشتراك نشط ✓</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    أنت مشترك حالياً في باقة "{activeSubscription.packages?.name_ar}" — ينتهي في{" "}
+                    {new Date(activeSubscription.expires_at).toLocaleDateString("ar", { day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link
+                      to="/subscribe?upgrade=true"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold gradient-primary text-primary-foreground px-4 py-2 rounded-xl"
+                    >
+                      <ArrowUpCircle className="w-3.5 h-3.5" />
+                      ترقية لباقة أعلى
+                    </Link>
+                    {daysLeft <= 15 && (
+                      <Link
+                        to={`/subscribe?renew=true&package=${activeSubscription.package_id}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold bg-secondary/50 text-foreground px-4 py-2 rounded-xl border border-border/50 hover:bg-secondary/70 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        تجديد الاشتراك
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Current subscription info for renewals */}
           {isRenewal && activeSubscription && (
             <div className="gradient-card rounded-2xl border border-yellow-500/20 p-5 mb-6">
