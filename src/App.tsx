@@ -22,6 +22,7 @@ import AdminRequests from "./pages/AdminRequests";
 import ManageUsers from "./pages/ManageUsers";
 import MyRequests from "./pages/MyRequests";
 import EmailLog from "./pages/EmailLog";
+import ErrorLog from "./pages/ErrorLog";
 import MyDevices from "./pages/MyDevices";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -70,6 +71,7 @@ const App = () => (
       <Route path="/dashboard/requests" element={<AdminRoute><AdminRequests /></AdminRoute>} />
       <Route path="/dashboard/users" element={<AdminRoute adminOnly><ManageUsers /></AdminRoute>} />
       <Route path="/dashboard/email-log" element={<AdminRoute adminOnly><EmailLog /></AdminRoute>} />
+      <Route path="/dashboard/error-log" element={<AdminRoute adminOnly><ErrorLog /></AdminRoute>} />
       <Route path="/dashboard/contact-messages" element={<AdminRoute><ContactMessages /></AdminRoute>} />
       <Route path="/dashboard/payment-settings" element={<AdminRoute adminOnly><PaymentSettings /></AdminRoute>} />
       <Route path="/dashboard/visa-monitor" element={<AdminRoute><VisaMonitorDashboard /></AdminRoute>} />
