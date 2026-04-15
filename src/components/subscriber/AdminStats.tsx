@@ -54,6 +54,16 @@ export default function AdminStats() {
     },
   });
 
+  // Play sound when pending requests increase
+  useEffect(() => {
+    if (stats == null) return;
+    const current = stats.pendingRequests + stats.newMessages;
+    if (prevPendingRef.current !== null && current > prevPendingRef.current) {
+      playAlertSound();
+    }
+    prevPendingRef.current = current;
+  }, [stats?.pendingRequests, stats?.newMessages]);
+
   const alerts = [
     {
       id: "pending",
