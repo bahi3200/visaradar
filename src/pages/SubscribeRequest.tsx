@@ -209,6 +209,25 @@ export default function SubscribeRequestPage() {
 
   const inputClass = "w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50";
 
+  if (isPrivileged) {
+    return (
+      <Layout>
+        <div className="container py-20 max-w-md text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="font-heading text-xl font-bold text-foreground mb-2">لا تحتاج اشتراك</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            بصفتك مسؤولاً، لديك وصول كامل لجميع الخدمات بدون الحاجة لاشتراك أو ترقية.
+          </p>
+          <Link to="/dashboard" className="gradient-primary text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-sm">
+            العودة للوحة التحكم
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container py-10 max-w-2xl">
