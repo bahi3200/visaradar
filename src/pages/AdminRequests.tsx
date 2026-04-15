@@ -446,58 +446,122 @@ export default function AdminRequestsPage() {
                             />
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex flex-wrap gap-2">
-                            {req.status !== "approved" && (
+                          {/* Moderator suggestion badge */}
+                          {req.moderator_action && isAdmin && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 mb-2">
+                              <UserCheck className="w-4 h-4 text-blue-400 shrink-0" />
+                              <div className="text-xs">
+                                <span className="text-blue-400 font-bold">اقتراح مشرف: </span>
+                                <span className="text-foreground font-medium">
+                                  {req.moderator_action === "approved" ? "قبول" : req.moderator_action === "rejected" ? "رفض" : "تجميد"}
+                                </span>
+                                {req.moderator_action_at && (
+                                  <span className="text-muted-foreground mr-2">
+                                    — {new Date(req.moderator_action_at).toLocaleDateString("ar")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons - Admin */}
+                          {isAdmin && (
+                            <div className="flex flex-wrap gap-2">
+                              {req.status !== "approved" && (
+                                <button
+                                  onClick={() => updateStatus(req.id, "approved")}
+                                  disabled={processing === req.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <Check className="w-4 h-4" />
+                                  قبول
+                                </button>
+                              )}
+                              {req.status !== "rejected" && (
+                                <button
+                                  onClick={() => updateStatus(req.id, "rejected")}
+                                  disabled={processing === req.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <X className="w-4 h-4" />
+                                  رفض
+                                </button>
+                              )}
+                              {req.status !== "frozen" && req.status === "approved" && (
+                                <button
+                                  onClick={() => updateStatus(req.id, "frozen")}
+                                  disabled={processing === req.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <Snowflake className="w-4 h-4" />
+                                  تجميد
+                                </button>
+                              )}
+                              {(req.status === "frozen" || req.status === "rejected") && (
+                                <button
+                                  onClick={() => updateStatus(req.id, "pending")}
+                                  disabled={processing === req.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                  إعادة تفعيل
+                                </button>
+                              )}
                               <button
-                                onClick={() => updateStatus(req.id, "approved")}
+                                onClick={() => setDeleteTarget(req)}
                                 disabled={processing === req.id}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors disabled:opacity-50 mr-auto"
                               >
-                                <Check className="w-4 h-4" />
-                                قبول
+                                <Trash2 className="w-4 h-4" />
+                                حذف نهائي
                               </button>
-                            )}
-                            {req.status !== "rejected" && (
-                              <button
-                                onClick={() => updateStatus(req.id, "rejected")}
-                                disabled={processing === req.id}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                              >
-                                <X className="w-4 h-4" />
-                                رفض
-                              </button>
-                            )}
-                            {req.status !== "frozen" && req.status === "approved" && (
-                              <button
-                                onClick={() => updateStatus(req.id, "frozen")}
-                                disabled={processing === req.id}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-50"
-                              >
-                                <Snowflake className="w-4 h-4" />
-                                تجميد
-                              </button>
-                            )}
-                            {(req.status === "frozen" || req.status === "rejected") && (
-                              <button
-                                onClick={() => updateStatus(req.id, "pending")}
-                                disabled={processing === req.id}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                                إعادة تفعيل
-                              </button>
-                            )}
-                            {/* Delete button */}
-                            <button
-                              onClick={() => setDeleteTarget(req)}
-                              disabled={processing === req.id}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors disabled:opacity-50 mr-auto"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              حذف نهائي
-                            </button>
-                          </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons - Moderator (suggest only) */}
+                          {isModerator && (
+                            <div className="flex flex-wrap gap-2">
+                              {req.moderator_action ? (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  تم إرسال اقتراحك — بانتظار موافقة المسؤول
+                                </div>
+                              ) : (
+                                <>
+                                  {req.status !== "approved" && (
+                                    <button
+                                      onClick={() => suggestAction(req.id, "approved")}
+                                      disabled={processing === req.id}
+                                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                      اقتراح قبول
+                                    </button>
+                                  )}
+                                  {req.status !== "rejected" && (
+                                    <button
+                                      onClick={() => suggestAction(req.id, "rejected")}
+                                      disabled={processing === req.id}
+                                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                      <X className="w-4 h-4" />
+                                      اقتراح رفض
+                                    </button>
+                                  )}
+                                  {req.status === "approved" && (
+                                    <button
+                                      onClick={() => suggestAction(req.id, "frozen")}
+                                      disabled={processing === req.id}
+                                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                      <Snowflake className="w-4 h-4" />
+                                      اقتراح تجميد
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
