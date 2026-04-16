@@ -50,7 +50,7 @@ export default function HomePage() {
       : (subscriptions.some((s: any) => s.service_type === 'visa') && subscriptions.some((s: any) => s.service_type === 'jobs')) ? 'both'
       : subscriptions[0].service_type,
     package_id: subscriptions[0].package_id,
-    packages: subscriptions[0].packages,
+    packages: subscriptions[0].packages ?? null,
   } : null;
 
   // Build per-country expiry map
