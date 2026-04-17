@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw, Copy, Check, Share2, Lightbulb } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw, Copy, Check, Share2, Lightbulb, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -270,6 +270,17 @@ export default function VisaChatBot() {
     toast.success("تم مسح المحادثة");
   };
 
+  const startNewChat = () => {
+    if (isLoading) return;
+    // Reset local state only — old conversation remains in DB
+    setMessages([]);
+    setSuggestions([]);
+    setConversationId(null);
+    setInput("");
+    setTimeout(() => inputRef.current?.focus(), 100);
+    toast.success("بدأت محادثة جديدة");
+  };
+
   // Strip markdown formatting for cleaner sharing
   const stripMarkdown = (text: string): string =>
     text
@@ -352,13 +363,25 @@ export default function VisaChatBot() {
                 </div>
                 <div className="flex items-center gap-1">
                   {messages.length > 0 && (
-                    <button
-                      onClick={clearChat}
-                      aria-label="مسح المحادثة"
-                      className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors"
-                    >
-                      <RotateCcw className="w-4 h-4 text-accent-foreground" />
-                    </button>
+                    <>
+                      <button
+                        onClick={startNewChat}
+                        disabled={isLoading}
+                        aria-label="محادثة جديدة"
+                        title="بدء محادثة جديدة"
+                        className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        <Plus className="w-4 h-4 text-accent-foreground" />
+                      </button>
+                      <button
+                        onClick={clearChat}
+                        aria-label="مسح المحادثة"
+                        title="حذف المحادثة الحالية"
+                        className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors"
+                      >
+                        <RotateCcw className="w-4 h-4 text-accent-foreground" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => setOpen(false)}
