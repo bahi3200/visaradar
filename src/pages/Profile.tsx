@@ -2,18 +2,27 @@ import Layout from "@/components/Layout";
 import ReferralSection from "@/components/referral/ReferralSection";
 import UserStatsDashboard from "@/components/profile/UserStatsDashboard";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type ActiveSub = {
+  id: string;
+  package_id: string;
+  service_type: string;
+  expires_at: string;
+  packages: { name_ar: string; price: number | null } | null;
+};
 
 export default function ProfilePage() {
   const { user } = useAuth();
