@@ -363,13 +363,25 @@ export default function VisaChatBot() {
                 </div>
                 <div className="flex items-center gap-1">
                   {messages.length > 0 && (
-                    <button
-                      onClick={clearChat}
-                      aria-label="مسح المحادثة"
-                      className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors"
-                    >
-                      <RotateCcw className="w-4 h-4 text-accent-foreground" />
-                    </button>
+                    <>
+                      <button
+                        onClick={startNewChat}
+                        disabled={isLoading}
+                        aria-label="محادثة جديدة"
+                        title="بدء محادثة جديدة"
+                        className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        <Plus className="w-4 h-4 text-accent-foreground" />
+                      </button>
+                      <button
+                        onClick={clearChat}
+                        aria-label="مسح المحادثة"
+                        title="حذف المحادثة الحالية"
+                        className="w-8 h-8 rounded-full hover:bg-accent-foreground/15 flex items-center justify-center transition-colors"
+                      >
+                        <RotateCcw className="w-4 h-4 text-accent-foreground" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => setOpen(false)}
