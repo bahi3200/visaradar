@@ -40,6 +40,7 @@ import ManageReferrals from "./pages/ManageReferrals";
 import SiteSettings from "./pages/SiteSettings";
 import ExpiryReminderLog from "./pages/ExpiryReminderLog";
 import ChatHistory from "./pages/ChatHistory";
+import AdminChatConversations from "./pages/AdminChatConversations";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
       <Route path="/dashboard/referrals" element={<AdminRoute adminOnly><ManageReferrals /></AdminRoute>} />
       <Route path="/dashboard/site-settings" element={<AdminRoute adminOnly><SiteSettings /></AdminRoute>} />
       <Route path="/dashboard/reminder-log" element={<AdminRoute adminOnly><ExpiryReminderLog /></AdminRoute>} />
+      <Route path="/dashboard/chat-conversations" element={<AdminRoute adminOnly><AdminChatConversations /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
