@@ -178,6 +178,25 @@ export default function VisaMonitorDashboard() {
   const [countryFilter, setCountryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [alerts, setAlerts] = useState<StatusAlert[]>([]);
+  const [sendingTest, setSendingTest] = useState(false);
+
+  const handleSendTest = async () => {
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-admin-test-telegram");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("✅ تم إرسال رسالة الاختبار إلى Telegram", {
+        description: `chat_id: ${data?.chatId}`,
+      });
+    } catch (err: any) {
+      toast.error("فشل إرسال رسالة الاختبار", {
+        description: err?.message || "تأكد من ربط telegram_id في ملفك الشخصي",
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   useEffect(() => {
     const channel = supabase
