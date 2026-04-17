@@ -313,6 +313,9 @@ export type Database = {
           phone: string | null
           referral_code: string | null
           telegram_id: string | null
+          telegram_link_expires_at: string | null
+          telegram_link_token: string | null
+          telegram_username: string | null
           updated_at: string
           user_id: string
         }
@@ -324,6 +327,9 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           telegram_id?: string | null
+          telegram_link_expires_at?: string | null
+          telegram_link_token?: string | null
+          telegram_username?: string | null
           updated_at?: string
           user_id: string
         }
@@ -335,6 +341,9 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           telegram_id?: string | null
+          telegram_link_expires_at?: string | null
+          telegram_link_token?: string | null
+          telegram_username?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -667,6 +676,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      telegram_bot_state: {
+        Row: {
+          id: number
+          update_offset: number
+          updated_at: string
+        }
+        Insert: {
+          id: number
+          update_offset?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          update_offset?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_link_log: {
+        Row: {
+          action: string
+          chat_id: string
+          created_at: string
+          id: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          action: string
+          chat_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          action?: string
+          chat_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
       }
       user_devices: {
         Row: {

@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar, Send, CheckCircle2, Unlink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,9 +34,13 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [telegramId, setTelegramId] = useState("");
+  const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkData, setLinkData] = useState<{ link: string; expires_at: string } | null>(null);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -58,6 +62,7 @@ export default function ProfilePage() {
         setFullName(profileData.full_name || "");
         setPhone(profileData.phone || "");
         setTelegramId(profileData.telegram_id || "");
+        setTelegramUsername(profileData.telegram_username || null);
         setAvatarUrl(profileData.avatar_url || "");
       }
       if (prefData) {
@@ -101,7 +106,7 @@ export default function ProfilePage() {
     const { error } = await supabase
       .from("profiles")
       .upsert(
-        { user_id: user.id, full_name: fullName, phone, telegram_id: telegramId },
+        { user_id: user.id, full_name: fullName, phone },
         { onConflict: "user_id" }
       );
     if (error) {
@@ -207,29 +212,134 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Telegram */}
+              {/* Telegram link */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-primary" />
-                  معرّف تيليغرام (Chat ID)
+                  <Send className="w-4 h-4 text-primary" />
+                  ربط Telegram لاستلام التنبيهات
                 </Label>
-                <Input
-                  value={telegramId}
-                  onChange={(e) => setTelegramId(e.target.value)}
-                  placeholder="مثال: 1698382532"
-                  className="text-right"
-                  dir="ltr"
-                />
-                <div className="rounded-md bg-muted/50 border border-border/50 p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    للحصول على Chat ID الخاص بك:
-                  </p>
-                  <ol className="text-xs text-muted-foreground leading-relaxed list-decimal list-inside space-y-0.5">
-                    <li>افتح تيليغرام وابدأ محادثة مع <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" dir="ltr" className="font-mono text-primary underline hover:text-primary/80">@userinfobot</a></li>
-                    <li>اضغط <strong>Start</strong> أو أرسل أي رسالة</li>
-                    <li>سيرد عليك برقم الـ Chat ID — انسخه وألصقه هنا</li>
-                  </ol>
-                </div>
+
+                {telegramId ? (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground">حسابك مرتبط</p>
+                        <p className="text-xs text-muted-foreground" dir="ltr">
+                          {telegramUsername ? `@${telegramUsername}` : `Chat ID: ${telegramId}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (!user) return;
+                        if (!confirm("هل تريد فك الربط؟ لن تستلم تنبيهات Telegram بعدها.")) return;
+                        const { error } = await supabase
+                          .from("profiles")
+                          .update({ telegram_id: null, telegram_username: null })
+                          .eq("user_id", user.id);
+                        if (error) {
+                          toast.error("فشل فك الربط");
+                        } else {
+                          setTelegramId("");
+                          setTelegramUsername(null);
+                          toast.success("تم فك الربط");
+                        }
+                      }}
+                      className="w-full gap-2"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                      فك الربط
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border/50 bg-muted/30 p-4 space-y-3">
+                    {!linkData ? (
+                      <>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          اضغط الزر أدناه لتوليد رابط ربط آمن. عند فتحه ستُحوَّل تلقائياً لـ Telegram، اضغط <strong>Start</strong>، وسيتم ربط حسابك فوراً.
+                        </p>
+                        <Button
+                          onClick={async () => {
+                            setLinkLoading(true);
+                            const { data, error } = await supabase.functions.invoke("telegram-generate-link");
+                            setLinkLoading(false);
+                            if (error || !data?.link) {
+                              toast.error("فشل توليد الرابط");
+                              return;
+                            }
+                            setLinkData({ link: data.link, expires_at: data.expires_at });
+                            window.open(data.link, "_blank");
+                          }}
+                          disabled={linkLoading}
+                          className="w-full gradient-primary text-primary-foreground font-bold gap-2"
+                        >
+                          {linkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          ربط Telegram تلقائياً
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs text-foreground leading-relaxed">
+                          تم فتح Telegram في تبويب جديد. اضغط <strong>Start</strong> هناك ثم ارجع واضغط <strong>«تحقّقت من الرسالة»</strong>.
+                        </p>
+                        <a
+                          href={linkData.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          dir="ltr"
+                          className="block text-xs font-mono text-primary underline break-all"
+                        >
+                          {linkData.link}
+                        </a>
+                        <Button
+                          onClick={async () => {
+                            if (!user) return;
+                            setPolling(true);
+                            const { data, error } = await supabase.functions.invoke("telegram-poll");
+                            if (error) {
+                              setPolling(false);
+                              toast.error("فشل التحقق");
+                              return;
+                            }
+                            // Re-fetch profile
+                            const { data: p } = await supabase
+                              .from("profiles")
+                              .select("telegram_id, telegram_username")
+                              .eq("user_id", user.id)
+                              .single();
+                            setPolling(false);
+                            if (p?.telegram_id) {
+                              setTelegramId(p.telegram_id);
+                              setTelegramUsername(p.telegram_username);
+                              setLinkData(null);
+                              toast.success("✅ تم ربط حسابك بنجاح!");
+                            } else {
+                              toast.error("لم نستلم /start بعد. تأكد أنك ضغطت Start في Telegram ثم حاول مجدداً.");
+                              console.log("poll result:", data);
+                            }
+                          }}
+                          disabled={polling}
+                          className="w-full font-bold gap-2"
+                          variant="default"
+                        >
+                          {polling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                          تحقّقت من الرسالة
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setLinkData(null)}
+                          className="w-full text-xs"
+                        >
+                          إلغاء
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Notification Sound */}
