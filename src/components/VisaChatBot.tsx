@@ -24,6 +24,8 @@ export default function VisaChatBot() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +111,29 @@ export default function VisaChatBot() {
     });
   };
 
+  const fetchSuggestions = async (history: Msg[]) => {
+    setLoadingSuggestions(true);
+    try {
+      const SUG_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/visa-chat-suggestions`;
+      const resp = await fetch(SUG_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: history }),
+      });
+      if (resp.ok) {
+        const { suggestions: sug } = await resp.json();
+        if (Array.isArray(sug)) setSuggestions(sug);
+      }
+    } catch (e) {
+      console.error("Suggestions error:", e);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
     const userMsg: Msg = { role: "user", content: text.trim() };
@@ -116,6 +141,7 @@ export default function VisaChatBot() {
     setMessages(newHistory);
     setInput("");
     setIsLoading(true);
+    setSuggestions([]); // Clear previous suggestions
 
     // Save user message to DB
     const convId = await ensureConversation(userMsg.content);
