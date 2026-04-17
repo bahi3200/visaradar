@@ -42,6 +42,7 @@ import ExpiryReminderLog from "./pages/ExpiryReminderLog";
 import ChatHistory from "./pages/ChatHistory";
 import AdminChatConversations from "./pages/AdminChatConversations";
 import Backup from "./pages/Backup";
+import TelegramLink from "./pages/TelegramLink";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/profile/conversations" element={<ProtectedRoute><ChatHistory /></ProtectedRoute>} />
       <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+      <Route path="/telegram-link" element={<ProtectedRoute><TelegramLink /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
