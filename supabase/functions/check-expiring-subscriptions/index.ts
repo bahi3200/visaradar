@@ -76,6 +76,14 @@ Deno.serve(async (req) => {
     const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Load configurable reminder days from site_settings
+    const { data: settingRow } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'expiry_reminder_days')
+      .maybeSingle();
+    const REMINDER_DAYS = parseReminderDays(settingRow?.value);
+
     console.log('[check-expiring] Starting reminder check for milestones:', REMINDER_DAYS);
 
     const now = new Date();
