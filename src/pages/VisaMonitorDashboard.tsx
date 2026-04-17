@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw,
-  Globe, Eye, Filter, BellRing, X, BarChart3, TrendingUp, Zap, ShieldCheck
+  Globe, Eye, Filter, BellRing, X, BarChart3, TrendingUp, Zap, ShieldCheck, Send
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -178,6 +178,25 @@ export default function VisaMonitorDashboard() {
   const [countryFilter, setCountryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [alerts, setAlerts] = useState<StatusAlert[]>([]);
+  const [sendingTest, setSendingTest] = useState(false);
+
+  const handleSendTest = async () => {
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-admin-test-telegram");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("✅ تم إرسال رسالة الاختبار إلى Telegram", {
+        description: `chat_id: ${data?.chatId}`,
+      });
+    } catch (err: any) {
+      toast.error("فشل إرسال رسالة الاختبار", {
+        description: err?.message || "تأكد من ربط telegram_id في ملفك الشخصي",
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   useEffect(() => {
     const channel = supabase
@@ -298,6 +317,36 @@ export default function VisaMonitorDashboard() {
             <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
           </motion.div>
         ))}
+      </div>
+
+      {/* Admin test telegram button */}
+      <div className="gradient-card rounded-2xl border border-border/50 shadow-card p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex-1">
+          <h3 className="font-heading text-base font-bold text-foreground flex items-center gap-2">
+            <Send className="w-4 h-4 text-primary" />
+            اختبار البوت
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            أرسل رسالة اختبار إلى حسابك على Telegram للتأكد من عمل البوت. لن يتم إزعاج المشتركين.
+          </p>
+        </div>
+        <button
+          onClick={handleSendTest}
+          disabled={sendingTest}
+          className="rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0"
+        >
+          {sendingTest ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              جارٍ الإرسال...
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              إرسال رسالة اختبار
+            </>
+          )}
+        </button>
       </div>
 
       {/* Performance Analytics */}
