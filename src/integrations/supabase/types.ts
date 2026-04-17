@@ -315,6 +315,7 @@ export type Database = {
           telegram_id: string | null
           telegram_link_expires_at: string | null
           telegram_link_token: string | null
+          telegram_linked_at: string | null
           telegram_username: string | null
           updated_at: string
           user_id: string
@@ -329,6 +330,7 @@ export type Database = {
           telegram_id?: string | null
           telegram_link_expires_at?: string | null
           telegram_link_token?: string | null
+          telegram_linked_at?: string | null
           telegram_username?: string | null
           updated_at?: string
           user_id: string
@@ -343,6 +345,7 @@ export type Database = {
           telegram_id?: string | null
           telegram_link_expires_at?: string | null
           telegram_link_token?: string | null
+          telegram_linked_at?: string | null
           telegram_username?: string | null
           updated_at?: string
           user_id?: string
