@@ -36,13 +36,23 @@ export default function ProfilePage() {
   const [telegramId, setTelegramId] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
-      const [{ data: profileData }, { data: prefData }] = await Promise.all([
+      const [{ data: profileData }, { data: prefData }, { data: subData }] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).single(),
         supabase.from("notification_preferences").select("sound_enabled").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("subscriptions")
+          .select("id, package_id, service_type, expires_at, packages(name_ar, price)")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .gt("expires_at", new Date().toISOString())
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (profileData) {
         setFullName(profileData.full_name || "");
@@ -52,6 +62,9 @@ export default function ProfilePage() {
       }
       if (prefData) {
         setSoundEnabled(prefData.sound_enabled);
+      }
+      if (subData) {
+        setActiveSub(subData as ActiveSub);
       }
       setLoading(false);
     };
