@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw, Copy, Check, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ export default function VisaChatBot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -236,6 +237,35 @@ export default function VisaChatBot() {
     toast.success("تم مسح المحادثة");
   };
 
+  // Strip markdown formatting for cleaner sharing
+  const stripMarkdown = (text: string): string =>
+    text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/`(.*?)`/g, "$1")
+      .replace(/^#+\s+/gm, "")
+      .replace(/^[-*]\s+/gm, "• ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .trim();
+
+  const copyToClipboard = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(stripMarkdown(text));
+      setCopiedIdx(idx);
+      toast.success("تم نسخ الإجابة");
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+
+  const shareToWhatsApp = (text: string) => {
+    const cleanText = stripMarkdown(text);
+    const footer = "\n\n— مساعد التأشيرات";
+    const message = encodeURIComponent(cleanText + footer);
+    window.open(`https://wa.me/?text=${message}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <>
       {/* Floating button */}
@@ -352,9 +382,40 @@ export default function VisaChatBot() {
                       }`}
                     >
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-sm prose-invert max-w-none [&_*]:!my-1 [&_p]:!my-1 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-sm [&_strong]:text-accent">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
+                        <>
+                          <div className="prose prose-sm prose-invert max-w-none [&_*]:!my-1 [&_p]:!my-1 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-sm [&_strong]:text-accent">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                          {msg.content && !(isLoading && i === messages.length - 1) && (
+                            <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/40">
+                              <button
+                                onClick={() => copyToClipboard(msg.content, i)}
+                                aria-label="نسخ الإجابة"
+                                className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-accent transition-colors px-2 py-1 rounded-md hover:bg-accent/10"
+                              >
+                                {copiedIdx === i ? (
+                                  <>
+                                    <Check className="w-3 h-3" />
+                                    <span>تم النسخ</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>نسخ</span>
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => shareToWhatsApp(msg.content)}
+                                aria-label="مشاركة عبر واتساب"
+                                className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-green-500 transition-colors px-2 py-1 rounded-md hover:bg-green-500/10"
+                              >
+                                <Share2 className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       )}
