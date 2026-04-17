@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, RefreshCw,
-  Globe, Eye, Filter, BellRing, X, BarChart3, TrendingUp, Zap, ShieldCheck
+  Globe, Eye, Filter, BellRing, X, BarChart3, TrendingUp, Zap, ShieldCheck, Send
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
