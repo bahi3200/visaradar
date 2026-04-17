@@ -39,6 +39,7 @@ import ManageReviews from "./pages/ManageReviews";
 import ManageReferrals from "./pages/ManageReferrals";
 import SiteSettings from "./pages/SiteSettings";
 import ExpiryReminderLog from "./pages/ExpiryReminderLog";
+import ChatHistory from "./pages/ChatHistory";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/profile/conversations" element={<ProtectedRoute><ChatHistory /></ProtectedRoute>} />
       <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />

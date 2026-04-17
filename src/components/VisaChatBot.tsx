@@ -84,6 +84,25 @@ export default function VisaChatBot() {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
 
+  // Listen for external "open conversation" events (from chat history page)
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (!detail?.id || !user) return;
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("role, content")
+        .eq("conversation_id", detail.id)
+        .order("created_at", { ascending: true });
+      setConversationId(detail.id);
+      setMessages((msgs as Msg[]) || []);
+      setSuggestions([]);
+      setOpen(true);
+    };
+    window.addEventListener("visa-chat:open-conversation", handler);
+    return () => window.removeEventListener("visa-chat:open-conversation", handler);
+  }, [user]);
+
   const ensureConversation = async (firstMsg: string): Promise<string | null> => {
     if (!user) return null;
     if (conversationId) return conversationId;
