@@ -139,6 +139,60 @@ export type Database = {
         }
         Relationships: []
       }
+      expiry_reminder_log: {
+        Row: {
+          created_at: string
+          days_left: number
+          email_error: string | null
+          email_status: string
+          expires_at: string
+          id: string
+          milestone_days: number
+          package_name: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          subscription_id: string
+          telegram_chat_id: string | null
+          telegram_error: string | null
+          telegram_status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_left: number
+          email_error?: string | null
+          email_status?: string
+          expires_at: string
+          id?: string
+          milestone_days: number
+          package_name?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          subscription_id: string
+          telegram_chat_id?: string | null
+          telegram_error?: string | null
+          telegram_status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_left?: number
+          email_error?: string | null
+          email_status?: string
+          expires_at?: string
+          id?: string
+          milestone_days?: number
+          package_name?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          subscription_id?: string
+          telegram_chat_id?: string | null
+          telegram_error?: string | null
+          telegram_status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           browser_notifications: boolean
