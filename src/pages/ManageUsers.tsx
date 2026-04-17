@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -31,6 +31,9 @@ type UserInfo = {
   banned_until: string | null;
   roles: string[];
   active_devices: number;
+  telegram_id: string | null;
+  telegram_username: string | null;
+  telegram_linked_at: string | null;
   subscription: {
     status: string;
     package_name: string;
@@ -408,6 +411,23 @@ export default function ManageUsersPage() {
                             بدون اشتراك
                           </span>
                         )
+                      )}
+                      {user.telegram_linked_at ? (
+                        <div
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20"
+                          title={`مرتبط بـ Telegram${user.telegram_username ? ` (@${user.telegram_username})` : ""} منذ ${new Date(user.telegram_linked_at).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })}`}
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>{new Date(user.telegram_linked_at).toLocaleDateString("ar", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        </div>
+                      ) : (
+                        <span
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary/30 text-muted-foreground border border-border/40"
+                          title="غير مرتبط بـ Telegram"
+                        >
+                          <Send className="w-3 h-3 opacity-50" />
+                          <span>—</span>
+                        </span>
                       )}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
