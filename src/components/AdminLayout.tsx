@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/reviews", label: "المراجعات", icon: Star },
   { path: "/dashboard/referrals", label: "الإحالات", icon: Gift, adminOnly: true },
   { path: "/dashboard/site-settings", label: "إعدادات الموقع", icon: Settings, adminOnly: true },
+  { path: "/dashboard/backup", label: "نسخ احتياطي", icon: Database, adminOnly: true },
 ];
 
 interface AdminLayoutProps {
