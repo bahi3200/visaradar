@@ -106,7 +106,7 @@ export default function ProfilePage() {
     const { error } = await supabase
       .from("profiles")
       .upsert(
-        { user_id: user.id, full_name: fullName, phone, telegram_id: telegramId },
+        { user_id: user.id, full_name: fullName, phone },
         { onConflict: "user_id" }
       );
     if (error) {
