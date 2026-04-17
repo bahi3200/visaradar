@@ -1,0 +1,170 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const MAX_RUNTIME_MS = 25_000; // shorter — invoked on-demand from UI
+const MIN_REMAINING_MS = 3_000;
+
+interface TgUpdate {
+  update_id: number;
+  message?: {
+    chat: { id: number; first_name?: string; last_name?: string; username?: string };
+    text?: string;
+  };
+}
+
+async function tg(method: string, body: Record<string, unknown>, token: string) {
+  const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+  const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  if (!TOKEN) {
+    return new Response(JSON.stringify({ error: "TELEGRAM_BOT_TOKEN missing" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  // Read offset
+  const { data: state, error: stateErr } = await supabase
+    .from("telegram_bot_state")
+    .select("update_offset")
+    .eq("id", 1)
+    .single();
+
+  if (stateErr) {
+    return new Response(JSON.stringify({ error: stateErr.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  let currentOffset = state.update_offset;
+  let processed = 0;
+  const linked: Array<{ user_id: string; chat_id: string }> = [];
+
+  while (true) {
+    const remaining = MAX_RUNTIME_MS - (Date.now() - startTime);
+    if (remaining < MIN_REMAINING_MS) break;
+    const timeout = Math.min(20, Math.floor(remaining / 1000) - 2);
+    if (timeout < 1) break;
+
+    const data = await tg("getUpdates", {
+      offset: currentOffset,
+      timeout,
+      allowed_updates: ["message"],
+    }, TOKEN);
+
+    if (!data.ok) {
+      return new Response(JSON.stringify({ error: "telegram_error", data }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const updates: TgUpdate[] = data.result || [];
+    if (updates.length === 0) {
+      // no new updates this iteration — exit early on UI calls
+      break;
+    }
+
+    for (const u of updates) {
+      const msg = u.message;
+      if (!msg?.text) continue;
+      const text = msg.text.trim();
+      const chatId = String(msg.chat.id);
+      const username = msg.chat.username || null;
+      const fullName = [msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ") || null;
+
+      // /start <token>
+      const m = text.match(/^\/start\s+([A-Za-z0-9_-]{10,})/);
+      if (m) {
+        const token = m[1];
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id, telegram_link_expires_at, full_name")
+          .eq("telegram_link_token", token)
+          .maybeSingle();
+
+        if (!profile) {
+          await tg("sendMessage", {
+            chat_id: chatId,
+            text: "❌ رمز الربط غير صالح. ارجع لتطبيق VisaRadar DZ واطلب رابطاً جديداً.",
+          }, TOKEN);
+        } else if (profile.telegram_link_expires_at && new Date(profile.telegram_link_expires_at) < new Date()) {
+          await tg("sendMessage", {
+            chat_id: chatId,
+            text: "⏰ انتهت صلاحية الرمز (15 دقيقة). اطلب رابطاً جديداً من ملفك الشخصي.",
+          }, TOKEN);
+        } else {
+          // Link!
+          await supabase
+            .from("profiles")
+            .update({
+              telegram_id: chatId,
+              telegram_username: username,
+              telegram_link_token: null,
+              telegram_link_expires_at: null,
+            })
+            .eq("user_id", profile.user_id);
+
+          await supabase.from("telegram_link_log").insert({
+            user_id: profile.user_id,
+            chat_id: chatId,
+            username,
+            action: "linked",
+          });
+
+          await tg("sendMessage", {
+            chat_id: chatId,
+            text: `✅ <b>تم ربط حسابك بنجاح!</b>\n\nأهلاً ${profile.full_name || fullName || ""} 👋\nستصلك تنبيهات VisaRadar DZ هنا فور توفّر مواعيد التأشيرات.`,
+            parse_mode: "HTML",
+          }, TOKEN);
+
+          linked.push({ user_id: profile.user_id, chat_id: chatId });
+        }
+      } else if (/^\/start\s*$/.test(text)) {
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: "👋 أهلاً بك في <b>VisaRadar DZ</b>\n\nلربط حسابك، افتح ملفك الشخصي على الموقع واضغط زر <b>«ربط Telegram»</b>.",
+          parse_mode: "HTML",
+        }, TOKEN);
+      }
+
+      processed++;
+    }
+
+    const newOffset = Math.max(...updates.map((u) => u.update_id)) + 1;
+    await supabase
+      .from("telegram_bot_state")
+      .update({ update_offset: newOffset, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+
+    currentOffset = newOffset;
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    processed,
+    linked,
+    finalOffset: currentOffset,
+  }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+});
