@@ -237,6 +237,35 @@ export default function VisaChatBot() {
     toast.success("تم مسح المحادثة");
   };
 
+  // Strip markdown formatting for cleaner sharing
+  const stripMarkdown = (text: string): string =>
+    text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/`(.*?)`/g, "$1")
+      .replace(/^#+\s+/gm, "")
+      .replace(/^[-*]\s+/gm, "• ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .trim();
+
+  const copyToClipboard = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(stripMarkdown(text));
+      setCopiedIdx(idx);
+      toast.success("تم نسخ الإجابة");
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+
+  const shareToWhatsApp = (text: string) => {
+    const cleanText = stripMarkdown(text);
+    const footer = "\n\n— مساعد التأشيرات";
+    const message = encodeURIComponent(cleanText + footer);
+    window.open(`https://wa.me/?text=${message}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <>
       {/* Floating button */}
