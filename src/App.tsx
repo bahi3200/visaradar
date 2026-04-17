@@ -41,6 +41,7 @@ import SiteSettings from "./pages/SiteSettings";
 import ExpiryReminderLog from "./pages/ExpiryReminderLog";
 import ChatHistory from "./pages/ChatHistory";
 import AdminChatConversations from "./pages/AdminChatConversations";
+import Backup from "./pages/Backup";
 
 const queryClient = new QueryClient();
 
