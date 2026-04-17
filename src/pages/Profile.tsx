@@ -1,17 +1,19 @@
 import Layout from "@/components/Layout";
 import ReferralSection from "@/components/referral/ReferralSection";
+import UserStatsDashboard from "@/components/profile/UserStatsDashboard";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2 } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -105,126 +107,145 @@ export default function ProfilePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
+          className="space-y-6"
         >
           <h1 className="text-2xl font-heading font-bold text-foreground text-center">
             الملف الشخصي
           </h1>
 
-          {/* Avatar */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative group">
-              <Avatar className="w-24 h-24 border-2 border-primary/30">
-                <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-secondary text-2xl">
-                  <User className="w-10 h-10 text-muted-foreground" />
-                </AvatarFallback>
-              </Avatar>
-              <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                {uploading ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-white" />
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading} />
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">اضغط على الصورة لتغييرها</p>
-          </div>
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="info" className="gap-2">
+                <UserCog className="w-4 h-4" />
+                البيانات
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                إحصائياتي
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Email (read-only) */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" />
-              البريد الإلكتروني
-            </Label>
-            <Input value={user?.email || ""} disabled className="text-right opacity-60" />
-          </div>
+            <TabsContent value="info" className="space-y-8 mt-6">
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group">
+                  <Avatar className="w-24 h-24 border-2 border-primary/30">
+                    <AvatarImage src={avatarUrl} />
+                    <AvatarFallback className="bg-secondary text-2xl">
+                      <User className="w-10 h-10 text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    {uploading ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading} />
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">اضغط على الصورة لتغييرها</p>
+              </div>
 
-          {/* Full Name */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" />
-              الاسم الكامل
-            </Label>
-            <Input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="أدخل اسمك الكامل"
-              className="text-right"
-            />
-          </div>
+              {/* Email (read-only) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-primary" />
+                  البريد الإلكتروني
+                </Label>
+                <Input value={user?.email || ""} disabled className="text-right opacity-60" />
+              </div>
 
-          {/* Phone */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary" />
-              رقم الهاتف
-            </Label>
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="مثال: +213..."
-              className="text-right"
-              dir="ltr"
-            />
-          </div>
+              {/* Full Name */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  الاسم الكامل
+                </Label>
+                <Input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="أدخل اسمك الكامل"
+                  className="text-right"
+                />
+              </div>
 
-          {/* Telegram */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-primary" />
-              معرّف تيليغرام (Chat ID)
-            </Label>
-            <Input
-              value={telegramId}
-              onChange={(e) => setTelegramId(e.target.value)}
-              placeholder="مثال: 1698382532"
-              className="text-right"
-              dir="ltr"
-            />
-            <div className="rounded-md bg-muted/50 border border-border/50 p-3 space-y-1">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                للحصول على Chat ID الخاص بك:
-              </p>
-              <ol className="text-xs text-muted-foreground leading-relaxed list-decimal list-inside space-y-0.5">
-                <li>افتح تيليغرام وابدأ محادثة مع <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" dir="ltr" className="font-mono text-primary underline hover:text-primary/80">@userinfobot</a></li>
-                <li>اضغط <strong>Start</strong> أو أرسل أي رسالة</li>
-                <li>سيرد عليك برقم الـ Chat ID — انسخه وألصقه هنا</li>
-              </ol>
-            </div>
-          </div>
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-primary" />
+                  رقم الهاتف
+                </Label>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="مثال: +213..."
+                  className="text-right"
+                  dir="ltr"
+                />
+              </div>
 
-          {/* Notification Sound */}
-          <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-primary" />
-              <Label className="cursor-pointer">صوت التنبيه</Label>
-            </div>
-            <Switch
-              checked={soundEnabled}
-              onCheckedChange={async (checked) => {
-                setSoundEnabled(checked);
-                if (user) {
-                  await supabase.from("notification_preferences").upsert({ user_id: user.id, sound_enabled: checked }, { onConflict: "user_id" });
-                }
-                localStorage.setItem("notif_sound", String(checked));
-                toast.success(checked ? "تم تفعيل صوت التنبيه" : "تم إيقاف صوت التنبيه");
-              }}
-            />
-          </div>
+              {/* Telegram */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-primary" />
+                  معرّف تيليغرام (Chat ID)
+                </Label>
+                <Input
+                  value={telegramId}
+                  onChange={(e) => setTelegramId(e.target.value)}
+                  placeholder="مثال: 1698382532"
+                  className="text-right"
+                  dir="ltr"
+                />
+                <div className="rounded-md bg-muted/50 border border-border/50 p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    للحصول على Chat ID الخاص بك:
+                  </p>
+                  <ol className="text-xs text-muted-foreground leading-relaxed list-decimal list-inside space-y-0.5">
+                    <li>افتح تيليغرام وابدأ محادثة مع <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" dir="ltr" className="font-mono text-primary underline hover:text-primary/80">@userinfobot</a></li>
+                    <li>اضغط <strong>Start</strong> أو أرسل أي رسالة</li>
+                    <li>سيرد عليك برقم الـ Chat ID — انسخه وألصقه هنا</li>
+                  </ol>
+                </div>
+              </div>
 
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full gradient-primary text-primary-foreground font-bold"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Save className="w-4 h-4 ml-2" />}
-            حفظ التغييرات
-          </Button>
+              {/* Notification Sound */}
+              <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-primary" />
+                  <Label className="cursor-pointer">صوت التنبيه</Label>
+                </div>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={async (checked) => {
+                    setSoundEnabled(checked);
+                    if (user) {
+                      await supabase.from("notification_preferences").upsert({ user_id: user.id, sound_enabled: checked }, { onConflict: "user_id" });
+                    }
+                    localStorage.setItem("notif_sound", String(checked));
+                    toast.success(checked ? "تم تفعيل صوت التنبيه" : "تم إيقاف صوت التنبيه");
+                  }}
+                />
+              </div>
 
-          {/* Referral Section - hidden for admins */}
-          {!isAdmin && <ReferralSection />}
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full gradient-primary text-primary-foreground font-bold"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Save className="w-4 h-4 ml-2" />}
+                حفظ التغييرات
+              </Button>
+
+              {/* Referral Section - hidden for admins */}
+              {!isAdmin && <ReferralSection />}
+            </TabsContent>
+
+            <TabsContent value="stats" className="mt-6">
+              <UserStatsDashboard />
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
     </Layout>
