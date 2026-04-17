@@ -305,6 +305,26 @@ export default function ProfilePage() {
                 );
               })()}
 
+              {/* Chat history shortcut */}
+              <Link to="/profile/conversations" className="block">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-card hover:border-accent/40 hover:bg-accent/5 transition-colors p-4 group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full gradient-accent flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-5 h-5 text-accent-foreground" />
+                    </div>
+                    <div className="text-right">
+                      <h3 className="font-bold text-foreground text-sm group-hover:text-accent transition-colors">
+                        سجل محادثات المساعد
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        تصفح، أعد فتح، أو احذف محادثاتك السابقة
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground group-hover:text-accent transition-colors">←</span>
+                </div>
+              </Link>
+
               {/* Referral Section - hidden for admins */}
               {!isAdmin && <ReferralSection />}
             </TabsContent>
