@@ -243,6 +243,12 @@ export default function VisaChatBot() {
       if (convId && assistantContent) {
         await saveMessage(convId, "assistant", assistantContent);
       }
+
+      // Fetch smart follow-up suggestions based on full context
+      if (assistantContent) {
+        const finalHistory: Msg[] = [...newHistory, { role: "assistant", content: assistantContent }];
+        fetchSuggestions(finalHistory);
+      }
     } catch (err) {
       console.error("Chat error:", err);
       toast.error("حدث خطأ، حاول مجدداً");
@@ -254,6 +260,7 @@ export default function VisaChatBot() {
 
   const clearChat = async () => {
     setMessages([]);
+    setSuggestions([]);
     if (user && conversationId) {
       await supabase.from("chat_conversations").delete().eq("id", conversationId);
       setConversationId(null);
