@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw, Copy, Check, Share2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw, Copy, Check, Share2, Lightbulb } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -474,6 +474,41 @@ export default function VisaChatBot() {
                     </div>
                   </div>
                 )}
+
+              {/* Smart follow-up suggestions */}
+              {!isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
+                <>
+                  {loadingSuggestions ? (
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-2">
+                      <Lightbulb className="w-3 h-3 animate-pulse" />
+                      <span>جاري توليد اقتراحات...</span>
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-1.5 pt-2"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+                        <Lightbulb className="w-3 h-3 text-accent" />
+                        <span>أسئلة مقترحة:</span>
+                      </div>
+                      {suggestions.map((q, i) => (
+                        <motion.button
+                          key={`${q}-${i}`}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          onClick={() => sendMessage(q)}
+                          className="block w-full text-right text-xs px-3 py-2 rounded-lg bg-accent/5 hover:bg-accent/15 transition-colors text-foreground border border-accent/20 hover:border-accent/40"
+                        >
+                          {q}
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  ) : null}
+                </>
+              )}
             </div>
 
             {/* Input */}
