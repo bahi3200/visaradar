@@ -270,6 +270,17 @@ export default function VisaChatBot() {
     toast.success("تم مسح المحادثة");
   };
 
+  const startNewChat = () => {
+    if (isLoading) return;
+    // Reset local state only — old conversation remains in DB
+    setMessages([]);
+    setSuggestions([]);
+    setConversationId(null);
+    setInput("");
+    setTimeout(() => inputRef.current?.focus(), 100);
+    toast.success("بدأت محادثة جديدة");
+  };
+
   // Strip markdown formatting for cleaner sharing
   const stripMarkdown = (text: string): string =>
     text
