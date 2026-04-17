@@ -84,6 +84,7 @@ const App = () => (
       <Route path="/dashboard/site-settings" element={<AdminRoute adminOnly><SiteSettings /></AdminRoute>} />
       <Route path="/dashboard/reminder-log" element={<AdminRoute adminOnly><ExpiryReminderLog /></AdminRoute>} />
       <Route path="/dashboard/chat-conversations" element={<AdminRoute adminOnly><AdminChatConversations /></AdminRoute>} />
+      <Route path="/dashboard/backup" element={<AdminRoute adminOnly><Backup /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
