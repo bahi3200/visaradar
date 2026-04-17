@@ -117,16 +117,15 @@ Deno.serve(async (req) => {
         const expiryDate = new Date(sub.expires_at).toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });
         const packageName = (sub as any).packages?.name_ar || 'الباقة';
 
-        // Dedup marker is per-milestone (so each user gets max 1 reminder per milestone per subscription)
-        const dedupMarker = `expiry_reminder_${sub.id}_d${milestone}`;
-
-        const { data: existingNotif } = await supabase
-          .from('email_notifications')
+        // Dedup via the new expiry_reminder_log table (per-milestone per-subscription)
+        const { data: existingLog } = await supabase
+          .from('expiry_reminder_log')
           .select('id')
-          .eq('recipient_email', dedupMarker)
+          .eq('subscription_id', sub.id)
+          .eq('milestone_days', milestone)
           .limit(1);
 
-        if (existingNotif && existingNotif.length > 0) {
+        if (existingLog && existingLog.length > 0) {
           console.log(`[check-expiring] D-${milestone}: already sent for sub ${sub.id}, skip`);
           continue;
         }
@@ -145,6 +144,11 @@ Deno.serve(async (req) => {
 
         const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : `خلال ${daysLeft} أيام`;
 
+        let emailStatus: 'sent' | 'failed' | 'skipped' = 'skipped';
+        let emailError: string | null = null;
+        let telegramStatus: 'sent' | 'failed' | 'skipped' = 'skipped';
+        let telegramError: string | null = null;
+
         // Email
         if (userEmail) {
           const emailSubject = `⏳ اشتراكك ينتهي ${daysText} — جدّد الآن`;
@@ -160,9 +164,15 @@ Deno.serve(async (req) => {
               body: JSON.stringify({ to: userEmail, subject: emailSubject, html: emailHtml, fullName }),
             });
             if (!emailRes.ok) {
-              console.error(`[check-expiring] Email failed for ${userEmail}:`, await emailRes.text());
+              emailStatus = 'failed';
+              emailError = (await emailRes.text()).slice(0, 500);
+              console.error(`[check-expiring] Email failed for ${userEmail}:`, emailError);
+            } else {
+              emailStatus = 'sent';
             }
           } catch (err) {
+            emailStatus = 'failed';
+            emailError = err instanceof Error ? err.message : String(err);
             console.error(`[check-expiring] Email error for ${userEmail}:`, err);
           }
         }
@@ -186,21 +196,34 @@ Deno.serve(async (req) => {
               body: JSON.stringify({ chat_id: telegramId, text: telegramMessage, parse_mode: 'HTML' }),
             });
             if (!res.ok) {
-              console.error(`[check-expiring] Telegram failed:`, await res.text());
+              telegramStatus = 'failed';
+              telegramError = (await res.text()).slice(0, 500);
+              console.error(`[check-expiring] Telegram failed:`, telegramError);
+            } else {
+              telegramStatus = 'sent';
             }
           } catch (err) {
+            telegramStatus = 'failed';
+            telegramError = err instanceof Error ? err.message : String(err);
             console.error(`[check-expiring] Telegram error:`, err);
           }
         }
 
-        // Record dedup marker
-        await supabase.from('email_notifications').insert({
-          recipient_email: dedupMarker,
-          recipient_name: fullName,
-          subject: `تذكير D-${milestone} لاشتراك ${sub.id}`,
-          html_body: `Reminder D-${milestone} sent for subscription ${sub.id}`,
-          status: 'sent',
-          sent_at: now.toISOString(),
+        // Persist log entry (acts as dedup marker too)
+        await supabase.from('expiry_reminder_log').insert({
+          user_id: sub.user_id,
+          subscription_id: sub.id,
+          package_name: packageName,
+          recipient_name: fullName || null,
+          recipient_email: userEmail || null,
+          telegram_chat_id: telegramId || null,
+          milestone_days: milestone,
+          days_left: daysLeft,
+          expires_at: sub.expires_at,
+          email_status: emailStatus,
+          email_error: emailError,
+          telegram_status: telegramStatus,
+          telegram_error: telegramError,
         });
 
         totalNotified++;
