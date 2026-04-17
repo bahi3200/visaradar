@@ -49,6 +49,18 @@ export default function SiteSettingsPage() {
           await updateSetting.mutateAsync({ key: field.key, value: values[field.key] || "" });
         }
       }
+      // Reminder days
+      const raw = values[REMINDER_KEY] ?? "";
+      const norm = normalizeReminderDays(raw);
+      if (norm.error) {
+        toast.error(norm.error);
+        setSaving(false);
+        return;
+      }
+      if (norm.value !== (settings[REMINDER_KEY] ?? "")) {
+        await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
+        setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+      }
       toast.success("تم حفظ الإعدادات بنجاح");
     } catch {
       toast.error("فشل في حفظ الإعدادات");
@@ -59,15 +71,18 @@ export default function SiteSettingsPage() {
 
   if (isLoading) {
     return (
-      <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا">
+      <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
         <div className="text-center py-20 text-muted-foreground animate-pulse">جاري التحميل...</div>
       </AdminLayout>
     );
   }
 
+  const reminderRaw = values[REMINDER_KEY] ?? "";
+  const reminderPreview = normalizeReminderDays(reminderRaw);
+
   return (
-    <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا">
-      <div className="max-w-xl">
+    <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
+      <div className="max-w-xl space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -92,22 +107,65 @@ export default function SiteSettingsPage() {
               />
             </div>
           ))}
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full flex items-center justify-center gap-2 gradient-primary text-primary-foreground font-bold py-3 rounded-xl transition-all hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? (
-              <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                حفظ الإعدادات
-              </>
-            )}
-          </button>
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="gradient-card rounded-2xl border border-border/50 p-6 shadow-card space-y-4"
+        >
+          <div>
+            <h2 className="font-heading text-lg font-bold text-foreground mb-1 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              تذكيرات انتهاء الاشتراك
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              عدد الأيام قبل انتهاء الاشتراك التي يُرسل فيها تذكير عبر البريد و Telegram. افصل بين القيم بفواصل.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">أيام التذكير (1 - 60)</label>
+            <input
+              type="text"
+              dir="ltr"
+              value={reminderRaw}
+              onChange={(e) => setValues({ ...values, [REMINDER_KEY]: e.target.value })}
+              placeholder="7,3,1"
+              className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            {reminderPreview.error ? (
+              <p className="text-xs text-destructive mt-2">{reminderPreview.error}</p>
+            ) : reminderPreview.days.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {reminderPreview.days.map((d) => (
+                  <span
+                    key={d}
+                    className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20"
+                  >
+                    D-{d}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </motion.div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full max-w-xl flex items-center justify-center gap-2 gradient-primary text-primary-foreground font-bold py-3 rounded-xl transition-all hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? (
+            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              حفظ الإعدادات
+            </>
+          )}
+        </button>
       </div>
     </AdminLayout>
   );
