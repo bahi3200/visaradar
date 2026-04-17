@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Facebook, Instagram, Send as TelegramIcon, Music2 } from "lucide-react";
+import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -11,6 +11,26 @@ const socialFields = [
   { key: "tiktok_url", label: "تيكتوك", icon: Music2, placeholder: "https://tiktok.com/@yourpage" },
   { key: "telegram_url", label: "تليغرام", icon: TelegramIcon, placeholder: "https://t.me/yourchannel" },
 ];
+
+const REMINDER_KEY = "expiry_reminder_days";
+
+function normalizeReminderDays(raw: string): { value: string; days: number[]; error?: string } {
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (parts.length === 0) return { value: "", days: [], error: "أدخل رقماً واحداً على الأقل" };
+  const nums: number[] = [];
+  for (const p of parts) {
+    const n = parseInt(p, 10);
+    if (!Number.isFinite(n) || n <= 0 || n > 60) {
+      return { value: raw, days: [], error: `قيمة غير صالحة: "${p}" (يجب أن تكون بين 1 و 60)` };
+    }
+    nums.push(n);
+  }
+  const unique = Array.from(new Set(nums)).sort((a, b) => b - a);
+  return { value: unique.join(","), days: unique };
+}
 
 export default function SiteSettingsPage() {
   const { settings, isLoading, updateSetting } = useSiteSettings();
