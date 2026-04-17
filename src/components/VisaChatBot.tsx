@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Loader2, Sparkles, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -15,29 +17,59 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function VisaChatBot() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load history from localStorage
+  // Load history: DB for logged-in users, localStorage for guests
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setMessages(JSON.parse(stored));
-    } catch {
-      // ignore
-    }
-  }, []);
+    const load = async () => {
+      if (user) {
+        // Get most recent conversation for this user
+        const { data: convs } = await supabase
+          .from("chat_conversations")
+          .select("id")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1);
 
-  // Persist history
+        if (convs && convs.length > 0) {
+          const convId = convs[0].id;
+          setConversationId(convId);
+          const { data: msgs } = await supabase
+            .from("chat_messages")
+            .select("role, content")
+            .eq("conversation_id", convId)
+            .order("created_at", { ascending: true });
+          if (msgs) setMessages(msgs as Msg[]);
+        } else {
+          setConversationId(null);
+          setMessages([]);
+        }
+      } else {
+        // Guest: localStorage
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) setMessages(JSON.parse(stored));
+        } catch {
+          // ignore
+        }
+      }
+    };
+    load();
+  }, [user]);
+
+  // Persist guest history to localStorage
   useEffect(() => {
-    if (messages.length > 0) {
+    if (!user && messages.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-30)));
     }
-  }, [messages]);
+  }, [messages, user]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -49,6 +81,33 @@ export default function VisaChatBot() {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
 
+  const ensureConversation = async (firstMsg: string): Promise<string | null> => {
+    if (!user) return null;
+    if (conversationId) return conversationId;
+    const title = firstMsg.slice(0, 60);
+    const { data, error } = await supabase
+      .from("chat_conversations")
+      .insert({ user_id: user.id, title })
+      .select("id")
+      .single();
+    if (error || !data) {
+      console.error("Failed to create conversation:", error);
+      return null;
+    }
+    setConversationId(data.id);
+    return data.id;
+  };
+
+  const saveMessage = async (convId: string, role: "user" | "assistant", content: string) => {
+    if (!user) return;
+    await supabase.from("chat_messages").insert({
+      conversation_id: convId,
+      user_id: user.id,
+      role,
+      content,
+    });
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
     const userMsg: Msg = { role: "user", content: text.trim() };
@@ -56,6 +115,10 @@ export default function VisaChatBot() {
     setMessages(newHistory);
     setInput("");
     setIsLoading(true);
+
+    // Save user message to DB
+    const convId = await ensureConversation(userMsg.content);
+    if (convId) await saveMessage(convId, "user", userMsg.content);
 
     let assistantContent = "";
     const upsertAssistant = (chunk: string) => {
@@ -148,6 +211,11 @@ export default function VisaChatBot() {
           }
         }
       }
+
+      // Save assistant reply to DB once streaming is complete
+      if (convId && assistantContent) {
+        await saveMessage(convId, "assistant", assistantContent);
+      }
     } catch (err) {
       console.error("Chat error:", err);
       toast.error("حدث خطأ، حاول مجدداً");
@@ -157,9 +225,14 @@ export default function VisaChatBot() {
     }
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
     setMessages([]);
-    localStorage.removeItem(STORAGE_KEY);
+    if (user && conversationId) {
+      await supabase.from("chat_conversations").delete().eq("id", conversationId);
+      setConversationId(null);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
     toast.success("تم مسح المحادثة");
   };
 
@@ -210,7 +283,7 @@ export default function VisaChatBot() {
                     </h3>
                     <p className="text-[11px] text-accent-foreground/80 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      متصل الآن
+                      {user ? "محفوظ في حسابك" : "متصل الآن"}
                     </p>
                   </div>
                 </div>
