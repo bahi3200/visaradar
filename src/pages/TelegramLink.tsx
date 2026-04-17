@@ -104,10 +104,10 @@ const TelegramLink = () => {
         </div>
 
         {currentChatId && (
-          <Card className="border-emerald-500/40 bg-emerald-500/5">
+          <Card className="border-primary/40 bg-primary/5">
             <CardContent className="pt-6 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                <CheckCircle2 className="w-6 h-6 text-primary" />
                 <div>
                   <p className="font-semibold">حسابك مرتبط بـ Telegram</p>
                   <p className="text-sm text-muted-foreground">
