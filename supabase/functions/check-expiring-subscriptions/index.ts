@@ -5,8 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Reminder milestones (days before expiry)
-const REMINDER_DAYS = [7, 3, 1];
+// Default reminder milestones (days before expiry); overridable via site_settings.expiry_reminder_days
+const DEFAULT_REMINDER_DAYS = [7, 3, 1];
+
+function parseReminderDays(raw: string | null | undefined): number[] {
+  if (!raw) return DEFAULT_REMINDER_DAYS;
+  const parsed = raw
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0 && n <= 60);
+  // Deduplicate + sort desc so longest lead-time runs first
+  const unique = Array.from(new Set(parsed)).sort((a, b) => b - a);
+  return unique.length > 0 ? unique : DEFAULT_REMINDER_DAYS;
+}
 
 function buildExpiryEmailHtml(fullName: string, packageName: string, daysLeft: number, expiryDate: string): string {
   const urgencyColor = daysLeft <= 1 ? '#ef4444' : daysLeft <= 3 ? '#f97316' : '#eab308';
@@ -64,6 +75,14 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Load configurable reminder days from site_settings
+    const { data: settingRow } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'expiry_reminder_days')
+      .maybeSingle();
+    const REMINDER_DAYS = parseReminderDays(settingRow?.value);
 
     console.log('[check-expiring] Starting reminder check for milestones:', REMINDER_DAYS);
 
