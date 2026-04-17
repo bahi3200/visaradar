@@ -65,12 +65,18 @@ Deno.serve(async (req) => {
       .select("user_id, is_active")
       .eq("is_active", true);
 
+    // Get telegram link info from profiles
+    const { data: profiles } = await adminClient
+      .from("profiles")
+      .select("user_id, telegram_id, telegram_username, telegram_linked_at");
+
     // Map data
     const result = users.map((u) => {
       const userSubs = (subscriptions || []).filter((s) => s.user_id === u.id);
       const activeSub = userSubs.find((s) => s.status === "active" && new Date(s.expires_at) > new Date());
       const userRoles = (roles || []).filter((r) => r.user_id === u.id).map((r) => r.role);
       const deviceCount = (devices || []).filter((d) => d.user_id === u.id).length;
+      const profile = (profiles || []).find((p) => p.user_id === u.id);
 
       return {
         id: u.id,
@@ -82,6 +88,9 @@ Deno.serve(async (req) => {
         banned_until: u.banned_until || null,
         roles: userRoles,
         active_devices: deviceCount,
+        telegram_id: profile?.telegram_id || null,
+        telegram_username: profile?.telegram_username || null,
+        telegram_linked_at: profile?.telegram_linked_at || null,
         subscription: activeSub
           ? {
               status: activeSub.status,
