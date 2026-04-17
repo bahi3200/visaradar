@@ -5,10 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Reminder milestones (days before expiry)
+const REMINDER_DAYS = [7, 3, 1];
+
 function buildExpiryEmailHtml(fullName: string, packageName: string, daysLeft: number, expiryDate: string): string {
-  const urgencyColor = daysLeft <= 1 ? '#ef4444' : daysLeft <= 2 ? '#f97316' : '#eab308';
-  const urgencyIcon = daysLeft <= 1 ? '🔴' : daysLeft <= 2 ? '🟠' : '🟡';
-  const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : daysLeft === 2 ? 'بعد يومين' : `خلال ${daysLeft} أيام`;
+  const urgencyColor = daysLeft <= 1 ? '#ef4444' : daysLeft <= 3 ? '#f97316' : '#eab308';
+  const urgencyIcon = daysLeft <= 1 ? '🔴' : daysLeft <= 3 ? '🟠' : '🟡';
+  const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : `خلال ${daysLeft} أيام`;
 
   return `
 <!DOCTYPE html>
@@ -62,150 +65,133 @@ Deno.serve(async (req) => {
     const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    console.log('[check-expiring] Starting expiring subscription check...');
+    console.log('[check-expiring] Starting reminder check for milestones:', REMINDER_DAYS);
 
-    // Find subscriptions expiring within 3 days (but not already expired)
     const now = new Date();
-    const threeDaysFromNow = new Date(now);
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    let totalNotified = 0;
+    const summary: Record<string, number> = {};
 
-    const { data: expiringSubs, error: subError } = await supabase
-      .from('subscriptions')
-      .select('*, packages(name_ar)')
-      .eq('status', 'active')
-      .gte('expires_at', now.toISOString())
-      .lte('expires_at', threeDaysFromNow.toISOString());
+    for (const milestone of REMINDER_DAYS) {
+      // Window: subscriptions that expire in [milestone, milestone+1) days from now
+      const windowStart = new Date(now.getTime() + (milestone - 1) * 24 * 60 * 60 * 1000);
+      const windowEnd = new Date(now.getTime() + milestone * 24 * 60 * 60 * 1000);
 
-    if (subError) {
-      console.error('[check-expiring] Query error:', subError);
-      throw subError;
-    }
+      const { data: expiringSubs, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*, packages(name_ar)')
+        .eq('status', 'active')
+        .gt('expires_at', windowStart.toISOString())
+        .lte('expires_at', windowEnd.toISOString());
 
-    if (!expiringSubs || expiringSubs.length === 0) {
-      console.log('[check-expiring] No expiring subscriptions found');
-      return new Response(JSON.stringify({ success: true, notified: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log(`[check-expiring] Found ${expiringSubs.length} expiring subscriptions`);
-
-    let notifiedCount = 0;
-
-    for (const sub of expiringSubs) {
-      const daysLeft = Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-      const expiryDate = new Date(sub.expires_at).toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });
-      const packageName = (sub as any).packages?.name_ar || 'الباقة';
-
-      // Check if we already sent a notification for this subscription today
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-
-      const { data: existingNotif } = await supabase
-        .from('email_notifications')
-        .select('id')
-        .eq('recipient_email', `expiry_check_${sub.id}`)
-        .gte('created_at', todayStart.toISOString())
-        .limit(1);
-
-      if (existingNotif && existingNotif.length > 0) {
-        console.log(`[check-expiring] Already notified today for sub ${sub.id}, skipping`);
+      if (subError) {
+        console.error(`[check-expiring] Query error for D-${milestone}:`, subError);
         continue;
       }
 
-      // Get user profile and email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, telegram_id')
-        .eq('user_id', sub.user_id)
-        .maybeSingle();
+      console.log(`[check-expiring] D-${milestone}: found ${expiringSubs?.length ?? 0} subs`);
+      summary[`D-${milestone}`] = 0;
 
-      // Get user email from auth
-      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(sub.user_id);
-      const userEmail = authUser?.email;
-      const fullName = profile?.full_name || '';
-      const telegramId = sub.telegram_chat_id || profile?.telegram_id;
+      if (!expiringSubs || expiringSubs.length === 0) continue;
 
-      // Send email notification
-      if (userEmail) {
-        const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : daysLeft === 2 ? 'بعد يومين' : `خلال ${daysLeft} أيام`;
-        const emailSubject = `⏳ اشتراكك ينتهي ${daysText} — جدّد الآن`;
-        const emailHtml = buildExpiryEmailHtml(fullName, packageName, daysLeft, expiryDate);
+      for (const sub of expiringSubs) {
+        const daysLeft = Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        const expiryDate = new Date(sub.expires_at).toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });
+        const packageName = (sub as any).packages?.name_ar || 'الباقة';
 
-        try {
-          const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-subscription-email`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({
-              to: userEmail,
-              subject: emailSubject,
-              html: emailHtml,
-              fullName,
-            }),
-          });
+        // Dedup marker is per-milestone (so each user gets max 1 reminder per milestone per subscription)
+        const dedupMarker = `expiry_reminder_${sub.id}_d${milestone}`;
 
-          if (emailRes.ok) {
-            console.log(`[check-expiring] Email sent to ${userEmail}`);
-          } else {
-            console.error(`[check-expiring] Email failed for ${userEmail}:`, await emailRes.text());
-          }
-        } catch (err) {
-          console.error(`[check-expiring] Email error for ${userEmail}:`, err);
+        const { data: existingNotif } = await supabase
+          .from('email_notifications')
+          .select('id')
+          .eq('recipient_email', dedupMarker)
+          .limit(1);
+
+        if (existingNotif && existingNotif.length > 0) {
+          console.log(`[check-expiring] D-${milestone}: already sent for sub ${sub.id}, skip`);
+          continue;
         }
-      }
 
-      // Send Telegram notification
-      if (telegramId && TELEGRAM_BOT_TOKEN) {
-        const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : daysLeft === 2 ? 'بعد يومين' : `خلال ${daysLeft} أيام`;
-        const telegramMessage = [
-          `⏳ <b>تذكير: اشتراكك ينتهي ${daysText}!</b>`,
-          ``,
-          `📦 <b>الباقة:</b> ${packageName}`,
-          `📅 <b>تاريخ الانتهاء:</b> ${expiryDate}`,
-          ``,
-          `🔄 جدّد اشتراكك الآن لتجنب انقطاع خدمة التنبيهات.`,
-        ].join('\n');
+        // Get user profile and email
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, telegram_id')
+          .eq('user_id', sub.user_id)
+          .maybeSingle();
 
-        try {
-          const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: telegramId,
-              text: telegramMessage,
-              parse_mode: 'HTML',
-            }),
-          });
+        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(sub.user_id);
+        const userEmail = authUser?.email;
+        const fullName = profile?.full_name || '';
+        const telegramId = sub.telegram_chat_id || profile?.telegram_id;
 
-          if (res.ok) {
-            console.log(`[check-expiring] Telegram sent to ${telegramId}`);
-          } else {
-            console.error(`[check-expiring] Telegram failed:`, await res.text());
+        const daysText = daysLeft === 0 ? 'اليوم' : daysLeft === 1 ? 'غداً' : `خلال ${daysLeft} أيام`;
+
+        // Email
+        if (userEmail) {
+          const emailSubject = `⏳ اشتراكك ينتهي ${daysText} — جدّد الآن`;
+          const emailHtml = buildExpiryEmailHtml(fullName, packageName, daysLeft, expiryDate);
+
+          try {
+            const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-subscription-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({ to: userEmail, subject: emailSubject, html: emailHtml, fullName }),
+            });
+            if (!emailRes.ok) {
+              console.error(`[check-expiring] Email failed for ${userEmail}:`, await emailRes.text());
+            }
+          } catch (err) {
+            console.error(`[check-expiring] Email error for ${userEmail}:`, err);
           }
-        } catch (err) {
-          console.error(`[check-expiring] Telegram error:`, err);
         }
+
+        // Telegram
+        if (telegramId && TELEGRAM_BOT_TOKEN) {
+          const telegramMessage = [
+            `⏳ <b>تذكير: اشتراكك ينتهي ${daysText}!</b>`,
+            ``,
+            `📦 <b>الباقة:</b> ${packageName}`,
+            `📅 <b>تاريخ الانتهاء:</b> ${expiryDate}`,
+            `⏱ <b>الوقت المتبقي:</b> ${daysLeft} يوم`,
+            ``,
+            `🔄 جدّد اشتراكك الآن لتجنب انقطاع خدمة التنبيهات.`,
+          ].join('\n');
+
+          try {
+            const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: telegramId, text: telegramMessage, parse_mode: 'HTML' }),
+            });
+            if (!res.ok) {
+              console.error(`[check-expiring] Telegram failed:`, await res.text());
+            }
+          } catch (err) {
+            console.error(`[check-expiring] Telegram error:`, err);
+          }
+        }
+
+        // Record dedup marker
+        await supabase.from('email_notifications').insert({
+          recipient_email: dedupMarker,
+          recipient_name: fullName,
+          subject: `تذكير D-${milestone} لاشتراك ${sub.id}`,
+          html_body: `Reminder D-${milestone} sent for subscription ${sub.id}`,
+          status: 'sent',
+          sent_at: now.toISOString(),
+        });
+
+        totalNotified++;
+        summary[`D-${milestone}`]++;
       }
-
-      // Record that we notified for this subscription today (dedup marker)
-      await supabase.from('email_notifications').insert({
-        recipient_email: `expiry_check_${sub.id}`,
-        recipient_name: fullName,
-        subject: `تذكير انتهاء اشتراك - ${daysLeft} أيام`,
-        html_body: `Expiry reminder sent for subscription ${sub.id}`,
-        status: 'sent',
-        sent_at: now.toISOString(),
-      });
-
-      notifiedCount++;
     }
 
-    console.log(`[check-expiring] Done. Notified ${notifiedCount} users.`);
+    console.log(`[check-expiring] Done. Total: ${totalNotified}`, summary);
 
-    return new Response(JSON.stringify({ success: true, notified: notifiedCount }), {
+    return new Response(JSON.stringify({ success: true, notified: totalNotified, summary }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
