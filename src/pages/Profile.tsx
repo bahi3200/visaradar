@@ -2,18 +2,27 @@ import Layout from "@/components/Layout";
 import ReferralSection from "@/components/referral/ReferralSection";
 import UserStatsDashboard from "@/components/profile/UserStatsDashboard";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type ActiveSub = {
+  id: string;
+  package_id: string;
+  service_type: string;
+  expires_at: string;
+  packages: { name_ar: string; price: number | null } | null;
+};
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -27,13 +36,23 @@ export default function ProfilePage() {
   const [telegramId, setTelegramId] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
-      const [{ data: profileData }, { data: prefData }] = await Promise.all([
+      const [{ data: profileData }, { data: prefData }, { data: subData }] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).single(),
         supabase.from("notification_preferences").select("sound_enabled").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("subscriptions")
+          .select("id, package_id, service_type, expires_at, packages(name_ar, price)")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .gt("expires_at", new Date().toISOString())
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (profileData) {
         setFullName(profileData.full_name || "");
@@ -43,6 +62,9 @@ export default function ProfilePage() {
       }
       if (prefData) {
         setSoundEnabled(prefData.sound_enabled);
+      }
+      if (subData) {
+        setActiveSub(subData as ActiveSub);
       }
       setLoading(false);
     };
@@ -237,6 +259,51 @@ export default function ProfilePage() {
                 {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Save className="w-4 h-4 ml-2" />}
                 حفظ التغييرات
               </Button>
+
+              {/* Quick Renew - only when user has an active subscription and is not admin */}
+              {!isAdmin && activeSub && (() => {
+                const daysLeft = Math.max(0, Math.ceil((new Date(activeSub.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                const urgent = daysLeft <= 7;
+                const expiryDate = new Date(activeSub.expires_at).toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" });
+                const renewUrl = `/subscribe?renew=true&package=${activeSub.package_id}&service=${activeSub.service_type}`;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-2xl border p-5 space-y-3 ${urgent ? "border-destructive/40 bg-destructive/5" : "border-primary/30 bg-primary/5"}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${urgent ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"}`}>
+                        <RefreshCw className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-heading font-bold text-foreground text-sm mb-0.5">تجديد سريع</h3>
+                        <p className="text-xs text-muted-foreground">
+                          باقتك الحالية: <span className="font-bold text-foreground">{activeSub.packages?.name_ar || "—"}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                          <Calendar className="w-3 h-3" />
+                          تنتهي في {expiryDate}
+                          <span className={`font-bold ${urgent ? "text-destructive" : "text-primary"}`}>
+                            ({daysLeft === 0 ? "اليوم" : daysLeft === 1 ? "غداً" : `بعد ${daysLeft} يوم`})
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <Link to={renewUrl} className="block">
+                      <Button className={`w-full font-bold ${urgent ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" : "gradient-primary text-primary-foreground"}`}>
+                        <RefreshCw className="w-4 h-4 ml-2" />
+                        جدّد نفس الباقة الآن
+                      </Button>
+                    </Link>
+                    {activeSub.packages?.price && (
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        السعر: <span className="font-bold text-foreground">{activeSub.packages.price.toLocaleString("ar")} د.ج</span>
+                      </p>
+                    )}
+                  </motion.div>
+                );
+              })()}
 
               {/* Referral Section - hidden for admins */}
               {!isAdmin && <ReferralSection />}
