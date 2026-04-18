@@ -224,14 +224,30 @@ const AdminTelegramUsers = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
     return users.filter((u) => {
       if (subFilter !== "all" && u.sub_status !== subFilter) return false;
+
+      if (activityFilter !== "all") {
+        if (activityFilter === "never") {
+          if (u.last_message_at) return false;
+        } else {
+          const days = activityFilter === "inactive_7d" ? 7 : 30;
+          // never received → counts as inactive
+          if (u.last_message_at) {
+            const ageMs = now - new Date(u.last_message_at).getTime();
+            if (ageMs < days * DAY) return false;
+          }
+        }
+      }
+
       if (!q) return true;
       return [u.full_name, u.telegram_id, u.telegram_username]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [users, search, subFilter]);
+  }, [users, search, subFilter, activityFilter]);
 
   const counts = useMemo(() => {
     let active = 0, expired = 0, none = 0;
