@@ -586,6 +586,19 @@ const AdminTelegramUsers = () => {
                     className="pr-9"
                   />
                 </div>
+                {hiddenSelectedCount > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={keepOnlyVisibleSelected}
+                    className="hidden md:inline-flex border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                    title={`${hiddenSelectedCount} من المحدّدين خارج النتائج المرئية`}
+                  >
+                    <Eye className="w-4 h-4 ml-2" />
+                    احتفظ بالمرئيين ({hiddenSelectedCount} مخفي)
+                  </Button>
+                )}
                 <Button onClick={openSendBulk} disabled={selected.size === 0}>
                   <Send className="w-4 h-4 ml-2" />
                   إرسال للمحدّدين ({selected.size})
