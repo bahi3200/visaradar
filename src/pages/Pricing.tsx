@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";

@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { FileText, CheckCircle, XCircle, CreditCard, Ban, RefreshCw, Scale } from "lucide-react";
 

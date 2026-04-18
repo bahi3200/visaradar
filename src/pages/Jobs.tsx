@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import JobCard from "@/components/JobCard";
 import { sampleJobs } from "@/data/sample";
 import { Search, Filter, X, MapPin, Building2, Banknote, Lock, Crown, Calendar, ArrowLeft } from "lucide-react";

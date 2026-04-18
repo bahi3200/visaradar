@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { sampleJobs } from "@/data/sample";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
