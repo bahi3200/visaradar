@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar, Send, CheckCircle2, Unlink } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar, Send, CheckCircle2, Unlink, IdCard, ChevronLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
