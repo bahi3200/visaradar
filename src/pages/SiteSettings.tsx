@@ -52,17 +52,23 @@ export default function SiteSettingsPage() {
           await updateSetting.mutateAsync({ key: field.key, value: values[field.key] || "" });
         }
       }
-      // Reminder days
-      const raw = values[REMINDER_KEY] ?? "";
-      const norm = normalizeReminderDays(raw);
-      if (norm.error) {
-        toast.error(norm.error);
-        setSaving(false);
-        return;
-      }
-      if (norm.value !== (settings[REMINDER_KEY] ?? "")) {
-        await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
-        setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+      // Reminder days (optional — only validate if user provided a value)
+      const raw = (values[REMINDER_KEY] ?? "").trim();
+      const previousReminder = (settings[REMINDER_KEY] ?? "").trim();
+      if (raw.length > 0) {
+        const norm = normalizeReminderDays(raw);
+        if (norm.error) {
+          toast.error(norm.error);
+          setSaving(false);
+          return;
+        }
+        if (norm.value !== previousReminder) {
+          await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
+          setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+        }
+      } else if (previousReminder.length > 0) {
+        // User cleared the field — persist empty
+        await updateSetting.mutateAsync({ key: REMINDER_KEY, value: "" });
       }
       // Quick test message
       const quickRaw = (values[QUICK_TEST_KEY] ?? "").trim();
@@ -153,7 +159,7 @@ export default function SiteSettingsPage() {
               placeholder="7,3,1"
               className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
-            {reminderPreview.error ? (
+            {reminderRaw.trim().length > 0 && reminderPreview.error ? (
               <p className="text-xs text-destructive mt-2">{reminderPreview.error}</p>
             ) : reminderPreview.days.length > 0 ? (
               <div className="flex flex-wrap gap-2 mt-3">
@@ -166,7 +172,11 @@ export default function SiteSettingsPage() {
                   </span>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="text-xs text-muted-foreground/70 mt-2">
+                اتركه فارغاً لاستخدام الإعداد الافتراضي
+              </p>
+            )}
           </div>
         </motion.div>
 
