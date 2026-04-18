@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { TELEGRAM_TEMPLATES, TELEGRAM_TEMPLATES_MAP } from "@/lib/telegramTemplates";
+import { formatRelativeArabic } from "@/lib/relativeTime";
 
 type SubStatus = "active" | "expired" | "none";
 
@@ -506,6 +507,7 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
+                      <th className="px-3 py-2 font-medium">منذ</th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
                   </thead>
@@ -561,6 +563,24 @@ const AdminTelegramUsers = () => {
                               </button>
                             ) : (
                               <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-xs whitespace-nowrap">
+                            {u.last_message_at ? (() => {
+                              const ageDays = (Date.now() - new Date(u.last_message_at).getTime()) / (24 * 60 * 60 * 1000);
+                              const isStale = ageDays >= 7;
+                              return (
+                                <span
+                                  className={isStale ? "text-amber-600 font-medium" : "text-muted-foreground"}
+                                  title={formatDate(u.last_message_at)}
+                                >
+                                  {formatRelativeArabic(u.last_message_at).replace(/^قبل\s/, "منذ ")}
+                                </span>
+                              );
+                            })() : (
+                              <span className="text-destructive/80 font-medium" title="لم يتلقَّ أي رسالة">
+                                لم يستلم بعد
+                              </span>
                             )}
                           </td>
                           <td className="px-3 py-3 text-left">
