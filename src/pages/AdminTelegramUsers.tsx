@@ -452,6 +452,16 @@ const AdminTelegramUsers = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={activityFilter} onValueChange={(v) => setActivityFilter(v as ActivityFilter)}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVITY_FILTERS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="relative flex-1 md:w-72">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
