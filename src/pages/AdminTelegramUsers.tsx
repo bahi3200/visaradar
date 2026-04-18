@@ -228,7 +228,7 @@ const AdminTelegramUsers = () => {
     const q = search.trim().toLowerCase();
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
-    return users.filter((u) => {
+    const result = users.filter((u) => {
       if (subFilter !== "all" && u.sub_status !== subFilter) return false;
 
       if (activityFilter !== "all") {
@@ -249,7 +249,17 @@ const AdminTelegramUsers = () => {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [users, search, subFilter, activityFilter]);
+
+    if (staleSort !== "none") {
+      // "never received" treated as oldest (Infinity age)
+      const ageOf = (u: TelegramUser) =>
+        u.last_message_at ? now - new Date(u.last_message_at).getTime() : Number.POSITIVE_INFINITY;
+      result.sort((a, b) =>
+        staleSort === "stalest" ? ageOf(b) - ageOf(a) : ageOf(a) - ageOf(b)
+      );
+    }
+    return result;
+  }, [users, search, subFilter, activityFilter, staleSort]);
 
   const counts = useMemo(() => {
     let active = 0, expired = 0, none = 0;
