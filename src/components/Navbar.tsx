@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell } from "lucide-react";
+import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell, IdCard } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,12 @@ export default function Navbar() {
                   <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
                     <User className="w-4 h-4" />
                     ملفي الشخصي
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile/visa" className="flex items-center gap-2 cursor-pointer">
+                    <IdCard className="w-4 h-4" />
+                    ملفي للفيزا
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -205,6 +211,10 @@ export default function Navbar() {
                   </span>
                   <Link to="/profile" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                     👤 ملفي الشخصي
+                  </Link>
+                  <Link to="/profile/visa" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
+                    <IdCard className="w-4 h-4" />
+                    ملفي للفيزا
                   </Link>
                   <Link to="/my-requests" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                     📋 طلباتي
