@@ -400,7 +400,7 @@ const AdminTelegramUsers = () => {
     >
       <div className="space-y-6" dir="rtl">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -445,6 +445,33 @@ const AdminTelegramUsers = () => {
               </div>
             </CardContent>
           </Card>
+          <button
+            type="button"
+            onClick={() => {
+              if (staleCount > 0) {
+                setActivityFilter("inactive_7d");
+                setStaleSort("stalest");
+              }
+            }}
+            className="text-right"
+            title={
+              staleCount > 0
+                ? `انقر لتصفية ${staleCount} مستخدم خامل منذ 7 أيام`
+                : "لا يوجد مستخدمون خاملون حالياً"
+            }
+          >
+            <Card className={staleCount > 0 ? "hover:border-amber-500/50 transition-colors cursor-pointer" : ""}>
+              <CardContent className="pt-6 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${staleCount > 0 ? "text-amber-600" : ""}`}>{staleCount}</p>
+                  <p className="text-xs text-muted-foreground">خاملون &gt; 7 أيام</p>
+                </div>
+              </CardContent>
+            </Card>
+          </button>
         </div>
 
         {/* Toolbar */}
