@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Globe, ArrowLeft } from "lucide-react";
 import Layout from "@/components/Layout";
+import AccessStatusCard from "@/components/AccessStatusCard";
 import { countryPages } from "@/data/countryLandingPages";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,10 @@ export default function VisaCountries() {
       </section>
 
       <div className="container mx-auto px-4 py-10" dir="rtl">
+        <AccessStatusCard
+          serviceType="visa"
+          lockedSubtitle="اشترك لتلقي تنبيهات فتح المواعيد ومتابعة الدول"
+        />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {countryPages.map((country, i) => (
             <motion.div
