@@ -725,6 +725,8 @@ const QR_FIELD_OPTIONS: { key: string; label: string }[] = [
   { key: "email", label: "البريد الإلكتروني" },
 ];
 
+const PDF_PREFS_KEY = "visa-profile:pdf-prefs:v1";
+
 const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -734,6 +736,46 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [qrFields, setQrFields] = useState<string[]>([
     "name", "passport", "nationality", "dob", "issued", "expires",
   ]);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  // Load saved preferences once on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PDF_PREFS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as {
+          selected?: string[];
+          includeQr?: boolean;
+          qrFields?: string[];
+        };
+        if (Array.isArray(saved.selected)) {
+          const valid = saved.selected.filter((s) => (ALL_PDF_SECTIONS as readonly string[]).includes(s));
+          if (valid.length > 0) setSelected(valid);
+        }
+        if (typeof saved.includeQr === "boolean") setIncludeQr(saved.includeQr);
+        if (Array.isArray(saved.qrFields)) {
+          const validKeys = saved.qrFields.filter((k) => QR_FIELD_OPTIONS.some((o) => o.key === k));
+          setQrFields(validKeys);
+        }
+      }
+    } catch {
+      // Ignore storage errors (private mode, quota, etc.)
+    }
+    setPrefsLoaded(true);
+  }, []);
+
+  // Persist preferences whenever they change (after initial load)
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    try {
+      localStorage.setItem(
+        PDF_PREFS_KEY,
+        JSON.stringify({ selected, includeQr, qrFields }),
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [selected, includeQr, qrFields, prefsLoaded]);
 
   const toggleQrField = (key: string, checked: boolean) => {
     setQrFields((prev) => (checked ? [...prev, key] : prev.filter((k) => k !== key)));
