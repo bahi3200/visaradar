@@ -291,48 +291,98 @@ const getAllSections = (p: VisaProfile): ProfileSection[] => [
   },
 ];
 
-const countFilled = (vals: Array<string | number | null | undefined>) =>
-  vals.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
+type FieldRef = { label: string; value: string | number | null | undefined };
+
+const splitFields = (fields: FieldRef[]) => {
+  const filled: string[] = [];
+  const missing: string[] = [];
+  for (const f of fields) {
+    const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+    if (v) filled.push(f.label);
+    else missing.push(f.label);
+  }
+  return { filled: filled.length, total: fields.length, missing };
+};
 
 const getTabStats = (p: VisaProfile) => ({
-  personal: {
-    filled: countFilled([p.full_name_ar, p.full_name_latin, p.gender, p.birth_date, p.birth_place, p.nationality, p.marital_status]),
-    total: 7,
-  },
-  passport: {
-    filled: countFilled([p.passport_number, p.passport_issue_date, p.passport_expiry_date, p.passport_issue_place, p.national_id]),
-    total: 5,
-  },
-  contact: {
-    filled: countFilled([p.phone, p.email, p.address, p.city, p.wilaya, p.postal_code]),
-    total: 6,
-  },
-  profession: {
-    filled: countFilled([p.profession, p.employer_name, p.employer_address, p.employer_phone, p.monthly_income]),
-    total: 5,
-  },
-  travel: {
-    filled: countFilled([p.destination_country, p.travel_purpose, p.travel_date, p.return_date, p.duration_days, p.hotel_or_host]),
-    total: 6,
-  },
-  family: {
-    filled: countFilled([p.father_name, p.mother_name, p.spouse_name, p.children_count, p.children_details]),
-    total: 5,
-  },
+  personal: splitFields([
+    { label: "الاسم الكامل (عربي)", value: p.full_name_ar },
+    { label: "الاسم الكامل (لاتيني)", value: p.full_name_latin },
+    { label: "الجنس", value: p.gender },
+    { label: "تاريخ الميلاد", value: p.birth_date },
+    { label: "مكان الميلاد", value: p.birth_place },
+    { label: "الجنسية", value: p.nationality },
+    { label: "الحالة العائلية", value: p.marital_status },
+  ]),
+  passport: splitFields([
+    { label: "رقم جواز السفر", value: p.passport_number },
+    { label: "تاريخ الإصدار", value: p.passport_issue_date },
+    { label: "تاريخ الانتهاء", value: p.passport_expiry_date },
+    { label: "مكان الإصدار", value: p.passport_issue_place },
+    { label: "رقم البطاقة الوطنية", value: p.national_id },
+  ]),
+  contact: splitFields([
+    { label: "الهاتف", value: p.phone },
+    { label: "البريد الإلكتروني", value: p.email },
+    { label: "العنوان", value: p.address },
+    { label: "المدينة", value: p.city },
+    { label: "الولاية", value: p.wilaya },
+    { label: "الرمز البريدي", value: p.postal_code },
+  ]),
+  profession: splitFields([
+    { label: "المهنة", value: p.profession },
+    { label: "اسم صاحب العمل", value: p.employer_name },
+    { label: "عنوان العمل", value: p.employer_address },
+    { label: "هاتف العمل", value: p.employer_phone },
+    { label: "الدخل الشهري", value: p.monthly_income },
+  ]),
+  travel: splitFields([
+    { label: "بلد الوجهة", value: p.destination_country },
+    { label: "الغرض من الزيارة", value: p.travel_purpose },
+    { label: "تاريخ السفر", value: p.travel_date },
+    { label: "تاريخ العودة", value: p.return_date },
+    { label: "مدة الإقامة (أيام)", value: p.duration_days },
+    { label: "الفندق / المضيف", value: p.hotel_or_host },
+  ]),
+  family: splitFields([
+    { label: "اسم الأب", value: p.father_name },
+    { label: "اسم الأم", value: p.mother_name },
+    { label: "اسم الزوج/الزوجة", value: p.spouse_name },
+    { label: "عدد الأطفال", value: p.children_count },
+    { label: "بيانات الأطفال", value: p.children_details },
+  ]),
 });
 
-const TabBadge = ({ filled, total }: { filled: number; total: number }) => {
+const TabBadge = ({ filled, total, missing }: { filled: number; total: number; missing: string[] }) => {
   const isComplete = filled === total && total > 0;
   const isEmpty = filled === 0;
   const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
   return (
-    <Badge
-      variant={variant}
-      className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums"
-      aria-label={`${filled} من ${total} حقل مكتمل`}
-    >
-      {filled}/{total}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant={variant}
+          className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums cursor-help"
+          aria-label={`${filled} من ${total} حقل مكتمل`}
+        >
+          {filled}/{total}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[260px]">
+        {isComplete ? (
+          <p className="text-xs">كل الحقول مكتملة ✓</p>
+        ) : (
+          <div className="text-xs space-y-1">
+            <p className="font-semibold">حقول ناقصة ({missing.length}):</p>
+            <ul className="list-disc pr-4 space-y-0.5">
+              {missing.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
