@@ -491,8 +491,9 @@ const AdminTelegramUsers = () => {
                 </Badge>
               </CardTitle>
               <div className="flex flex-wrap gap-2">
+                {/* Desktop: Select dropdowns */}
                 <Select value={subFilter} onValueChange={(v) => setSubFilter(v as "all" | SubStatus)}>
-                  <SelectTrigger className="w-44">
+                  <SelectTrigger className="w-44 hidden md:flex">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -502,7 +503,7 @@ const AdminTelegramUsers = () => {
                   </SelectContent>
                 </Select>
                 <Select value={activityFilter} onValueChange={(v) => setActivityFilter(v as ActivityFilter)}>
-                  <SelectTrigger className="w-52">
+                  <SelectTrigger className="w-52 hidden md:flex">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -524,6 +525,58 @@ const AdminTelegramUsers = () => {
                   <Send className="w-4 h-4 ml-2" />
                   إرسال للمحدّدين ({selected.size})
                 </Button>
+              </div>
+            </div>
+
+            {/* Mobile: horizontal scrollable chips */}
+            <div className="md:hidden mt-3 space-y-2">
+              <div className="-mx-6 px-6 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 w-max pb-1">
+                  <span className="text-[10px] text-muted-foreground shrink-0 ml-1">الاشتراك:</span>
+                  {SUB_FILTERS.map((f) => {
+                    const active = subFilter === f.value;
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => setSubFilter(f.value as "all" | SubStatus)}
+                        className={`shrink-0 h-7 px-3 rounded-full text-xs border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="-mx-6 px-6 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 w-max pb-1">
+                  <span className="text-[10px] text-muted-foreground shrink-0 ml-1">النشاط:</span>
+                  {ACTIVITY_FILTERS.map((f) => {
+                    const active = activityFilter === f.value;
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => {
+                          setActivityFilter(f.value);
+                          if (f.value !== "all") setStaleSort("stalest");
+                          else setStaleSort("none");
+                        }}
+                        className={`shrink-0 h-7 px-3 rounded-full text-xs border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </CardHeader>
