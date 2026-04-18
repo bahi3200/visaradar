@@ -96,7 +96,7 @@ export default function HomePage() {
     return (
       <SubscriberHome
         subscription={mergedSubscription}
-        fullName={profile?.full_name || null}
+        fullName={displayName}
         isAdmin={!!isPrivileged}
         isLoading={subLoading}
         countryExpiries={countryExpiries}
