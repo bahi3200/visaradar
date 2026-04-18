@@ -703,9 +703,9 @@ const AdminTelegramUsers = () => {
 
               {/* Desktop: table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b">
-                    <tr className="text-right text-muted-foreground">
+                <table className="w-full text-sm border-separate border-spacing-0">
+                  <thead>
+                    <tr className="text-right text-muted-foreground [&>th]:border-b [&>th]:bg-card">
                       <th className="px-3 py-2 w-10">
                         <Checkbox
                           checked={allSelected}
@@ -718,7 +718,7 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
-                      <th className="px-3 py-2 font-medium">
+                      <th className="px-3 py-2 font-medium sticky left-[120px] z-20 bg-card shadow-[1px_0_0_0_hsl(var(--border))]">
                         <span className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
@@ -782,14 +782,14 @@ const AdminTelegramUsers = () => {
                           )}
                         </span>
                       </th>
-                      <th className="px-3 py-2 font-medium text-left">إجراء</th>
+                      <th className="px-3 py-2 font-medium text-left sticky left-0 z-20 bg-card">إجراء</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((u) => {
                       const checked = selected.has(u.telegram_id);
                       return (
-                        <tr key={u.user_id} className="border-b hover:bg-muted/30">
+                        <tr key={u.user_id} className="group border-b hover:bg-muted/30 [&>td]:border-b">
                           <td className="px-3 py-3">
                             <Checkbox
                               checked={checked}
@@ -839,7 +839,7 @@ const AdminTelegramUsers = () => {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          <td className="px-3 py-3 text-xs whitespace-nowrap sticky left-[120px] z-10 bg-card group-hover:bg-muted/30 shadow-[1px_0_0_0_hsl(var(--border))]">
                             {u.last_message_at ? (() => {
                               const ageDays = (Date.now() - new Date(u.last_message_at).getTime()) / (24 * 60 * 60 * 1000);
                               const isStale = ageDays >= 7;
@@ -857,7 +857,7 @@ const AdminTelegramUsers = () => {
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-left">
+                          <td className="px-3 py-3 text-left sticky left-0 z-10 bg-card group-hover:bg-muted/30">
                             <div className="flex gap-1.5 justify-end">
                               <Button
                                 size="sm"
