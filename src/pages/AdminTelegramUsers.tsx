@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap, Eye } from "lucide-react";
+import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ const AdminTelegramUsers = () => {
   const [search, setSearch] = useState("");
   const [subFilter, setSubFilter] = useState<"all" | SubStatus>("all");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
+  const [staleSort, setStaleSort] = useState<"none" | "stalest" | "freshest">("none");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -227,7 +228,7 @@ const AdminTelegramUsers = () => {
     const q = search.trim().toLowerCase();
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
-    return users.filter((u) => {
+    const result = users.filter((u) => {
       if (subFilter !== "all" && u.sub_status !== subFilter) return false;
 
       if (activityFilter !== "all") {
@@ -248,7 +249,17 @@ const AdminTelegramUsers = () => {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [users, search, subFilter, activityFilter]);
+
+    if (staleSort !== "none") {
+      // "never received" treated as oldest (Infinity age)
+      const ageOf = (u: TelegramUser) =>
+        u.last_message_at ? now - new Date(u.last_message_at).getTime() : Number.POSITIVE_INFINITY;
+      result.sort((a, b) =>
+        staleSort === "stalest" ? ageOf(b) - ageOf(a) : ageOf(a) - ageOf(b)
+      );
+    }
+    return result;
+  }, [users, search, subFilter, activityFilter, staleSort]);
 
   const counts = useMemo(() => {
     let active = 0, expired = 0, none = 0;
@@ -539,8 +550,30 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
                       <th className="px-3 py-2 font-medium">
-                        <span className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStaleSort((s) =>
+                              s === "none" ? "stalest" : s === "stalest" ? "freshest" : "none"
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
+                          title={
+                            staleSort === "stalest"
+                              ? "مرتّب: الأكثر خمولاً أولاً (انقر للعكس)"
+                              : staleSort === "freshest"
+                              ? "مرتّب: الأكثر نشاطاً أولاً (انقر لإلغاء الفرز)"
+                              : "انقر للفرز حسب آخر نشاط"
+                          }
+                        >
                           منذ
+                          {staleSort === "stalest" ? (
+                            <ArrowDown className="w-3.5 h-3.5 text-amber-600" />
+                          ) : staleSort === "freshest" ? (
+                            <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                          )}
                           {staleCount > 0 && (
                             <Badge
                               variant="outline"
@@ -550,7 +583,7 @@ const AdminTelegramUsers = () => {
                               {staleCount}
                             </Badge>
                           )}
-                        </span>
+                        </button>
                       </th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
