@@ -866,7 +866,7 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       container.style.position = "fixed";
       container.style.left = "-10000px";
       container.style.top = "0";
-      container.innerHTML = await buildHtml(selected, includeQr);
+      container.innerHTML = await buildHtml(selected, includeQr, qrFields);
       document.body.appendChild(container);
 
       const node = container.querySelector("#pdf-root") as HTMLElement;
@@ -934,11 +934,28 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
               </label>
             ))}
           </div>
-          <div className="border-t pt-2">
+          <div className="border-t pt-2 space-y-2">
             <label className="flex items-center gap-2 cursor-pointer text-sm">
               <Checkbox checked={includeQr} onCheckedChange={(c) => setIncludeQr(!!c)} />
               <span>إضافة QR code للجواز</span>
             </label>
+            {includeQr && (
+              <div className="pr-6 space-y-1.5 border-r-2 border-warning/40 pt-1">
+                <p className="text-[11px] text-muted-foreground">البيانات المضمَّنة في الـQR:</p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                  {QR_FIELD_OPTIONS.map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-1.5 cursor-pointer text-[12px]">
+                      <Checkbox
+                        checked={qrFields.includes(opt.key)}
+                        onCheckedChange={(c) => toggleQrField(opt.key, !!c)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <Button
             type="button"
