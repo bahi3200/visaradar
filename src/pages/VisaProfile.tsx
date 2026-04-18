@@ -289,6 +289,51 @@ const getAllSections = (p: VisaProfile): ProfileSection[] => [
   },
 ];
 
+const countFilled = (vals: Array<string | number | null | undefined>) =>
+  vals.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
+
+const getTabStats = (p: VisaProfile) => ({
+  personal: {
+    filled: countFilled([p.full_name_ar, p.full_name_latin, p.gender, p.birth_date, p.birth_place, p.nationality, p.marital_status]),
+    total: 7,
+  },
+  passport: {
+    filled: countFilled([p.passport_number, p.passport_issue_date, p.passport_expiry_date, p.passport_issue_place, p.national_id]),
+    total: 5,
+  },
+  contact: {
+    filled: countFilled([p.phone, p.email, p.address, p.city, p.wilaya, p.postal_code]),
+    total: 6,
+  },
+  profession: {
+    filled: countFilled([p.profession, p.employer_name, p.employer_address, p.employer_phone, p.monthly_income]),
+    total: 5,
+  },
+  travel: {
+    filled: countFilled([p.destination_country, p.travel_purpose, p.travel_date, p.return_date, p.duration_days, p.hotel_or_host]),
+    total: 6,
+  },
+  family: {
+    filled: countFilled([p.father_name, p.mother_name, p.spouse_name, p.children_count, p.children_details]),
+    total: 5,
+  },
+});
+
+const TabBadge = ({ filled, total }: { filled: number; total: number }) => {
+  const isComplete = filled === total && total > 0;
+  const isEmpty = filled === 0;
+  const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
+  return (
+    <Badge
+      variant={variant}
+      className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums"
+      aria-label={`${filled} من ${total} حقل مكتمل`}
+    >
+      {filled}/{total}
+    </Badge>
+  );
+};
+
 const CopyFullProfileButton = forwardRef<
   HTMLButtonElement,
   { profile: VisaProfile }
