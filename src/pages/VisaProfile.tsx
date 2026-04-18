@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Copy, Check, Plus, Trash2, Save, FileText, User, BookOpen,
-  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil,
+  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil, ClipboardCopy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -149,6 +149,49 @@ const FormField = ({ label, children }: { label: string; children: React.ReactNo
     {children}
   </div>
 );
+
+type SectionField = { label: string; value: string | number | null | undefined };
+
+const CopySectionButton = ({ title, fields }: { title: string; fields: SectionField[] }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const lines = fields
+      .map((f) => {
+        const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+        return v ? `${f.label}: ${v}` : null;
+      })
+      .filter(Boolean) as string[];
+
+    if (lines.length === 0) {
+      toast.error("لا توجد بيانات للنسخ في هذا القسم");
+      return;
+    }
+    const text = `— ${title} —\n${lines.join("\n")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(`تم نسخ قسم: ${title} (${lines.length} حقل)`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+  return (
+    <div className="flex items-center justify-between pt-4 pb-1">
+      <span className="text-xs text-muted-foreground">{fields.length} حقل في هذا القسم</span>
+      <Button
+        type="button"
+        size="sm"
+        variant={copied ? "default" : "outline"}
+        onClick={handleCopy}
+        className="h-8"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 ml-1.5" /> : <ClipboardCopy className="w-3.5 h-3.5 ml-1.5" />}
+        نسخ كل القسم
+      </Button>
+    </div>
+  );
+};
 
 export default function VisaProfile() {
   const { user } = useAuth();
@@ -431,57 +474,133 @@ export default function VisaProfile() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="الاسم الكامل (عربي)" value={active.full_name_ar} />
-                  <CopyField label="الاسم الكامل (لاتيني)" value={active.full_name_latin} />
-                  <CopyField label="الجنس" value={active.gender} />
-                  <CopyField label="تاريخ الميلاد" value={active.birth_date} />
-                  <CopyField label="مكان الميلاد" value={active.birth_place} />
-                  <CopyField label="الجنسية" value={active.nationality} />
-                  <CopyField label="الحالة العائلية" value={active.marital_status} />
+                <TabsContent value="personal" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات شخصية"
+                    fields={[
+                      { label: "الاسم الكامل (عربي)", value: active.full_name_ar },
+                      { label: "الاسم الكامل (لاتيني)", value: active.full_name_latin },
+                      { label: "الجنس", value: active.gender },
+                      { label: "تاريخ الميلاد", value: active.birth_date },
+                      { label: "مكان الميلاد", value: active.birth_place },
+                      { label: "الجنسية", value: active.nationality },
+                      { label: "الحالة العائلية", value: active.marital_status },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="الاسم الكامل (عربي)" value={active.full_name_ar} />
+                    <CopyField label="الاسم الكامل (لاتيني)" value={active.full_name_latin} />
+                    <CopyField label="الجنس" value={active.gender} />
+                    <CopyField label="تاريخ الميلاد" value={active.birth_date} />
+                    <CopyField label="مكان الميلاد" value={active.birth_place} />
+                    <CopyField label="الجنسية" value={active.nationality} />
+                    <CopyField label="الحالة العائلية" value={active.marital_status} />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="passport" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="رقم جواز السفر" value={active.passport_number} />
-                  <CopyField label="تاريخ الإصدار" value={active.passport_issue_date} />
-                  <CopyField label="تاريخ الانتهاء" value={active.passport_expiry_date} />
-                  <CopyField label="مكان الإصدار" value={active.passport_issue_place} />
-                  <CopyField label="رقم البطاقة الوطنية" value={active.national_id} />
+                <TabsContent value="passport" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات الجواز"
+                    fields={[
+                      { label: "رقم جواز السفر", value: active.passport_number },
+                      { label: "تاريخ الإصدار", value: active.passport_issue_date },
+                      { label: "تاريخ الانتهاء", value: active.passport_expiry_date },
+                      { label: "مكان الإصدار", value: active.passport_issue_place },
+                      { label: "رقم البطاقة الوطنية", value: active.national_id },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="رقم جواز السفر" value={active.passport_number} />
+                    <CopyField label="تاريخ الإصدار" value={active.passport_issue_date} />
+                    <CopyField label="تاريخ الانتهاء" value={active.passport_expiry_date} />
+                    <CopyField label="مكان الإصدار" value={active.passport_issue_place} />
+                    <CopyField label="رقم البطاقة الوطنية" value={active.national_id} />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="الهاتف" value={active.phone} />
-                  <CopyField label="البريد الإلكتروني" value={active.email} type="email" />
-                  <CopyField label="العنوان" value={active.address} multiline />
-                  <CopyField label="المدينة" value={active.city} />
-                  <CopyField label="الولاية" value={active.wilaya} />
-                  <CopyField label="الرمز البريدي" value={active.postal_code} />
+                <TabsContent value="contact" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات الاتصال"
+                    fields={[
+                      { label: "الهاتف", value: active.phone },
+                      { label: "البريد الإلكتروني", value: active.email },
+                      { label: "العنوان", value: active.address },
+                      { label: "المدينة", value: active.city },
+                      { label: "الولاية", value: active.wilaya },
+                      { label: "الرمز البريدي", value: active.postal_code },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="الهاتف" value={active.phone} />
+                    <CopyField label="البريد الإلكتروني" value={active.email} type="email" />
+                    <CopyField label="العنوان" value={active.address} multiline />
+                    <CopyField label="المدينة" value={active.city} />
+                    <CopyField label="الولاية" value={active.wilaya} />
+                    <CopyField label="الرمز البريدي" value={active.postal_code} />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="profession" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="المهنة" value={active.profession} />
-                  <CopyField label="اسم صاحب العمل" value={active.employer_name} />
-                  <CopyField label="عنوان العمل" value={active.employer_address} multiline />
-                  <CopyField label="هاتف العمل" value={active.employer_phone} />
-                  <CopyField label="الدخل الشهري" value={active.monthly_income} />
+                <TabsContent value="profession" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات المهنة"
+                    fields={[
+                      { label: "المهنة", value: active.profession },
+                      { label: "اسم صاحب العمل", value: active.employer_name },
+                      { label: "عنوان العمل", value: active.employer_address },
+                      { label: "هاتف العمل", value: active.employer_phone },
+                      { label: "الدخل الشهري", value: active.monthly_income },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="المهنة" value={active.profession} />
+                    <CopyField label="اسم صاحب العمل" value={active.employer_name} />
+                    <CopyField label="عنوان العمل" value={active.employer_address} multiline />
+                    <CopyField label="هاتف العمل" value={active.employer_phone} />
+                    <CopyField label="الدخل الشهري" value={active.monthly_income} />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="travel" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="بلد الوجهة" value={active.destination_country} />
-                  <CopyField label="الغرض من الزيارة" value={active.travel_purpose} />
-                  <CopyField label="تاريخ السفر" value={active.travel_date} />
-                  <CopyField label="تاريخ العودة" value={active.return_date} />
-                  <CopyField label="مدة الإقامة (أيام)" value={active.duration_days?.toString() || ""} />
-                  <CopyField label="الفندق / المضيف" value={active.hotel_or_host} multiline />
+                <TabsContent value="travel" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات السفر"
+                    fields={[
+                      { label: "بلد الوجهة", value: active.destination_country },
+                      { label: "الغرض من الزيارة", value: active.travel_purpose },
+                      { label: "تاريخ السفر", value: active.travel_date },
+                      { label: "تاريخ العودة", value: active.return_date },
+                      { label: "مدة الإقامة (أيام)", value: active.duration_days },
+                      { label: "الفندق / المضيف", value: active.hotel_or_host },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="بلد الوجهة" value={active.destination_country} />
+                    <CopyField label="الغرض من الزيارة" value={active.travel_purpose} />
+                    <CopyField label="تاريخ السفر" value={active.travel_date} />
+                    <CopyField label="تاريخ العودة" value={active.return_date} />
+                    <CopyField label="مدة الإقامة (أيام)" value={active.duration_days?.toString() || ""} />
+                    <CopyField label="الفندق / المضيف" value={active.hotel_or_host} multiline />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="family" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                  <CopyField label="اسم الأب" value={active.father_name} />
-                  <CopyField label="اسم الأم" value={active.mother_name} />
-                  <CopyField label="اسم الزوج/الزوجة" value={active.spouse_name} />
-                  <CopyField label="عدد الأطفال" value={active.children_count?.toString() || ""} />
-                  <div className="sm:col-span-2">
-                    <CopyField label="بيانات الأطفال (الأسماء وتواريخ الميلاد)" value={active.children_details} multiline />
+                <TabsContent value="family" className="pt-2">
+                  <CopySectionButton
+                    title="بيانات العائلة"
+                    fields={[
+                      { label: "اسم الأب", value: active.father_name },
+                      { label: "اسم الأم", value: active.mother_name },
+                      { label: "اسم الزوج/الزوجة", value: active.spouse_name },
+                      { label: "عدد الأطفال", value: active.children_count },
+                      { label: "بيانات الأطفال", value: active.children_details },
+                    ]}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CopyField label="اسم الأب" value={active.father_name} />
+                    <CopyField label="اسم الأم" value={active.mother_name} />
+                    <CopyField label="اسم الزوج/الزوجة" value={active.spouse_name} />
+                    <CopyField label="عدد الأطفال" value={active.children_count?.toString() || ""} />
+                    <div className="sm:col-span-2">
+                      <CopyField label="بيانات الأطفال (الأسماء وتواريخ الميلاد)" value={active.children_details} multiline />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
