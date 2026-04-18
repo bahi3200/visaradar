@@ -320,13 +320,14 @@ export default function ProfilePage() {
                             // Re-fetch profile
                             const { data: p } = await supabase
                               .from("profiles")
-                              .select("telegram_id, telegram_username")
+                              .select("telegram_id, telegram_username, telegram_linked_at")
                               .eq("user_id", user.id)
                               .single();
                             setPolling(false);
                             if (p?.telegram_id) {
                               setTelegramId(p.telegram_id);
                               setTelegramUsername(p.telegram_username);
+                              setTelegramLinkedAt((p as any).telegram_linked_at || null);
                               setLinkData(null);
                               toast.success("✅ تم ربط حسابك بنجاح!");
                             } else {
