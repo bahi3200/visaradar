@@ -680,6 +680,51 @@ export type Database = {
           },
         ]
       }
+      telegram_admin_messages: {
+        Row: {
+          batch_id: string | null
+          chat_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          recipient_label: string | null
+          recipient_user_id: string | null
+          sender_id: string
+          status: string
+          telegram_message_id: number | null
+          template_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          chat_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          recipient_label?: string | null
+          recipient_user_id?: string | null
+          sender_id: string
+          status?: string
+          telegram_message_id?: number | null
+          template_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          chat_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          recipient_label?: string | null
+          recipient_user_id?: string | null
+          sender_id?: string
+          status?: string
+          telegram_message_id?: number | null
+          template_id?: string | null
+        }
+        Relationships: []
+      }
       telegram_bot_state: {
         Row: {
           id: number

@@ -217,7 +217,11 @@ const AdminTelegramUsers = () => {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("telegram-send-message", {
-        body: { chat_ids: targetIds, message: text },
+        body: {
+          chat_ids: targetIds,
+          message: text,
+          template_id: templateId === "custom" ? null : templateId,
+        },
       });
       if (error || data?.error) {
         toast.error(data?.error || error?.message || "فشل الإرسال");
