@@ -582,15 +582,6 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                 className="h-9 flex-1"
               />
-                id="wa-phone"
-                dir="ltr"
-                inputMode="tel"
-                maxLength={15}
-                placeholder="555123456"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                className="h-9 flex-1"
-              />
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
               اختر رمز الدولة ثم أدخل الرقم بدون الصفر الأول. اتركه فارغاً لاختيار جهة الاتصال يدوياً.
