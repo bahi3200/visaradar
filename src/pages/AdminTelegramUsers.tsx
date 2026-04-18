@@ -417,6 +417,21 @@ const AdminTelegramUsers = () => {
 
   const allSelected = filtered.length > 0 && filtered.every((u) => selected.has(u.telegram_id));
 
+  // Count of selected items not present in the current filtered view
+  const visibleIds = useMemo(() => new Set(filtered.map((u) => u.telegram_id)), [filtered]);
+  const hiddenSelectedCount = useMemo(() => {
+    let n = 0;
+    selected.forEach((id) => { if (!visibleIds.has(id)) n++; });
+    return n;
+  }, [selected, visibleIds]);
+
+  const keepOnlyVisibleSelected = () => {
+    const next = new Set<string>();
+    selected.forEach((id) => { if (visibleIds.has(id)) next.add(id); });
+    setSelected(next);
+    toast.success(`تم الاحتفاظ بـ ${next.size} من المرئيين فقط`);
+  };
+
   const renderSubBadge = (u: TelegramUser) => {
     if (u.sub_status === "active") {
       return (
