@@ -143,6 +143,7 @@ export default function PricingPage() {
 
   const regularPackages = packages?.filter((p) => !p.is_golden) || [];
   const goldenPackage = packages?.find((p) => p.is_golden);
+  const hasNoPackages = !packages || packages.length === 0;
 
   const getFeatures = (pkg: any, svc: ServiceType) => {
     const base = pkg.features_ar || [];
