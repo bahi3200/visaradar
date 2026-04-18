@@ -95,6 +95,14 @@ const AdminTelegramUsers = () => {
       const sent = data?.sent ?? 0;
       if (sent > 0) {
         toast.success(`تم إرسال رسالة الاختبار إلى ${u.full_name || u.telegram_id}`);
+        // Optimistically update last message column
+        setUsers((prev) =>
+          prev.map((x) =>
+            x.telegram_id === u.telegram_id
+              ? { ...x, last_message_at: new Date().toISOString(), last_message_status: "sent" }
+              : x
+          )
+        );
       } else {
         toast.error("لم يتم الإرسال");
       }
