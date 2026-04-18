@@ -152,7 +152,10 @@ const FormField = ({ label, children }: { label: string; children: React.ReactNo
 
 type SectionField = { label: string; value: string | number | null | undefined };
 
-const CopySectionButton = ({ title, fields }: { title: string; fields: SectionField[] }) => {
+const CopySectionButton = forwardRef<
+  HTMLButtonElement,
+  { title: string; fields: SectionField[] }
+>(({ title, fields }, ref) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     const lines = fields
@@ -180,6 +183,7 @@ const CopySectionButton = ({ title, fields }: { title: string; fields: SectionFi
     <div className="flex items-center justify-between pt-4 pb-1">
       <span className="text-xs text-muted-foreground">{fields.length} حقل في هذا القسم</span>
       <Button
+        ref={ref}
         type="button"
         size="sm"
         variant={copied ? "default" : "outline"}
@@ -191,7 +195,8 @@ const CopySectionButton = ({ title, fields }: { title: string; fields: SectionFi
       </Button>
     </div>
   );
-};
+});
+CopySectionButton.displayName = "CopySectionButton";
 
 type ProfileSection = { title: string; fields: SectionField[] };
 
