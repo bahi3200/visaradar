@@ -132,7 +132,7 @@ const AdminTelegramUsers = () => {
         .select("user_id, status, expires_at"),
       supabase
         .from("telegram_admin_messages")
-        .select("chat_id, status, created_at")
+        .select("chat_id, status, created_at, message, error_message")
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
