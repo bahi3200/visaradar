@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Radar, Mail, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
       setSent(true);
       toast.success("تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني");
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الإرسال");
+      toast.error(translateAuthError(err) || err.message || "حدث خطأ أثناء الإرسال");
     } finally {
       setLoading(false);
     }
