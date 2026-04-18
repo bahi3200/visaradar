@@ -857,7 +857,7 @@ const AdminTelegramUsers = () => {
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-left">
+                          <td className="px-3 py-3 text-left sticky left-0 z-10 bg-card group-hover:bg-muted/30">
                             <div className="flex gap-1.5 justify-end">
                               <Button
                                 size="sm"
