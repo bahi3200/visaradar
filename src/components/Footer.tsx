@@ -1,4 +1,4 @@
-import { Radar } from "lucide-react";
+import { Radar, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -52,6 +52,13 @@ export default function Footer() {
           <Link to="/contact" className="hover:text-foreground transition-colors">اتصل بنا</Link>
           <Link to="/privacy" className="hover:text-foreground transition-colors">سياسة الخصوصية</Link>
           <Link to="/terms" className="hover:text-foreground transition-colors">شروط الاستخدام</Link>
+          <Link
+            to="/install"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all font-medium"
+          >
+            <Download className="w-3.5 h-3.5" />
+            ثبّت التطبيق
+          </Link>
         </div>
 
         <div className="flex items-center gap-4">
