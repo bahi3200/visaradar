@@ -691,6 +691,16 @@ const AdminTelegramUsers = () => {
                       <Button
                         type="button"
                         size="sm"
+                        variant="outline"
+                        className="h-8 px-2"
+                        onClick={exportSelectedCsv}
+                        title="تصدير CSV للمحدّدين"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
                         className="h-8"
                         onClick={openSendBulk}
                       >
