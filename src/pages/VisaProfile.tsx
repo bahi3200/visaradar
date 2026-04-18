@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Copy, Check, Plus, Trash2, Save, FileText, User, BookOpen,
-  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil, ClipboardCopy, AlertTriangle, MessageCircle,
+  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil, ClipboardCopy, AlertTriangle, MessageCircle, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -396,6 +396,133 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
   );
 };
 
+const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
+  const [loading, setLoading] = useState(false);
+
+  const buildHtml = (): string => {
+    const sections = getAllSections(profile);
+    const today = new Date().toLocaleDateString("ar-DZ");
+
+    const sectionsHtml = sections
+      .map((s) => {
+        const rows = s.fields
+          .map((f) => {
+            const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+            if (!v) return "";
+            return `<tr><td class="lbl">${f.label}</td><td class="val">${v}</td></tr>`;
+          })
+          .filter(Boolean)
+          .join("");
+        if (!rows) return "";
+        return `<section class="block">
+          <h2>${s.title}</h2>
+          <table>${rows}</table>
+        </section>`;
+      })
+      .filter(Boolean)
+      .join("");
+
+    return `
+      <div id="pdf-root" dir="rtl" style="font-family: Cairo, Tajawal, system-ui, sans-serif; background: #fff; color: #0f172a; width: 794px; padding: 48px 40px; box-sizing: border-box;">
+        <header style="border-bottom: 3px solid #c9a227; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
+          <div>
+            <h1 style="margin: 0; font-size: 24px; color: #0b1d39; font-weight: 800;">ملف بيانات للفيزا</h1>
+            <div style="margin-top: 4px; font-size: 13px; color: #64748b;">${profile.profile_label}</div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; text-align: left;">
+            <div>تاريخ التصدير</div>
+            <div style="font-weight: 600; color: #0b1d39;">${today}</div>
+          </div>
+        </header>
+        ${sectionsHtml || '<p style="color:#64748b;">لا توجد بيانات معبّأة بعد.</p>'}
+        <footer style="margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+          هذا الملف يُستخدم للمساعدة في تعبئة طلبات التأشيرة. يرجى التحقق من جميع البيانات قبل التقديم.
+        </footer>
+        <style>
+          #pdf-root h2 { font-size: 15px; color: #0b1d39; margin: 0 0 8px; padding: 6px 10px; background: #f1f5f9; border-right: 4px solid #c9a227; border-radius: 4px; }
+          #pdf-root .block { margin-bottom: 18px; page-break-inside: avoid; }
+          #pdf-root table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+          #pdf-root td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+          #pdf-root .lbl { width: 38%; color: #475569; font-weight: 600; background: #fafafa; }
+          #pdf-root .val { color: #0f172a; }
+        </style>
+      </div>`;
+  };
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const sections = getAllSections(profile);
+      const hasData = sections.some((s) =>
+        s.fields.some((f) => f.value !== null && f.value !== undefined && String(f.value).trim() !== "")
+      );
+      if (!hasData) {
+        toast.error("لا توجد بيانات للتصدير بعد");
+        setLoading(false);
+        return;
+      }
+
+      const [{ default: jsPDF }, html2canvasMod] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+      const html2canvas = html2canvasMod.default;
+
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-10000px";
+      container.style.top = "0";
+      container.innerHTML = buildHtml();
+      document.body.appendChild(container);
+
+      const node = container.querySelector("#pdf-root") as HTMLElement;
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      let heightLeft = imgH;
+      let position = 0;
+      pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position = heightLeft - imgH;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
+      }
+
+      const safeName = profile.profile_label.replace(/[^\p{L}\p{N}_-]+/gu, "_") || "visa-profile";
+      pdf.save(`${safeName}.pdf`);
+      toast.success("تم تصدير الملف بصيغة PDF");
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل تصدير الـ PDF");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={handleExport}
+      disabled={loading}
+      className="h-8"
+    >
+      {loading ? <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 ml-1.5" />}
+      تصدير PDF
+    </Button>
+  );
+};
+
 export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -661,6 +788,7 @@ export default function VisaProfile() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <CopyFullProfileButton profile={active} />
                     <ShareWhatsAppButton profile={active} />
+                    <ExportPdfButton profile={active} />
                     <Button size="sm" variant="outline" onClick={startEdit}>
                       <Pencil className="w-3.5 h-3.5 ml-1.5" />
                       تعديل
