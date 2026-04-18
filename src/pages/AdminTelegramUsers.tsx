@@ -108,7 +108,7 @@ const AdminTelegramUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
 
-    const [profilesRes, subsRes] = await Promise.all([
+    const [profilesRes, subsRes, msgsRes] = await Promise.all([
       supabase
         .from("profiles")
         .select("user_id, full_name, telegram_id, telegram_username, telegram_linked_at")
@@ -117,6 +117,11 @@ const AdminTelegramUsers = () => {
       supabase
         .from("subscriptions")
         .select("user_id, status, expires_at"),
+      supabase
+        .from("telegram_admin_messages")
+        .select("chat_id, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000),
     ]);
 
     if (profilesRes.error) {
@@ -140,6 +145,15 @@ const AdminTelegramUsers = () => {
       }
     }
 
+    // Pick latest admin message per chat_id
+    const latestMsgByChat = new Map<string, { status: string; created_at: string }>();
+    for (const m of msgsRes.data || []) {
+      if (!m.chat_id) continue;
+      if (!latestMsgByChat.has(m.chat_id)) {
+        latestMsgByChat.set(m.chat_id, { status: m.status, created_at: m.created_at });
+      }
+    }
+
     const now = Date.now();
     const merged: TelegramUser[] = (profilesRes.data || []).map((p) => {
       const sub = latestByUser.get(p.user_id);
@@ -150,6 +164,7 @@ const AdminTelegramUsers = () => {
         const isLive = sub.status === "active" && new Date(sub.expires_at).getTime() > now;
         sub_status = isLive ? "active" : "expired";
       }
+      const lastMsg = latestMsgByChat.get(p.telegram_id as string);
       return {
         user_id: p.user_id,
         full_name: p.full_name,
@@ -158,6 +173,8 @@ const AdminTelegramUsers = () => {
         telegram_linked_at: p.telegram_linked_at,
         sub_status,
         sub_expires_at,
+        last_message_at: lastMsg?.created_at || null,
+        last_message_status: lastMsg?.status || null,
       };
     });
 
