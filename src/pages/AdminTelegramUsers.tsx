@@ -480,6 +480,32 @@ const AdminTelegramUsers = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {activityFilter !== "all" && filtered.length > 0 && (
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong className="text-amber-700">{filtered.length}</strong> مستخدم مطابق لفلتر النشاط الحالي
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => {
+                    const ids = filtered.map((u) => u.telegram_id);
+                    setSelected(new Set(ids));
+                    setTargetIds(ids);
+                    setTargetLabel(`${ids.length} مستخدم غير نشط`);
+                    setMessage("");
+                    setTemplateId("custom");
+                    setDialogOpen(true);
+                  }}
+                >
+                  <Send className="w-4 h-4 ml-2" />
+                  إرسال رسالة تذكير لكل غير النشطين
+                </Button>
+              </div>
+            )}
             {loading ? (
               <div className="py-12 text-center text-muted-foreground">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
