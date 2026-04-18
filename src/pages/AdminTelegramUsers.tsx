@@ -81,6 +81,7 @@ const AdminTelegramUsers = () => {
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [search, setSearch] = useState("");
   const [subFilter, setSubFilter] = useState<"all" | SubStatus>("all");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
