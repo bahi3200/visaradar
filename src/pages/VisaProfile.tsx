@@ -154,7 +154,7 @@ const CopyField = ({ label, value, type = "text", multiline = false }: {
 };
 
 const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <div className="space-y-1.5" data-field-label={label}>
     <Label className="text-xs text-muted-foreground">{label}</Label>
     {children}
   </div>
