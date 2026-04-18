@@ -53,9 +53,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { chat_ids, message } = await req.json();
+    const { chat_ids, message, template_id } = await req.json();
     const ids: string[] = Array.isArray(chat_ids) ? chat_ids : [chat_ids];
     const text = String(message || '').trim();
+    const tplId: string | null = template_id ? String(template_id) : null;
 
     if (!text) {
       return new Response(JSON.stringify({ error: 'الرسالة فارغة' }), {
@@ -73,9 +74,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Lookup recipient profiles for logging (user_id + display name)
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, telegram_username, telegram_id')
+      .in('telegram_id', validIds);
+
+    const profileByChat = new Map<string, { user_id: string; label: string }>();
+    for (const p of profileRows || []) {
+      if (!p.telegram_id) continue;
+      profileByChat.set(p.telegram_id, {
+        user_id: p.user_id,
+        label: p.full_name || (p.telegram_username ? `@${p.telegram_username}` : p.telegram_id),
+      });
+    }
+
+    const batchId = crypto.randomUUID();
     const results: Array<{ chat_id: string; ok: boolean; error?: string }> = [];
+    const logRows: Array<Record<string, unknown>> = [];
 
     for (const chatId of validIds) {
+      const profile = profileByChat.get(chatId);
+      let ok = false;
+      let errMsg: string | null = null;
+      let tgMsgId: number | null = null;
+
       try {
         const tgRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
@@ -88,20 +111,47 @@ Deno.serve(async (req) => {
           }),
         });
         const tgData = await tgRes.json();
-        results.push({
-          chat_id: chatId,
-          ok: tgRes.ok,
-          error: tgRes.ok ? undefined : (tgData.description || 'send failed'),
-        });
+        ok = tgRes.ok;
+        if (!ok) {
+          errMsg = tgData.description || 'send failed';
+        } else {
+          tgMsgId = tgData?.result?.message_id ?? null;
+        }
       } catch (e) {
-        results.push({ chat_id: chatId, ok: false, error: e instanceof Error ? e.message : 'error' });
+        ok = false;
+        errMsg = e instanceof Error ? e.message : 'error';
+      }
+
+      results.push({ chat_id: chatId, ok, error: ok ? undefined : (errMsg || 'send failed') });
+
+      logRows.push({
+        sender_id: user.id,
+        recipient_user_id: profile?.user_id ?? null,
+        chat_id: chatId,
+        recipient_label: profile?.label ?? null,
+        message: text,
+        template_id: tplId,
+        status: ok ? 'sent' : 'failed',
+        error_message: ok ? null : errMsg,
+        telegram_message_id: tgMsgId,
+        batch_id: batchId,
+      });
+    }
+
+    // Persist log (best-effort — never block response on this)
+    if (logRows.length > 0) {
+      const { error: logErr } = await supabase
+        .from('telegram_admin_messages')
+        .insert(logRows);
+      if (logErr) {
+        console.error('Failed to log admin messages:', logErr);
       }
     }
 
     const sent = results.filter((r) => r.ok).length;
     const failed = results.length - sent;
 
-    return new Response(JSON.stringify({ success: true, sent, failed, results }), {
+    return new Response(JSON.stringify({ success: true, sent, failed, batch_id: batchId, results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
