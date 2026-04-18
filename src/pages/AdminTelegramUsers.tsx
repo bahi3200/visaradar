@@ -621,6 +621,35 @@ const AdminTelegramUsers = () => {
               <>
               {/* Mobile: cards */}
               <div className="md:hidden space-y-3">
+                {/* Sticky bulk-send action when items are selected */}
+                {selected.size > 0 && (
+                  <div className="sticky top-2 z-30 -mx-2 px-2">
+                    <div className="flex items-center gap-2 p-2 rounded-lg border border-primary/40 bg-primary/10 backdrop-blur-md shadow-lg">
+                      <Badge className="bg-primary text-primary-foreground shrink-0">
+                        {selected.size}
+                      </Badge>
+                      <span className="text-xs text-foreground flex-1 truncate">محدّد</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setSelected(new Set())}
+                      >
+                        إلغاء
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8"
+                        onClick={openSendBulk}
+                      >
+                        <Send className="w-3.5 h-3.5 ml-1.5" />
+                        إرسال جماعي
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {/* Quick filter: inactive only */}
                 <div className="flex items-center gap-2">
                   <Button
