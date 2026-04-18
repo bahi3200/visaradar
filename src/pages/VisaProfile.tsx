@@ -568,31 +568,32 @@ export default function VisaProfile() {
         {!editing && active && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">{active.profile_label}</CardTitle>
-                  {active.is_primary && (
-                    <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
-                      <Star className="w-3 h-3 ml-1 fill-current" />
-                      أساسي
-                    </Badge>
-                  )}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">{active.profile_label}</CardTitle>
+                    {active.is_primary && (
+                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                        <Star className="w-3 h-3 ml-1 fill-current" />
+                        أساسي
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CopyFullProfileButton profile={active} />
+                    <Button size="sm" variant="outline" onClick={startEdit}>
+                      <Pencil className="w-3.5 h-3.5 ml-1.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                      onClick={() => setDeleteId(active.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={startEdit}>
-                    <Pencil className="w-3.5 h-3.5 ml-1.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                    onClick={() => setDeleteId(active.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="personal" className="w-full">
