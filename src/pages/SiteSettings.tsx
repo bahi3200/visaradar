@@ -52,17 +52,23 @@ export default function SiteSettingsPage() {
           await updateSetting.mutateAsync({ key: field.key, value: values[field.key] || "" });
         }
       }
-      // Reminder days
-      const raw = values[REMINDER_KEY] ?? "";
-      const norm = normalizeReminderDays(raw);
-      if (norm.error) {
-        toast.error(norm.error);
-        setSaving(false);
-        return;
-      }
-      if (norm.value !== (settings[REMINDER_KEY] ?? "")) {
-        await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
-        setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+      // Reminder days (optional — only validate if user provided a value)
+      const raw = (values[REMINDER_KEY] ?? "").trim();
+      const previousReminder = (settings[REMINDER_KEY] ?? "").trim();
+      if (raw.length > 0) {
+        const norm = normalizeReminderDays(raw);
+        if (norm.error) {
+          toast.error(norm.error);
+          setSaving(false);
+          return;
+        }
+        if (norm.value !== previousReminder) {
+          await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
+          setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+        }
+      } else if (previousReminder.length > 0) {
+        // User cleared the field — persist empty
+        await updateSetting.mutateAsync({ key: REMINDER_KEY, value: "" });
       }
       // Quick test message
       const quickRaw = (values[QUICK_TEST_KEY] ?? "").trim();
