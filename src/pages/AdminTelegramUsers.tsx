@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff } from "lucide-react";
+import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,34 @@ const AdminTelegramUsers = () => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [templateId, setTemplateId] = useState<string>("custom");
+  const [quickSendingId, setQuickSendingId] = useState<string | null>(null);
+
+  const handleQuickTest = async (u: TelegramUser) => {
+    setQuickSendingId(u.telegram_id);
+    try {
+      const { data, error } = await supabase.functions.invoke("telegram-send-message", {
+        body: {
+          chat_ids: [u.telegram_id],
+          message: "مرحباً من VisaRadar 👋",
+          template_id: null,
+        },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || error?.message || "فشل الإرسال");
+        return;
+      }
+      const sent = data?.sent ?? 0;
+      if (sent > 0) {
+        toast.success(`تم إرسال رسالة الاختبار إلى ${u.full_name || u.telegram_id}`);
+      } else {
+        toast.error("لم يتم الإرسال");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الإرسال");
+    } finally {
+      setQuickSendingId(null);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -426,10 +454,26 @@ const AdminTelegramUsers = () => {
                             {formatDate(u.telegram_linked_at)}
                           </td>
                           <td className="px-3 py-3 text-left">
-                            <Button size="sm" variant="outline" onClick={() => openSendOne(u)}>
-                              <Send className="w-3.5 h-3.5 ml-1.5" />
-                              رسالة
-                            </Button>
+                            <div className="flex gap-1.5 justify-end">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleQuickTest(u)}
+                                disabled={quickSendingId === u.telegram_id}
+                                title="إرسال رسالة اختبار سريعة"
+                              >
+                                {quickSendingId === u.telegram_id ? (
+                                  <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" />
+                                ) : (
+                                  <Zap className="w-3.5 h-3.5 ml-1.5" />
+                                )}
+                                اختبار
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => openSendOne(u)}>
+                                <Send className="w-3.5 h-3.5 ml-1.5" />
+                                رسالة
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
