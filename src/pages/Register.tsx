@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
