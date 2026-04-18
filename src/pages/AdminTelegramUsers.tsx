@@ -74,6 +74,34 @@ const AdminTelegramUsers = () => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [templateId, setTemplateId] = useState<string>("custom");
+  const [quickSendingId, setQuickSendingId] = useState<string | null>(null);
+
+  const handleQuickTest = async (u: TelegramUser) => {
+    setQuickSendingId(u.telegram_id);
+    try {
+      const { data, error } = await supabase.functions.invoke("telegram-send-message", {
+        body: {
+          chat_ids: [u.telegram_id],
+          message: "مرحباً من VisaRadar 👋",
+          template_id: null,
+        },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || error?.message || "فشل الإرسال");
+        return;
+      }
+      const sent = data?.sent ?? 0;
+      if (sent > 0) {
+        toast.success(`تم إرسال رسالة الاختبار إلى ${u.full_name || u.telegram_id}`);
+      } else {
+        toast.error("لم يتم الإرسال");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الإرسال");
+    } finally {
+      setQuickSendingId(null);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
