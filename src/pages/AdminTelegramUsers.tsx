@@ -66,6 +66,14 @@ const SUB_FILTERS: { value: "all" | SubStatus; label: string }[] = [
   { value: "none", label: "بلا اشتراك" },
 ];
 
+type ActivityFilter = "all" | "inactive_7d" | "inactive_30d" | "never";
+const ACTIVITY_FILTERS: { value: ActivityFilter; label: string }[] = [
+  { value: "all", label: "كل النشاطات" },
+  { value: "inactive_7d", label: "بدون رسالة منذ 7 أيام" },
+  { value: "inactive_30d", label: "بدون رسالة منذ 30 يوم" },
+  { value: "never", label: "لم يتلقَّ أي رسالة" },
+];
+
 const AdminTelegramUsers = () => {
   const { settings } = useSiteSettings();
   const quickTestMessage = (settings?.telegram_quick_test_message || "مرحباً من VisaRadar 👋").trim();
@@ -73,6 +81,7 @@ const AdminTelegramUsers = () => {
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [search, setSearch] = useState("");
   const [subFilter, setSubFilter] = useState<"all" | SubStatus>("all");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -215,14 +224,30 @@ const AdminTelegramUsers = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
     return users.filter((u) => {
       if (subFilter !== "all" && u.sub_status !== subFilter) return false;
+
+      if (activityFilter !== "all") {
+        if (activityFilter === "never") {
+          if (u.last_message_at) return false;
+        } else {
+          const days = activityFilter === "inactive_7d" ? 7 : 30;
+          // never received → counts as inactive
+          if (u.last_message_at) {
+            const ageMs = now - new Date(u.last_message_at).getTime();
+            if (ageMs < days * DAY) return false;
+          }
+        }
+      }
+
       if (!q) return true;
       return [u.full_name, u.telegram_id, u.telegram_username]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [users, search, subFilter]);
+  }, [users, search, subFilter, activityFilter]);
 
   const counts = useMemo(() => {
     let active = 0, expired = 0, none = 0;
@@ -423,6 +448,16 @@ const AdminTelegramUsers = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {SUB_FILTERS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={activityFilter} onValueChange={(v) => setActivityFilter(v as ActivityFilter)}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVITY_FILTERS.map((f) => (
                       <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                     ))}
                   </SelectContent>
