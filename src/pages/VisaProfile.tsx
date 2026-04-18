@@ -289,6 +289,51 @@ const getAllSections = (p: VisaProfile): ProfileSection[] => [
   },
 ];
 
+const countFilled = (vals: Array<string | number | null | undefined>) =>
+  vals.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
+
+const getTabStats = (p: VisaProfile) => ({
+  personal: {
+    filled: countFilled([p.full_name_ar, p.full_name_latin, p.gender, p.birth_date, p.birth_place, p.nationality, p.marital_status]),
+    total: 7,
+  },
+  passport: {
+    filled: countFilled([p.passport_number, p.passport_issue_date, p.passport_expiry_date, p.passport_issue_place, p.national_id]),
+    total: 5,
+  },
+  contact: {
+    filled: countFilled([p.phone, p.email, p.address, p.city, p.wilaya, p.postal_code]),
+    total: 6,
+  },
+  profession: {
+    filled: countFilled([p.profession, p.employer_name, p.employer_address, p.employer_phone, p.monthly_income]),
+    total: 5,
+  },
+  travel: {
+    filled: countFilled([p.destination_country, p.travel_purpose, p.travel_date, p.return_date, p.duration_days, p.hotel_or_host]),
+    total: 6,
+  },
+  family: {
+    filled: countFilled([p.father_name, p.mother_name, p.spouse_name, p.children_count, p.children_details]),
+    total: 5,
+  },
+});
+
+const TabBadge = ({ filled, total }: { filled: number; total: number }) => {
+  const isComplete = filled === total && total > 0;
+  const isEmpty = filled === 0;
+  const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
+  return (
+    <Badge
+      variant={variant}
+      className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums"
+      aria-label={`${filled} من ${total} حقل مكتمل`}
+    >
+      {filled}/{total}
+    </Badge>
+  );
+};
+
 const CopyFullProfileButton = forwardRef<
   HTMLButtonElement,
   { profile: VisaProfile }
@@ -606,25 +651,34 @@ export default function VisaProfile() {
                 </div>
             </CardHeader>
             <CardContent>
+              {(() => {
+                const stats = getTabStats(active);
+                return (
               <Tabs defaultValue="personal" className="w-full">
                 <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
                   <TabsTrigger value="personal" className="shrink-0">
                     <User className="w-3.5 h-3.5 ml-1.5" />شخصية
+                    <TabBadge filled={stats.personal.filled} total={stats.personal.total} />
                   </TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">
                     <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
+                    <TabBadge filled={stats.passport.filled} total={stats.passport.total} />
                   </TabsTrigger>
                   <TabsTrigger value="contact" className="shrink-0">
                     <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
+                    <TabBadge filled={stats.contact.filled} total={stats.contact.total} />
                   </TabsTrigger>
                   <TabsTrigger value="profession" className="shrink-0">
                     <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
+                    <TabBadge filled={stats.profession.filled} total={stats.profession.total} />
                   </TabsTrigger>
                   <TabsTrigger value="travel" className="shrink-0">
                     <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
+                    <TabBadge filled={stats.travel.filled} total={stats.travel.total} />
                   </TabsTrigger>
                   <TabsTrigger value="family" className="shrink-0">
                     <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
+                    <TabBadge filled={stats.family.filled} total={stats.family.total} />
                   </TabsTrigger>
                 </TabsList>
 
@@ -792,6 +846,8 @@ export default function VisaProfile() {
                   </div>
                 </TabsContent>
               </Tabs>
+                );
+              })()}
 
               {active.notes && (
                 <div className="mt-6 pt-4 border-t">
