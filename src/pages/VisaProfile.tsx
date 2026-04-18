@@ -541,12 +541,12 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
     return lines.length ? lines.join("\n") : null;
   };
 
-  const buildHtml = async (): Promise<string> => {
-    const sections = getAllSections(profile);
+  const buildHtml = async (selectedSections: string[], withQr: boolean): Promise<string> => {
+    const sections = getAllSections(profile).filter((s) => selectedSections.includes(s.title));
     const today = new Date().toLocaleDateString("ar-DZ");
     const logo = await fetchLogoDataUrl();
 
-    const qrPayload = buildPassportQrPayload();
+    const qrPayload = withQr ? buildPassportQrPayload() : null;
     let qrDataUrl: string | null = null;
     if (qrPayload) {
       try {
