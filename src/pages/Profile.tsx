@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatLinkedSince, formatFullDateAr } from "@/lib/relativeTime";
 
 type ActiveSub = {
   id: string;
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [telegramId, setTelegramId] = useState("");
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
+  const [telegramLinkedAt, setTelegramLinkedAt] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
@@ -63,6 +65,7 @@ export default function ProfilePage() {
         setPhone(profileData.phone || "");
         setTelegramId(profileData.telegram_id || "");
         setTelegramUsername(profileData.telegram_username || null);
+        setTelegramLinkedAt((profileData as any).telegram_linked_at || null);
         setAvatarUrl(profileData.avatar_url || "");
       }
       if (prefData) {
@@ -228,6 +231,15 @@ export default function ProfilePage() {
                         <p className="text-xs text-muted-foreground" dir="ltr">
                           {telegramUsername ? `@${telegramUsername}` : `Chat ID: ${telegramId}`}
                         </p>
+                        {telegramLinkedAt && (
+                          <p
+                            className="text-[11px] text-muted-foreground/80 mt-1 flex items-center gap-1"
+                            title={formatFullDateAr(telegramLinkedAt)}
+                          >
+                            <Calendar className="w-3 h-3" />
+                            {formatLinkedSince(telegramLinkedAt)}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -245,6 +257,7 @@ export default function ProfilePage() {
                         } else {
                           setTelegramId("");
                           setTelegramUsername(null);
+                          setTelegramLinkedAt(null);
                           toast.success("تم فك الربط");
                         }
                       }}
@@ -307,13 +320,14 @@ export default function ProfilePage() {
                             // Re-fetch profile
                             const { data: p } = await supabase
                               .from("profiles")
-                              .select("telegram_id, telegram_username")
+                              .select("telegram_id, telegram_username, telegram_linked_at")
                               .eq("user_id", user.id)
                               .single();
                             setPolling(false);
                             if (p?.telegram_id) {
                               setTelegramId(p.telegram_id);
                               setTelegramUsername(p.telegram_username);
+                              setTelegramLinkedAt((p as any).telegram_linked_at || null);
                               setLinkData(null);
                               toast.success("✅ تم ربط حسابك بنجاح!");
                             } else {
