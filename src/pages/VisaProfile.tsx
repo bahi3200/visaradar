@@ -373,6 +373,9 @@ const CopyFullProfileButton = forwardRef<
 CopyFullProfileButton.displayName = "CopyFullProfileButton";
 
 const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+
   const handleShare = () => {
     const sections = getAllSections(profile);
     const { text, totalFields } = buildFullProfileText(profile.profile_label, sections);
@@ -380,20 +383,57 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
       toast.error("لا توجد بيانات للمشاركة بعد");
       return;
     }
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    let target = "";
+    const trimmed = phone.trim();
+    if (trimmed) {
+      // Keep digits only (allow leading + already removed); then validate length
+      const digits = trimmed.replace(/[\s\-()]/g, "").replace(/^\+/, "");
+      if (!/^\d{8,15}$/.test(digits)) {
+        toast.error("رقم غير صالح. أدخل رقماً دولياً بدون + (مثال: 213555123456)");
+        return;
+      }
+      target = digits;
+    }
+
+    const url = `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+    setOpen(false);
   };
+
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={handleShare}
-      className="h-8"
-    >
-      <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
-      مشاركة واتساب
-    </Button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="h-8">
+          <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
+          مشاركة واتساب
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72">
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="wa-phone" className="text-xs">رقم المستلم (اختياري)</Label>
+            <Input
+              id="wa-phone"
+              dir="ltr"
+              inputMode="tel"
+              maxLength={20}
+              placeholder="213555123456"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="h-9 mt-1"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              أدخل الرقم بالصيغة الدولية بدون + أو 00. اتركه فارغاً لاختيار جهة الاتصال يدوياً.
+            </p>
+          </div>
+          <Button type="button" size="sm" className="w-full" onClick={handleShare}>
+            <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
+            فتح واتساب
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
