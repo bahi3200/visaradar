@@ -359,30 +359,62 @@ const TabBadge = ({ filled, total, missing }: { filled: number; total: number; m
   const isComplete = filled === total && total > 0;
   const isEmpty = filled === 0;
   const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
+  const isMobile = useIsMobile();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const content = isComplete ? (
+    <p className="text-xs">كل الحقول مكتملة ✓</p>
+  ) : (
+    <div className="text-xs space-y-1">
+      <p className="font-semibold">حقول ناقصة ({missing.length}):</p>
+      <ul className="list-disc pr-4 space-y-0.5">
+        {missing.map((m) => (
+          <li key={m}>{m}</li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const badge = (
+    <Badge
+      variant={variant}
+      className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums cursor-help"
+      aria-label={`${filled} من ${total} حقل مكتمل`}
+    >
+      {filled}/{total}
+    </Badge>
+  );
+
+  // On touch devices, hover tooltips don't work — use a tap-triggered popover instead.
+  if (isMobile) {
+    return (
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setPopoverOpen((v) => !v);
+            }}
+            className="inline-flex items-center"
+            aria-label={`${filled} من ${total} حقل مكتمل، اضغط لعرض الحقول الناقصة`}
+          >
+            {badge}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" className="w-[260px] p-3" onClick={(e) => e.stopPropagation()}>
+          {content}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge
-          variant={variant}
-          className="ml-1.5 h-4 px-1.5 text-[10px] leading-none font-medium tabular-nums cursor-help"
-          aria-label={`${filled} من ${total} حقل مكتمل`}
-        >
-          {filled}/{total}
-        </Badge>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
       <TooltipContent side="top" className="max-w-[260px]">
-        {isComplete ? (
-          <p className="text-xs">كل الحقول مكتملة ✓</p>
-        ) : (
-          <div className="text-xs space-y-1">
-            <p className="font-semibold">حقول ناقصة ({missing.length}):</p>
-            <ul className="list-disc pr-4 space-y-0.5">
-              {missing.map((m) => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {content}
       </TooltipContent>
     </Tooltip>
   );
