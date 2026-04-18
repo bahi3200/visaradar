@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ClipboardList, Users, Briefcase, Bell, Mail, LogOut,
-  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings, AlertTriangle, Clock, Bot, Database, Send
+  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings, AlertTriangle, Clock, Bot, Database, Send, Megaphone
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -33,6 +33,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/referrals", label: "الإحالات", icon: Gift, adminOnly: true },
   { path: "/dashboard/site-settings", label: "إعدادات الموقع", icon: Settings, adminOnly: true },
   { path: "/dashboard/telegram-users", label: "مستخدمو Telegram", icon: Send, adminOnly: true },
+  { path: "/dashboard/telegram-broadcast", label: "بث Telegram جماعي", icon: Megaphone, adminOnly: true },
   { path: "/dashboard/backup", label: "نسخ احتياطي", icon: Database, adminOnly: true },
 ];
 
