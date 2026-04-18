@@ -45,6 +45,7 @@ import Backup from "./pages/Backup";
 import TelegramLink from "./pages/TelegramLink";
 import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
+import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => (
       <Route path="/contact" element={<ContactUs />} />
       <Route path="/visa" element={<VisaCountries />} />
       <Route path="/visa/:slug" element={<CountryVisa />} />
+      <Route path="/install" element={<Install />} />
 
       {/* Protected routes */}
       <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
