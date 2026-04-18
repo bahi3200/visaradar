@@ -1563,7 +1563,7 @@ export default function VisaProfile() {
                 </FormField>
               </div>
 
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs value={editTab} onValueChange={setEditTab} className="w-full">
                 <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
                   <TabsTrigger value="personal" className="shrink-0">شخصية</TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">جواز</TabsTrigger>
