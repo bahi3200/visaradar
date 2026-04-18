@@ -626,6 +626,81 @@ const AdminTelegramUsers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Last message detail dialog */}
+      <Dialog open={!!msgDetailUser} onOpenChange={(o) => !o && setMsgDetailUser(null)}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              تفاصيل آخر رسالة
+            </DialogTitle>
+            <DialogDescription>
+              المستلم:{" "}
+              <span className="font-semibold text-foreground">
+                {msgDetailUser?.full_name || msgDetailUser?.telegram_username || msgDetailUser?.telegram_id}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {msgDetailUser && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {msgDetailUser.last_message_status === "sent" ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15">
+                    <CheckCircle2 className="w-3 h-3 ml-1" />
+                    تم الإرسال بنجاح
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-destructive border-destructive/40">
+                    <XCircle className="w-3 h-3 ml-1" />
+                    {msgDetailUser.last_message_status === "failed"
+                      ? "فشل الإرسال"
+                      : msgDetailUser.last_message_status || "—"}
+                  </Badge>
+                )}
+                <span className="text-muted-foreground">
+                  <Clock className="w-3 h-3 inline ml-1" />
+                  {formatDate(msgDetailUser.last_message_at)}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">نص الرسالة</label>
+                <div className="rounded-md border bg-muted/30 p-3 max-h-72 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                  {msgDetailUser.last_message_text || (
+                    <span className="text-muted-foreground italic">لا يوجد محتوى</span>
+                  )}
+                </div>
+              </div>
+
+              {msgDetailUser.last_message_error && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-destructive">رسالة الخطأ</label>
+                  <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs font-mono text-destructive whitespace-pre-wrap">
+                    {msgDetailUser.last_message_error}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t">
+                <div>
+                  <p className="text-muted-foreground mb-0.5">chat_id</p>
+                  <p className="font-mono" dir="ltr">{msgDetailUser.telegram_id}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-0.5">Username</p>
+                  <p className="font-mono" dir="ltr">
+                    {msgDetailUser.telegram_username ? `@${msgDetailUser.telegram_username}` : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMsgDetailUser(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
