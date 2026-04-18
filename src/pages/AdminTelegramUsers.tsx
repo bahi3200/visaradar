@@ -839,7 +839,7 @@ const AdminTelegramUsers = () => {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          <td className="px-3 py-3 text-xs whitespace-nowrap sticky left-[120px] z-10 bg-card group-hover:bg-muted/30 shadow-[1px_0_0_0_hsl(var(--border))]">
                             {u.last_message_at ? (() => {
                               const ageDays = (Date.now() - new Date(u.last_message_at).getTime()) / (24 * 60 * 60 * 1000);
                               const isStale = ageDays >= 7;
