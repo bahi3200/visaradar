@@ -489,8 +489,28 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
   );
 };
 
+const ALL_PDF_SECTIONS = [
+  "بيانات شخصية",
+  "بيانات الجواز",
+  "بيانات الاتصال",
+  "بيانات المهنة",
+  "بيانات السفر",
+  "بيانات العائلة",
+  "ملاحظات",
+] as const;
+
 const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([...ALL_PDF_SECTIONS]);
+  const [includeQr, setIncludeQr] = useState(true);
+
+  const toggleSection = (name: string, checked: boolean) => {
+    setSelected((prev) => (checked ? [...new Set([...prev, name])] : prev.filter((s) => s !== name)));
+  };
+  const allChecked = selected.length === ALL_PDF_SECTIONS.length;
+  const toggleAll = (checked: boolean) => setSelected(checked ? [...ALL_PDF_SECTIONS] : []);
+
 
   const fetchLogoDataUrl = async (): Promise<string | null> => {
     try {
