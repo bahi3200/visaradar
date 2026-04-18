@@ -6,6 +6,7 @@ import { Radar, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/authErrors";
+import PasswordStrength from "@/components/auth/PasswordStrength";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -132,6 +133,7 @@ export default function ResetPasswordPage() {
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    <PasswordStrength password={password} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">تأكيد كلمة المرور</label>

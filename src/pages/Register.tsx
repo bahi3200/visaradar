@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { translateAuthError } from "@/lib/authErrors";
+import PasswordStrength from "@/components/auth/PasswordStrength";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -188,9 +189,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 <FieldError field="password" />
-                {password && !fieldErrors.password && (
-                  <p className="text-xs text-accent mt-1">✓ كلمة المرور مقبولة</p>
-                )}
+                <PasswordStrength password={password} />
               </div>
 
               <div>
