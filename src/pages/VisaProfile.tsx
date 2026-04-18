@@ -505,6 +505,16 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
       target = full;
     }
 
+    // Persist last used dial code + phone for next time
+    try {
+      localStorage.setItem(
+        WA_STORAGE_KEY,
+        JSON.stringify({ dialCode, phone: phone.replace(/\D/g, "").replace(/^0+/, "") }),
+      );
+    } catch {
+      // storage may be unavailable (private mode); ignore
+    }
+
     const url = `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
