@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap, Eye, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -311,6 +311,56 @@ const AdminTelegramUsers = () => {
     setMessage("");
     setTemplateId("custom");
     setDialogOpen(true);
+  };
+
+  const exportSelectedCsv = () => {
+    if (selected.size === 0) {
+      toast.error("اختر مستخدماً واحداً على الأقل");
+      return;
+    }
+    const rows = users.filter((u) => selected.has(u.telegram_id));
+    const headers = [
+      "full_name",
+      "telegram_id",
+      "telegram_username",
+      "linked_at",
+      "sub_status",
+      "sub_expires_at",
+      "last_message_at",
+      "last_message_status",
+    ];
+    const subStatusAr: Record<SubStatus, string> = { active: "نشط", expired: "منتهٍ", none: "بلا اشتراك" };
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [
+      headers.join(","),
+      ...rows.map((u) =>
+        [
+          u.full_name || "",
+          u.telegram_id,
+          u.telegram_username || "",
+          u.telegram_linked_at || "",
+          subStatusAr[u.sub_status],
+          u.sub_expires_at || "",
+          u.last_message_at || "",
+          u.last_message_status || "",
+        ].map(escape).join(","),
+      ),
+    ];
+    // UTF-8 BOM for Excel Arabic support
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `telegram-users-${rows.length}-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`تم تصدير ${rows.length} مستخدم`);
   };
 
   const applyTemplate = (id: string) => {
@@ -637,6 +687,16 @@ const AdminTelegramUsers = () => {
                         onClick={() => setSelected(new Set())}
                       >
                         إلغاء
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2"
+                        onClick={exportSelectedCsv}
+                        title="تصدير CSV للمحدّدين"
+                      >
+                        <Download className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         type="button"
