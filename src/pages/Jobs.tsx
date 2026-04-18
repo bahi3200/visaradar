@@ -110,8 +110,12 @@ export default function JobsPage() {
                 <Crown className="w-4 h-4 text-accent-foreground" />
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground">مشترك — وصول كامل</p>
-                <p className="text-[10px] text-muted-foreground">{subscription?.packages?.name_ar}</p>
+                <p className="text-sm font-bold text-foreground">
+                  {subscription ? "مشترك — وصول كامل" : isPrivileged ? "وصول إداري — كل الميزات" : "مشترك — وصول كامل"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {subscription?.packages?.name_ar ?? (isPrivileged ? "صلاحيات المسؤول/المشرف" : "")}
+                </p>
               </div>
             </div>
             {subscription && (
