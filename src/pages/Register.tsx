@@ -82,11 +82,7 @@ export default function RegisterPage() {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          toast.error("هذا البريد الإلكتروني مسجل بالفعل");
-        } else {
-          toast.error(signUpError.message);
-        }
+        toast.error(translateAuthError(signUpError) || signUpError.message);
         return;
       }
 
