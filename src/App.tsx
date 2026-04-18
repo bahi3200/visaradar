@@ -46,6 +46,7 @@ import TelegramLink from "./pages/TelegramLink";
 import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import Install from "./pages/Install";
+import ManagePackages from "./pages/ManagePackages";
 
 const queryClient = new QueryClient();
 
