@@ -425,8 +425,40 @@ const CopyFullProfileButton = forwardRef<
 });
 CopyFullProfileButton.displayName = "CopyFullProfileButton";
 
+const COUNTRY_DIAL_CODES: { code: string; label: string; flag: string }[] = [
+  { code: "213", label: "الجزائر", flag: "🇩🇿" },
+  { code: "33", label: "فرنسا", flag: "🇫🇷" },
+  { code: "966", label: "السعودية", flag: "🇸🇦" },
+  { code: "971", label: "الإمارات", flag: "🇦🇪" },
+  { code: "974", label: "قطر", flag: "🇶🇦" },
+  { code: "973", label: "البحرين", flag: "🇧🇭" },
+  { code: "965", label: "الكويت", flag: "🇰🇼" },
+  { code: "968", label: "عُمان", flag: "🇴🇲" },
+  { code: "20", label: "مصر", flag: "🇪🇬" },
+  { code: "212", label: "المغرب", flag: "🇲🇦" },
+  { code: "216", label: "تونس", flag: "🇹🇳" },
+  { code: "218", label: "ليبيا", flag: "🇱🇾" },
+  { code: "962", label: "الأردن", flag: "🇯🇴" },
+  { code: "961", label: "لبنان", flag: "🇱🇧" },
+  { code: "963", label: "سوريا", flag: "🇸🇾" },
+  { code: "964", label: "العراق", flag: "🇮🇶" },
+  { code: "967", label: "اليمن", flag: "🇾🇪" },
+  { code: "90", label: "تركيا", flag: "🇹🇷" },
+  { code: "1", label: "أمريكا/كندا", flag: "🇺🇸" },
+  { code: "44", label: "بريطانيا", flag: "🇬🇧" },
+  { code: "49", label: "ألمانيا", flag: "🇩🇪" },
+  { code: "39", label: "إيطاليا", flag: "🇮🇹" },
+  { code: "34", label: "إسبانيا", flag: "🇪🇸" },
+  { code: "32", label: "بلجيكا", flag: "🇧🇪" },
+  { code: "41", label: "سويسرا", flag: "🇨🇭" },
+  { code: "31", label: "هولندا", flag: "🇳🇱" },
+  { code: "46", label: "السويد", flag: "🇸🇪" },
+  { code: "47", label: "النرويج", flag: "🇳🇴" },
+];
+
 const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
   const [open, setOpen] = useState(false);
+  const [dialCode, setDialCode] = useState("213");
   const [phone, setPhone] = useState("");
 
   const handleShare = () => {
@@ -440,13 +472,18 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
     let target = "";
     const trimmed = phone.trim();
     if (trimmed) {
-      // Keep digits only (allow leading + already removed); then validate length
-      const digits = trimmed.replace(/[\s\-()]/g, "").replace(/^\+/, "");
-      if (!/^\d{8,15}$/.test(digits)) {
-        toast.error("رقم غير صالح. أدخل رقماً دولياً بدون + (مثال: 213555123456)");
+      // Strip non-digits, remove leading zeros (local format like 0555... → 555...)
+      const localDigits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
+      if (!/^\d{6,14}$/.test(localDigits)) {
+        toast.error("رقم غير صالح. أدخل الرقم بدون رمز الدولة (مثال: 555123456)");
         return;
       }
-      target = digits;
+      const full = `${dialCode}${localDigits}`;
+      if (!/^\d{8,15}$/.test(full)) {
+        toast.error("الرقم الكامل خارج النطاق المسموح");
+        return;
+      }
+      target = full;
     }
 
     const url = `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
@@ -462,22 +499,39 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
           مشاركة واتساب
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72">
+      <PopoverContent align="end" className="w-80">
         <div className="space-y-3">
           <div>
-            <Label htmlFor="wa-phone" className="text-xs">رقم المستلم (اختياري)</Label>
-            <Input
-              id="wa-phone"
-              dir="ltr"
-              inputMode="tel"
-              maxLength={20}
-              placeholder="213555123456"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="h-9 mt-1"
-            />
+            <Label className="text-xs">رقم المستلم (اختياري)</Label>
+            <div className="flex gap-2 mt-1" dir="ltr">
+              <Select value={dialCode} onValueChange={setDialCode}>
+                <SelectTrigger className="h-9 w-[120px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {COUNTRY_DIAL_CODES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{c.flag}</span>
+                        <span className="font-mono">+{c.code}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="wa-phone"
+                dir="ltr"
+                inputMode="tel"
+                maxLength={15}
+                placeholder="555123456"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                className="h-9 flex-1"
+              />
+            </div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              أدخل الرقم بالصيغة الدولية بدون + أو 00. اتركه فارغاً لاختيار جهة الاتصال يدوياً.
+              اختر رمز الدولة ثم أدخل الرقم بدون الصفر الأول. اتركه فارغاً لاختيار جهة الاتصال يدوياً.
             </p>
           </div>
           <Button type="button" size="sm" className="w-full" onClick={handleShare}>
