@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
       setSent(true);
       toast.success("تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني");
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الإرسال");
+      toast.error(translateAuthError(err) || err.message || "حدث خطأ أثناء الإرسال");
     } finally {
       setLoading(false);
     }
