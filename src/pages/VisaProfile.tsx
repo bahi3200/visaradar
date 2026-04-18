@@ -427,6 +427,21 @@ const TabBadge = ({
         <PopoverTrigger asChild>
           <button
             type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+                e.preventDefault();
+                setPopoverOpen((v) => !v);
+              }
+            }}
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
