@@ -560,7 +560,149 @@ const AdminTelegramUsers = () => {
                 لا توجد نتائج مطابقة للفلاتر الحالية
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Mobile: cards */}
+              <div className="md:hidden space-y-3">
+                {filtered.length > 0 && (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-md border bg-muted/30">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(c) => toggleAll(Boolean(c))}
+                      />
+                      <span>تحديد الكل ({filtered.length})</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setStaleSort((s) =>
+                          s === "none" ? "stalest" : s === "stalest" ? "freshest" : "none"
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      فرز: منذ
+                      {staleSort === "stalest" ? (
+                        <ArrowDown className="w-3.5 h-3.5 text-amber-600" />
+                      ) : staleSort === "freshest" ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                      )}
+                    </button>
+                  </div>
+                )}
+                {filtered.map((u) => {
+                  const checked = selected.has(u.telegram_id);
+                  const ageMs = u.last_message_at
+                    ? Date.now() - new Date(u.last_message_at).getTime()
+                    : null;
+                  const isStale = ageMs !== null && ageMs >= 7 * 24 * 60 * 60 * 1000;
+                  const sinceLabel = u.last_message_at
+                    ? formatRelativeArabic(u.last_message_at).replace(/^قبل\s/, "منذ ")
+                    : "لم يستلم بعد";
+                  return (
+                    <div
+                      key={u.user_id}
+                      className={`rounded-lg border bg-card p-3 space-y-2.5 ${
+                        checked ? "border-primary/50 ring-1 ring-primary/20" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(c) => toggleOne(u.telegram_id, Boolean(c))}
+                            className="mt-1"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold truncate">
+                              {u.full_name || <span className="text-muted-foreground">بدون اسم</span>}
+                            </div>
+                            {u.telegram_username && (
+                              <div className="text-xs font-mono text-muted-foreground truncate" dir="ltr">
+                                @{u.telegram_username}
+                              </div>
+                            )}
+                            <div className="text-[11px] font-mono text-muted-foreground/70 truncate" dir="ltr">
+                              {u.telegram_id}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs whitespace-nowrap font-medium ${
+                            !u.last_message_at
+                              ? "text-destructive/80"
+                              : isStale
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                          }`}
+                          title={u.last_message_at ? formatDate(u.last_message_at) : "لم يتلقَّ أي رسالة"}
+                        >
+                          {sinceLabel}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {renderSubBadge(u)}
+                        {u.last_message_at ? (
+                          u.last_message_status === "sent" ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15">
+                              <CheckCircle2 className="w-3 h-3 ml-1" />
+                              آخر رسالة نجحت
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-destructive border-destructive/40">
+                              <XCircle className="w-3 h-3 ml-1" />
+                              {u.last_message_status === "failed" ? "آخر رسالة فشلت" : u.last_message_status}
+                            </Badge>
+                          )
+                        ) : null}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 pt-1">
+                        {u.last_message_at && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2"
+                            onClick={() => setMsgDetailUser(u)}
+                            title="عرض تفاصيل آخر رسالة"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="flex-1 h-8"
+                          onClick={() => handleQuickTest(u)}
+                          disabled={quickSendingId === u.telegram_id}
+                        >
+                          {quickSendingId === u.telegram_id ? (
+                            <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" />
+                          ) : (
+                            <Zap className="w-3.5 h-3.5 ml-1.5" />
+                          )}
+                          اختبار
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-8"
+                          onClick={() => openSendOne(u)}
+                        >
+                          <Send className="w-3.5 h-3.5 ml-1.5" />
+                          رسالة
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="border-b">
                     <tr className="text-right text-muted-foreground">
@@ -743,6 +885,7 @@ const AdminTelegramUsers = () => {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </CardContent>
         </Card>
