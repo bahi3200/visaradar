@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { TELEGRAM_TEMPLATES, TELEGRAM_TEMPLATES_MAP } from "@/lib/telegramTemplates";
 
 type SubStatus = "active" | "expired" | "none";
 
@@ -72,6 +73,7 @@ const AdminTelegramUsers = () => {
   const [targetLabel, setTargetLabel] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [templateId, setTemplateId] = useState<string>("custom");
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -174,6 +176,7 @@ const AdminTelegramUsers = () => {
     setTargetIds([u.telegram_id]);
     setTargetLabel(u.full_name || u.telegram_username || u.telegram_id);
     setMessage("");
+    setTemplateId("custom");
     setDialogOpen(true);
   };
 
@@ -185,7 +188,24 @@ const AdminTelegramUsers = () => {
     setTargetIds(Array.from(selected));
     setTargetLabel(`${selected.size} مستخدم`);
     setMessage("");
+    setTemplateId("custom");
     setDialogOpen(true);
+  };
+
+  const applyTemplate = (id: string) => {
+    setTemplateId(id);
+    if (id === "custom") {
+      setMessage("");
+      return;
+    }
+    const tpl = TELEGRAM_TEMPLATES_MAP[id];
+    if (!tpl) return;
+    // For single recipient, replace {{name}} with their label.
+    let body = tpl.body;
+    if (targetIds.length === 1 && targetLabel && !targetLabel.match(/^\d+\s/)) {
+      body = body.replace(/\{\{name\}\}/g, targetLabel);
+    }
+    setMessage(body);
   };
 
   const handleSend = async () => {
@@ -428,15 +448,39 @@ const AdminTelegramUsers = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">قالب جاهز</label>
+              <Select value={templateId} onValueChange={applyTemplate}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">✍️ رسالة مخصّصة (فارغة)</SelectItem>
+                  {TELEGRAM_TEMPLATES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.emoji} {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {templateId !== "custom" && TELEGRAM_TEMPLATES_MAP[templateId] && (
+                <p className="text-xs text-muted-foreground">
+                  {TELEGRAM_TEMPLATES_MAP[templateId].description}
+                </p>
+              )}
+            </div>
             <Textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                if (templateId !== "custom") setTemplateId("custom");
+              }}
               placeholder="اكتب رسالتك هنا... يدعم HTML بسيط (<b>, <i>, <a>)"
-              rows={6}
-              className="resize-none"
+              rows={9}
+              className="resize-none font-mono text-xs leading-relaxed"
             />
             <p className="text-xs text-muted-foreground">
-              💡 ستُرسل الرسالة عبر بوت VisaRadar مباشرة. تأكد من المحتوى قبل الإرسال.
+              💡 ستُرسل الرسالة عبر بوت VisaRadar مباشرة. عدّل النص قبل الإرسال إن لزم.
             </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
