@@ -313,6 +313,56 @@ const AdminTelegramUsers = () => {
     setDialogOpen(true);
   };
 
+  const exportSelectedCsv = () => {
+    if (selected.size === 0) {
+      toast.error("اختر مستخدماً واحداً على الأقل");
+      return;
+    }
+    const rows = users.filter((u) => selected.has(u.telegram_id));
+    const headers = [
+      "full_name",
+      "telegram_id",
+      "telegram_username",
+      "linked_at",
+      "sub_status",
+      "sub_expires_at",
+      "last_message_at",
+      "last_message_status",
+    ];
+    const subStatusAr: Record<SubStatus, string> = { active: "نشط", expired: "منتهٍ", none: "بلا اشتراك" };
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [
+      headers.join(","),
+      ...rows.map((u) =>
+        [
+          u.full_name || "",
+          u.telegram_id,
+          u.telegram_username || "",
+          u.telegram_linked_at || "",
+          subStatusAr[u.sub_status],
+          u.sub_expires_at || "",
+          u.last_message_at || "",
+          u.last_message_status || "",
+        ].map(escape).join(","),
+      ),
+    ];
+    // UTF-8 BOM for Excel Arabic support
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `telegram-users-${rows.length}-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`تم تصدير ${rows.length} مستخدم`);
+  };
+
   const applyTemplate = (id: string) => {
     setTemplateId(id);
     if (id === "custom") {
