@@ -589,7 +589,7 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       container.style.position = "fixed";
       container.style.left = "-10000px";
       container.style.top = "0";
-      container.innerHTML = buildHtml();
+      container.innerHTML = await buildHtml();
       document.body.appendChild(container);
 
       const node = container.querySelector("#pdf-root") as HTMLElement;
