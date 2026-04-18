@@ -150,6 +150,49 @@ const FormField = ({ label, children }: { label: string; children: React.ReactNo
   </div>
 );
 
+type SectionField = { label: string; value: string | number | null | undefined };
+
+const CopySectionButton = ({ title, fields }: { title: string; fields: SectionField[] }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const lines = fields
+      .map((f) => {
+        const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+        return v ? `${f.label}: ${v}` : null;
+      })
+      .filter(Boolean) as string[];
+
+    if (lines.length === 0) {
+      toast.error("لا توجد بيانات للنسخ في هذا القسم");
+      return;
+    }
+    const text = `— ${title} —\n${lines.join("\n")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(`تم نسخ قسم: ${title} (${lines.length} حقل)`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+  return (
+    <div className="flex items-center justify-between pt-4 pb-1">
+      <span className="text-xs text-muted-foreground">{fields.length} حقل في هذا القسم</span>
+      <Button
+        type="button"
+        size="sm"
+        variant={copied ? "default" : "outline"}
+        onClick={handleCopy}
+        className="h-8"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 ml-1.5" /> : <ClipboardCopy className="w-3.5 h-3.5 ml-1.5" />}
+        نسخ كل القسم
+      </Button>
+    </div>
+  );
+};
+
 export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
