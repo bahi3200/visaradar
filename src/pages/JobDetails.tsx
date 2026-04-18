@@ -99,6 +99,12 @@ export default function JobDetailsPage() {
 
   return (
     <Layout>
+      <SEO
+        title={`${job.title} — ${job.company} | VisaRadar`}
+        description={`عرض عمل: ${job.title} لدى ${job.company} في ${countryNames[job.countryCode] || job.countryCode}. ${job.salary ? `راتب ${job.salary}.` : ""} اشترك في VisaRadar للوصول الكامل.`}
+        path={`/jobs/${job.id}`}
+        type="article"
+      />
       <div className="container py-8 max-w-3xl">
         <Link
           to="/jobs"
