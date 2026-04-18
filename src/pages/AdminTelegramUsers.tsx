@@ -688,7 +688,7 @@ const AdminTelegramUsers = () => {
               <div className="md:hidden space-y-3">
                 {/* Sticky bulk-send action when items are selected */}
                 {selected.size > 0 && (
-                  <div className="sticky top-2 z-30 -mx-2 px-2">
+                  <div className="sticky top-2 z-30 -mx-2 px-2 space-y-1.5">
                     <div className="flex items-center gap-2 p-2 rounded-lg border border-primary/40 bg-primary/10 backdrop-blur-md shadow-lg">
                       <Badge className="bg-primary text-primary-foreground shrink-0">
                         {selected.size}
@@ -723,6 +723,23 @@ const AdminTelegramUsers = () => {
                         إرسال جماعي
                       </Button>
                     </div>
+                    {hiddenSelectedCount > 0 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg border border-amber-500/40 bg-amber-500/10 backdrop-blur-md text-[11px]">
+                        <Eye className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="flex-1 text-amber-700 dark:text-amber-400 leading-tight">
+                          {hiddenSelectedCount} من المحدّدين خارج النتائج المرئية
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px] border-amber-500/40"
+                          onClick={keepOnlyVisibleSelected}
+                        >
+                          احتفظ بالمرئيين فقط
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
