@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { TELEGRAM_TEMPLATES, TELEGRAM_TEMPLATES_MAP } from "@/lib/telegramTemplates";
 
 type SubStatus = "active" | "expired" | "none";
@@ -64,6 +65,8 @@ const SUB_FILTERS: { value: "all" | SubStatus; label: string }[] = [
 ];
 
 const AdminTelegramUsers = () => {
+  const { settings } = useSiteSettings();
+  const quickTestMessage = (settings?.telegram_quick_test_message || "مرحباً من VisaRadar 👋").trim();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [search, setSearch] = useState("");
@@ -84,7 +87,7 @@ const AdminTelegramUsers = () => {
       const { data, error } = await supabase.functions.invoke("telegram-send-message", {
         body: {
           chat_ids: [u.telegram_id],
-          message: "مرحباً من VisaRadar 👋",
+          message: quickTestMessage,
           template_id: null,
         },
       });

@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock } from "lucide-react";
+import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -13,6 +13,9 @@ const socialFields = [
 ];
 
 const REMINDER_KEY = "expiry_reminder_days";
+const QUICK_TEST_KEY = "telegram_quick_test_message";
+const QUICK_TEST_DEFAULT = "مرحباً من VisaRadar 👋";
+const QUICK_TEST_MAX = 500;
 
 function normalizeReminderDays(raw: string): { value: string; days: number[]; error?: string } {
   const parts = raw
@@ -60,6 +63,21 @@ export default function SiteSettingsPage() {
       if (norm.value !== (settings[REMINDER_KEY] ?? "")) {
         await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
         setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+      }
+      // Quick test message
+      const quickRaw = (values[QUICK_TEST_KEY] ?? "").trim();
+      if (!quickRaw) {
+        toast.error("نص رسالة الاختبار السريع لا يمكن أن يكون فارغاً");
+        setSaving(false);
+        return;
+      }
+      if (quickRaw.length > QUICK_TEST_MAX) {
+        toast.error(`نص رسالة الاختبار طويل جداً (الحد الأقصى ${QUICK_TEST_MAX} حرف)`);
+        setSaving(false);
+        return;
+      }
+      if (quickRaw !== (settings[QUICK_TEST_KEY] ?? "")) {
+        await updateSetting.mutateAsync({ key: QUICK_TEST_KEY, value: quickRaw });
       }
       toast.success("تم حفظ الإعدادات بنجاح");
     } catch {
@@ -149,6 +167,46 @@ export default function SiteSettingsPage() {
                 ))}
               </div>
             ) : null}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="gradient-card rounded-2xl border border-border/50 p-6 shadow-card space-y-4"
+        >
+          <div>
+            <h2 className="font-heading text-lg font-bold text-foreground mb-1 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              رسالة اختبار Telegram السريعة
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              النص الذي يُرسَل عند الضغط على زر «اختبار» بجانب أي مستخدم في صفحة مستخدمي Telegram. يدعم HTML بسيط (&lt;b&gt;, &lt;i&gt;, &lt;a&gt;).
+            </p>
+          </div>
+          <div>
+            <textarea
+              dir="rtl"
+              rows={3}
+              value={values[QUICK_TEST_KEY] ?? ""}
+              onChange={(e) => setValues({ ...values, [QUICK_TEST_KEY]: e.target.value })}
+              placeholder={QUICK_TEST_DEFAULT}
+              maxLength={QUICK_TEST_MAX}
+              className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+              <span>{(values[QUICK_TEST_KEY] ?? "").length} / {QUICK_TEST_MAX} حرف</span>
+              {(values[QUICK_TEST_KEY] ?? "") !== QUICK_TEST_DEFAULT && (
+                <button
+                  type="button"
+                  onClick={() => setValues({ ...values, [QUICK_TEST_KEY]: QUICK_TEST_DEFAULT })}
+                  className="text-primary hover:underline"
+                >
+                  استعادة الافتراضي
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 
