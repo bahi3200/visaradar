@@ -230,7 +230,36 @@ export default function PricingPage() {
         </section>
       )}
 
+      {/* Empty State */}
+      {hasNoPackages && (
+        <section className="container pb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-xl mx-auto gradient-card rounded-2xl border border-border/50 p-10 text-center shadow-card"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-muted/40 mx-auto mb-5 flex items-center justify-center">
+              <Shield className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-heading text-xl font-bold text-foreground mb-2">
+              لا توجد باقات متاحة حالياً
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+              نعمل على تحديث باقاتنا. يُرجى التواصل مع فريق الدعم للحصول على المساعدة.
+            </p>
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 gradient-primary text-primary-foreground font-bold px-6 py-3 rounded-xl hover:opacity-90 transition-all"
+            >
+              <Send className="w-4 h-4" />
+              تواصل مع الدعم
+            </Link>
+          </motion.div>
+        </section>
+      )}
+
       {/* Regular Packages */}
+      {regularPackages.length > 0 && (
       <section className="container pb-10">
         <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {regularPackages.map((pkg, i) => {
@@ -320,6 +349,7 @@ export default function PricingPage() {
           })}
         </div>
       </section>
+      )}
 
       {/* Comparison Table */}
       {packages && packages.length > 0 && (
