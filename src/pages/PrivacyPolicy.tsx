@@ -64,6 +64,11 @@ const sections = [
 export default function PrivacyPolicy() {
   return (
     <Layout>
+      <SEO
+        title="سياسة الخصوصية — VisaRadar"
+        description="تعرّف على كيفية جمع وحماية بياناتك الشخصية على منصة VisaRadar وحقوقك في الوصول إليها وتعديلها أو حذفها."
+        path="/privacy"
+      />
       <div className="container max-w-4xl py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

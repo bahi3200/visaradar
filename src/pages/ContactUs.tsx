@@ -50,6 +50,11 @@ export default function ContactUs() {
 
   return (
     <Layout>
+      <SEO
+        title="تواصل معنا — VisaRadar"
+        description="هل لديك سؤال أو اقتراح؟ راسلنا مباشرة عبر النموذج وسيرد فريق VisaRadar في أقرب وقت ممكن."
+        path="/contact"
+      />
       <div className="container max-w-2xl py-12" dir="rtl">
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center space-y-2">

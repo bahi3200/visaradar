@@ -74,6 +74,12 @@ export default function LoginPage() {
 
   return (
     <Layout>
+      <SEO
+        title="تسجيل الدخول — VisaRadar"
+        description="ادخل إلى حسابك في VisaRadar للوصول إلى تنبيهات الفيزا وعروض العمل المخصصة."
+        path="/auth/login"
+        noindex
+      />
       <div className="container flex items-center justify-center min-h-[70vh] py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

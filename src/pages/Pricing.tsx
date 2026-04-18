@@ -135,6 +135,11 @@ export default function PricingPage() {
   if (isLoading) {
     return (
       <Layout>
+        <SEO
+          title="باقات الاشتراك والأسعار — VisaRadar"
+          description="اختر الباقة المناسبة: تنبيهات فيزا، عقود عمل، أو الباقة الشاملة. أسعار شفافة لـ 3/6/12 شهر مع تجربة Gold للوصول لكل الدول."
+          path="/pricing"
+        />
         <div className="container py-20 text-center">
           <div className="animate-pulse text-muted-foreground">جاري التحميل...</div>
         </div>

@@ -36,6 +36,12 @@ export default function ForgotPasswordPage() {
 
   return (
     <Layout>
+      <SEO
+        title="نسيت كلمة المرور — VisaRadar"
+        description="استرجع كلمة مرور حسابك عبر إرسال رابط التعيين إلى بريدك الإلكتروني."
+        path="/auth/forgot-password"
+        noindex
+      />
       <div className="container flex items-center justify-center min-h-[70vh] py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -99,6 +99,11 @@ export default function JobsPage() {
 
   return (
     <Layout>
+      <SEO
+        title="عقود عمل في أوروبا وكندا — VisaRadar"
+        description="استعرض أحدث عروض العمل والعقود الموثقة في كندا وفرنسا وألمانيا وأمريكا وأستراليا وبريطانيا، مع فلاتر حسب الراتب ونوع العقد."
+        path="/jobs"
+      />
       <div className="container py-10">
         <h1 className="font-heading text-3xl font-bold text-foreground mb-2">عقود العمل في أوروبا وكندا</h1>
         <p className="text-muted-foreground mb-6">تصفّح أحدث فرص العمل المتاحة من مصادر رسمية</p>

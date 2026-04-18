@@ -107,6 +107,11 @@ export default function HomePage() {
 
   return (
     <Layout>
+      <SEO
+        title="VisaRadar — رادار التأشيرات والوظائف في أوروبا وكندا"
+        description="منصة عربية لمتابعة فتح مواعيد فيزا الشنغن (إيطاليا، فرنسا، إسبانيا، ألمانيا) وعروض عمل أوروبا وكندا، مع تنبيهات فورية عبر تيليجرام."
+        path="/"
+      />
       {/* Hero */}
       <HeroSection user={user} />
 
