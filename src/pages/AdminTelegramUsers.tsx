@@ -481,6 +481,26 @@ const AdminTelegramUsers = () => {
                           <td className="px-3 py-3 text-xs text-muted-foreground">
                             {formatDate(u.telegram_linked_at)}
                           </td>
+                          <td className="px-3 py-3 text-xs">
+                            {u.last_message_at ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-muted-foreground">{formatDate(u.last_message_at)}</span>
+                                {u.last_message_status === "sent" ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15 w-fit">
+                                    <CheckCircle2 className="w-3 h-3 ml-1" />
+                                    نجحت
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-destructive border-destructive/40 w-fit">
+                                    <XCircle className="w-3 h-3 ml-1" />
+                                    {u.last_message_status === "failed" ? "فشلت" : u.last_message_status}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="px-3 py-3 text-left">
                             <div className="flex gap-1.5 justify-end">
                               <Button
