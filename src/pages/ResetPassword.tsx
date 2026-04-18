@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Radar, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
