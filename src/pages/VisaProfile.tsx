@@ -203,6 +203,20 @@ export default function VisaProfile() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const fetchPrefillFromProfile = async (): Promise<Partial<FormState>> => {
+    if (!user) return {};
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    return {
+      full_name_ar: data?.full_name?.trim() || "",
+      phone: data?.phone?.trim() || "",
+      email: user.email || "",
+    };
+  };
+
   const fetchProfiles = async () => {
     if (!user) return;
     setLoading(true);
@@ -221,9 +235,14 @@ export default function VisaProfile() {
     if (list.length > 0 && !activeId) {
       setActiveId(list[0].id);
     } else if (list.length === 0) {
-      // Auto-open new form if no profiles
+      // Auto-open new form if no profiles, with prefill from profiles table
+      const prefill = await fetchPrefillFromProfile();
       setEditing(true);
-      setForm({ ...EMPTY, is_primary: true });
+      setForm({ ...EMPTY, is_primary: true, ...prefill });
+      const prefilledCount = Object.values(prefill).filter((v) => v && String(v).trim()).length;
+      if (prefilledCount > 0) {
+        toast.success(`تم تعبئة ${prefilledCount} حقل تلقائياً من ملفك الشخصي`);
+      }
     }
     setLoading(false);
   };
@@ -245,9 +264,10 @@ export default function VisaProfile() {
     setEditing(true);
   };
 
-  const startNew = () => {
+  const startNew = async () => {
     setActiveId(null);
-    setForm({ ...EMPTY, is_primary: profiles.length === 0 });
+    const prefill = await fetchPrefillFromProfile();
+    setForm({ ...EMPTY, is_primary: profiles.length === 0, ...prefill });
     setEditing(true);
   };
 
