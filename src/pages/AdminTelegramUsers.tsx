@@ -260,6 +260,11 @@ const AdminTelegramUsers = () => {
     return { active, expired, none };
   }, [users]);
 
+  const staleCount = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return users.filter((u) => !u.last_message_at || new Date(u.last_message_at).getTime() < cutoff).length;
+  }, [users]);
+
   const toggleAll = (checked: boolean) => {
     if (checked) setSelected(new Set(filtered.map((u) => u.telegram_id)));
     else setSelected(new Set());
@@ -533,7 +538,20 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
-                      <th className="px-3 py-2 font-medium">منذ</th>
+                      <th className="px-3 py-2 font-medium">
+                        <span className="inline-flex items-center gap-1.5">
+                          منذ
+                          {staleCount > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="text-amber-600 border-amber-500/40 bg-amber-500/10 h-5 px-1.5 text-[10px] font-bold"
+                              title={`${staleCount} مستخدم لم يستلم رسالة منذ أكثر من 7 أيام`}
+                            >
+                              {staleCount}
+                            </Badge>
+                          )}
+                        </span>
+                      </th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
                   </thead>
