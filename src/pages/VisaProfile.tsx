@@ -1106,6 +1106,17 @@ export default function VisaProfile() {
     await fetchProfiles();
   };
 
+  // Compute overall completion for the active profile (used by mobile sticky bar)
+  // Must be declared BEFORE any conditional return to satisfy Rules of Hooks.
+  const overallStats = useMemo(() => {
+    if (!active) return { filled: 0, total: 0, pct: 0 };
+    const stats = getTabStats(active);
+    const filled = Object.values(stats).reduce((a, s) => a + s.filled, 0);
+    const total = Object.values(stats).reduce((a, s) => a + s.total, 0);
+    const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+    return { filled, total, pct };
+  }, [active]);
+
   if (loading) {
     return (
       <Layout>
@@ -1116,15 +1127,6 @@ export default function VisaProfile() {
     );
   }
 
-  // Compute overall completion for the active profile (used by mobile sticky bar)
-  const overallStats = useMemo(() => {
-    if (!active) return { filled: 0, total: 0, pct: 0 };
-    const stats = getTabStats(active);
-    const filled = Object.values(stats).reduce((a, s) => a + s.filled, 0);
-    const total = Object.values(stats).reduce((a, s) => a + s.total, 0);
-    const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
-    return { filled, total, pct };
-  }, [active]);
 
   return (
     <Layout>
