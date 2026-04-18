@@ -492,9 +492,26 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
 const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [loading, setLoading] = useState(false);
 
-  const buildHtml = (): string => {
+  const fetchLogoDataUrl = async (): Promise<string | null> => {
+    try {
+      const res = await fetch("/icon-192.png");
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const buildHtml = async (): Promise<string> => {
     const sections = getAllSections(profile);
     const today = new Date().toLocaleDateString("ar-DZ");
+    const logo = await fetchLogoDataUrl();
 
     const sectionsHtml = sections
       .map((s) => {
@@ -515,12 +532,19 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       .filter(Boolean)
       .join("");
 
+    const logoHtml = logo
+      ? `<img src="${logo}" alt="logo" style="width:56px;height:56px;border-radius:12px;object-fit:cover;box-shadow:0 2px 6px rgba(11,29,57,0.15);" />`
+      : "";
+
     return `
       <div id="pdf-root" dir="rtl" style="font-family: Cairo, Tajawal, system-ui, sans-serif; background: #fff; color: #0f172a; width: 794px; padding: 48px 40px; box-sizing: border-box;">
-        <header style="border-bottom: 3px solid #c9a227; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
-          <div>
-            <h1 style="margin: 0; font-size: 24px; color: #0b1d39; font-weight: 800;">ملف بيانات للفيزا</h1>
-            <div style="margin-top: 4px; font-size: 13px; color: #64748b;">${profile.profile_label}</div>
+        <header style="border-bottom: 3px solid #c9a227; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div style="display:flex; align-items:center; gap:14px;">
+            ${logoHtml}
+            <div>
+              <h1 style="margin: 0; font-size: 22px; color: #0b1d39; font-weight: 800;">ملف بيانات للفيزا</h1>
+              <div style="margin-top: 4px; font-size: 13px; color: #64748b;">${profile.profile_label}</div>
+            </div>
           </div>
           <div style="font-size: 12px; color: #64748b; text-align: left;">
             <div>تاريخ التصدير</div>
