@@ -1331,27 +1331,27 @@ export default function VisaProfile() {
                   <TooltipProvider delayDuration={150}>
                   <TabsTrigger value="personal" className="shrink-0">
                     <User className="w-3.5 h-3.5 ml-1.5" />شخصية
-                    <TabBadge {...stats.personal} />
+                    <TabBadge {...stats.personal} onJumpFirst={(label) => jumpToField("personal", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">
                     <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
-                    <TabBadge {...stats.passport} />
+                    <TabBadge {...stats.passport} onJumpFirst={(label) => jumpToField("passport", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="contact" className="shrink-0">
                     <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
-                    <TabBadge {...stats.contact} />
+                    <TabBadge {...stats.contact} onJumpFirst={(label) => jumpToField("contact", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="profession" className="shrink-0">
                     <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
-                    <TabBadge {...stats.profession} />
+                    <TabBadge {...stats.profession} onJumpFirst={(label) => jumpToField("profession", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="travel" className="shrink-0">
                     <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
-                    <TabBadge {...stats.travel} />
+                    <TabBadge {...stats.travel} onJumpFirst={(label) => jumpToField("travel", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="family" className="shrink-0">
                     <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
-                    <TabBadge {...stats.family} />
+                    <TabBadge {...stats.family} onJumpFirst={(label) => jumpToField("family", label)} />
                   </TabsTrigger>
                   </TooltipProvider>
                 </TabsList>
