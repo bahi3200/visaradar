@@ -315,6 +315,8 @@ const CopyFullProfileButton = ({ profile }: { profile: VisaProfile }) => {
     </Button>
   );
 };
+
+export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
