@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const socialFields = [
-  { key: "facebook_url", label: "فيسبوك", icon: Facebook, placeholder: "https://facebook.com/yourpage" },
-  { key: "instagram_url", label: "إنستغرام", icon: Instagram, placeholder: "https://instagram.com/yourpage" },
-  { key: "tiktok_url", label: "تيكتوك", icon: Music2, placeholder: "https://tiktok.com/@yourpage" },
-  { key: "telegram_url", label: "تليغرام", icon: TelegramIcon, placeholder: "https://t.me/yourchannel" },
+  { key: "public_facebook_url", label: "فيسبوك", icon: Facebook, placeholder: "https://facebook.com/yourpage" },
+  { key: "public_instagram_url", label: "إنستغرام", icon: Instagram, placeholder: "https://instagram.com/yourpage" },
+  { key: "public_tiktok_url", label: "تيكتوك", icon: Music2, placeholder: "https://tiktok.com/@yourpage" },
+  { key: "public_telegram_url", label: "تليغرام", icon: TelegramIcon, placeholder: "https://t.me/yourchannel" },
 ];
 
 const REMINDER_KEY = "expiry_reminder_days";
