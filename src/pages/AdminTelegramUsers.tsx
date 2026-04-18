@@ -454,10 +454,26 @@ const AdminTelegramUsers = () => {
                             {formatDate(u.telegram_linked_at)}
                           </td>
                           <td className="px-3 py-3 text-left">
-                            <Button size="sm" variant="outline" onClick={() => openSendOne(u)}>
-                              <Send className="w-3.5 h-3.5 ml-1.5" />
-                              رسالة
-                            </Button>
+                            <div className="flex gap-1.5 justify-end">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleQuickTest(u)}
+                                disabled={quickSendingId === u.telegram_id}
+                                title="إرسال رسالة اختبار سريعة"
+                              >
+                                {quickSendingId === u.telegram_id ? (
+                                  <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" />
+                                ) : (
+                                  <Zap className="w-3.5 h-3.5 ml-1.5" />
+                                )}
+                                اختبار
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => openSendOne(u)}>
+                                <Send className="w-3.5 h-3.5 ml-1.5" />
+                                رسالة
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
