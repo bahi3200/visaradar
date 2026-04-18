@@ -79,6 +79,14 @@ export default function HomePage() {
     enabled: !!user,
   });
 
+  // Fallback to auth metadata if profile.full_name is missing
+  const displayName =
+    (profile?.full_name && profile.full_name.trim()) ||
+    (user?.user_metadata?.full_name as string | undefined)?.trim() ||
+    (user?.user_metadata?.name as string | undefined)?.trim() ||
+    (user?.email ? user.email.split("@")[0] : null) ||
+    null;
+
   const { isAdmin, isPrivileged } = useIsAdmin();
 
   const noMotion = { opacity: 1, y: 0, x: 0, scale: 1 };
