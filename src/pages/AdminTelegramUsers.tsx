@@ -276,6 +276,11 @@ const AdminTelegramUsers = () => {
     return users.filter((u) => !u.last_message_at || new Date(u.last_message_at).getTime() < cutoff).length;
   }, [users]);
 
+  const neverCount = useMemo(
+    () => users.filter((u) => !u.last_message_at).length,
+    [users],
+  );
+
   const toggleAll = (checked: boolean) => {
     if (checked) setSelected(new Set(filtered.map((u) => u.telegram_id)));
     else setSelected(new Set());
