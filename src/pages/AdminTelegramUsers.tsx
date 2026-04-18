@@ -603,19 +603,28 @@ const AdminTelegramUsers = () => {
                               <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
                             )}
                           </button>
-                          {staleCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (staleCount > 0) {
                                 setActivityFilter("inactive_7d");
                                 setStaleSort("stalest");
-                              }}
-                              title={`${staleCount} مستخدم لم يستلم رسالة منذ أكثر من 7 أيام — انقر لتصفيتهم`}
-                              className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 h-5 px-1.5 text-[10px] font-bold hover:bg-amber-500/20 hover:border-amber-500/60 transition-colors cursor-pointer"
-                            >
-                              {staleCount}
-                            </button>
-                          )}
+                              }
+                            }}
+                            disabled={staleCount === 0}
+                            title={
+                              staleCount > 0
+                                ? `${staleCount} مستخدم لم يستلم رسالة منذ أكثر من 7 أيام — انقر لتصفيتهم`
+                                : "لا يوجد مستخدمون خاملون حالياً"
+                            }
+                            className={
+                              staleCount > 0
+                                ? "inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 h-5 px-1.5 text-[10px] font-bold hover:bg-amber-500/20 hover:border-amber-500/60 transition-colors cursor-pointer"
+                                : "inline-flex items-center rounded-full border border-muted-foreground/30 bg-muted text-muted-foreground h-5 px-1.5 text-[10px] font-bold cursor-not-allowed"
+                            }
+                          >
+                            {staleCount}
+                          </button>
                           {activityFilter === "inactive_7d" && (
                             <button
                               type="button"
