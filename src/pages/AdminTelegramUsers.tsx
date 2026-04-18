@@ -789,7 +789,7 @@ const AdminTelegramUsers = () => {
                     {filtered.map((u) => {
                       const checked = selected.has(u.telegram_id);
                       return (
-                        <tr key={u.user_id} className="border-b hover:bg-muted/30">
+                        <tr key={u.user_id} className="group border-b hover:bg-muted/30 [&>td]:border-b">
                           <td className="px-3 py-3">
                             <Checkbox
                               checked={checked}
