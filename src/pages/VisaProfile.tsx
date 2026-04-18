@@ -660,6 +660,7 @@ export default function VisaProfile() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <CopyFullProfileButton profile={active} />
+                    <ShareWhatsAppButton profile={active} />
                     <Button size="sm" variant="outline" onClick={startEdit}>
                       <Pencil className="w-3.5 h-3.5 ml-1.5" />
                       تعديل
