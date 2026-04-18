@@ -48,7 +48,7 @@ export default function NotificationSettings() {
       ]);
       const isPrivileged = !!isAdmin || !!isModerator;
       return {
-        maxCountries: isPrivileged ? 999 : (sub?.packages as any)?.max_countries ?? 1,
+        maxCountries: isPrivileged ? 999 : (sub?.packages as { max_countries: number } | null)?.max_countries ?? 1,
         subscriptionCountries: sub?.countries ?? [],
         isAdmin: !!isAdmin,
         isModerator: !!isModerator,

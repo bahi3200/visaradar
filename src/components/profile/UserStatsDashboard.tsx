@@ -84,7 +84,7 @@ export default function UserStatsDashboard() {
           ? {
               expires_at: sub.expires_at,
               countries: userCountries,
-              package_name: (sub as any).packages?.name_ar || null,
+              package_name: (sub.packages as { name_ar: string } | null)?.name_ar || null,
             }
           : null
       );
