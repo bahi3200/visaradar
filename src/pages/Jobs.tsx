@@ -49,7 +49,7 @@ export default function JobsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Check active subscription
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<SubscriptionWithPackage | null>({
     queryKey: ["my-subscription", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -59,7 +59,7 @@ export default function JobsPage() {
         .eq("user_id", user.id)
         .eq("status", "active")
         .maybeSingle();
-      return data;
+      return (data as SubscriptionWithPackage | null) ?? null;
     },
     enabled: !!user,
   });
