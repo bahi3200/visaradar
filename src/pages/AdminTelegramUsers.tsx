@@ -451,6 +451,7 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">chat_id</th>
                       <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
+                      <th className="px-3 py-2 font-medium">آخر رسالة</th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
                   </thead>
