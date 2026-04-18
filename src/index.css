@@ -153,6 +153,13 @@
   .glass {
     backdrop-filter: blur(16px);
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
   .dark .glass {
     background: hsla(222, 41%, 10%, 0.7);
     border: 1px solid hsla(210, 40%, 96%, 0.06);
