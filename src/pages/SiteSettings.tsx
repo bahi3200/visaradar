@@ -279,6 +279,69 @@ export default function SiteSettingsPage() {
               )}
             </div>
           </div>
+
+          {/* Live Telegram preview */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-foreground/80">معاينة مباشرة في Telegram</p>
+            <div
+              className="rounded-2xl p-4 border border-border/50"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(210 40% 92%) 0%, hsl(210 40% 96%) 100%)",
+              }}
+            >
+              <div className="flex justify-end" dir="ltr">
+                <div className="relative max-w-[85%] bg-[#effdde] text-[#000] rounded-2xl rounded-br-sm px-3.5 py-2 shadow-sm">
+                  {(values[QUICK_TEST_KEY] ?? "").trim() ? (
+                    <div
+                      dir="auto"
+                      className="text-[14px] leading-[1.35] whitespace-pre-wrap break-words [&_a]:text-[#168acd] [&_a]:underline [&_code]:bg-black/5 [&_code]:px-1 [&_code]:rounded [&_code]:font-mono [&_code]:text-[13px] [&_pre]:bg-black/5 [&_pre]:p-2 [&_pre]:rounded [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:my-1"
+                      dangerouslySetInnerHTML={{
+                        html: renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").html,
+                      }}
+                    />
+                  ) : (
+                    <span className="text-[13px] text-black/40 italic">
+                      اكتب رسالة لرؤية المعاينة...
+                    </span>
+                  )}
+                  <div className="flex items-center justify-end gap-1 mt-1 -mb-0.5">
+                    <span className="text-[10px] text-black/45">
+                      {new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
+                    </span>
+                    <svg width="14" height="10" viewBox="0 0 16 11" fill="none" className="text-[#4fae4e]">
+                      <path
+                        d="M11.5 1L4.5 8L1.5 5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M14.5 1L7.5 8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").error && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                ⚠️ {renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").error}
+              </p>
+            )}
+            <p className="text-[11px] text-muted-foreground/70">
+              الوسوم المدعومة: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;s&gt;, &lt;a href&gt;, &lt;code&gt;, &lt;pre&gt;
+            </p>
+          </div>
         </motion.div>
 
         <button
