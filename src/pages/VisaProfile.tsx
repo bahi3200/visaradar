@@ -388,7 +388,7 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
       size="sm"
       variant="outline"
       onClick={handleShare}
-      className="h-8 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+      className="h-8"
     >
       <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
       مشاركة واتساب
