@@ -193,7 +193,25 @@ const CopySectionButton = ({ title, fields }: { title: string; fields: SectionFi
   );
 };
 
-export default function VisaProfile() {
+type ProfileSection = { title: string; fields: SectionField[] };
+
+const buildFullProfileText = (profileLabel: string, sections: ProfileSection[]) => {
+  const blocks: string[] = [];
+  let totalFields = 0;
+  for (const section of sections) {
+    const lines = section.fields
+      .map((f) => {
+        const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+        return v ? `${f.label}: ${v}` : null;
+      })
+      .filter(Boolean) as string[];
+    if (lines.length === 0) continue;
+    totalFields += lines.length;
+    blocks.push(`━━━ ${section.title} ━━━\n${lines.join("\n")}`);
+  }
+  const header = `📋 ${profileLabel}\n`;
+  return { text: blocks.length ? `${header}\n${blocks.join("\n\n")}` : "", totalFields };
+};
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
