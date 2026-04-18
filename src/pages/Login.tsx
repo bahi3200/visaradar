@@ -6,6 +6,7 @@ import { Radar, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function LoginPage() {
   const navigate = useNavigate();
