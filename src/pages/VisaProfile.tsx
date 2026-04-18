@@ -154,7 +154,7 @@ const CopyField = ({ label, value, type = "text", multiline = false }: {
 };
 
 const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <div className="space-y-1.5" data-field-label={label}>
     <Label className="text-xs text-muted-foreground">{label}</Label>
     {children}
   </div>
@@ -361,23 +361,52 @@ const getTabStats = (p: VisaProfile) => ({
   ]),
 });
 
-const TabBadge = ({ filled, total, missing }: { filled: number; total: number; missing: string[] }) => {
+const TabBadge = ({
+  filled,
+  total,
+  missing,
+  onJumpFirst,
+}: {
+  filled: number;
+  total: number;
+  missing: string[];
+  onJumpFirst?: (firstLabel: string) => void;
+}) => {
   const isComplete = filled === total && total > 0;
   const isEmpty = filled === 0;
   const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
   const isMobile = useIsMobile();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
+  const handleJump = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (missing[0]) onJumpFirst?.(missing[0]);
+    setPopoverOpen(false);
+  };
+
   const content = isComplete ? (
     <p className="text-xs">كل الحقول مكتملة ✓</p>
   ) : (
-    <div className="text-xs space-y-1">
+    <div className="text-xs space-y-2">
       <p className="font-semibold">حقول ناقصة ({missing.length}):</p>
       <ul className="list-disc pr-4 space-y-0.5">
         {missing.map((m) => (
           <li key={m}>{m}</li>
         ))}
       </ul>
+      {onJumpFirst && missing[0] && (
+        <Button
+          type="button"
+          size="sm"
+          variant="default"
+          className="w-full h-7 text-[11px] mt-1"
+          onClick={handleJump}
+        >
+          <Pencil className="w-3 h-3 ml-1" />
+          انتقل لأول حقل ناقص
+        </Button>
+      )}
     </div>
   );
 
@@ -419,7 +448,7 @@ const TabBadge = ({ filled, total, missing }: { filled: number; total: number; m
   return (
     <Tooltip>
       <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[260px]">
+      <TooltipContent side="top" className="max-w-[260px] p-3">
         {content}
       </TooltipContent>
     </Tooltip>
@@ -921,8 +950,53 @@ export default function VisaProfile() {
   const [profiles, setProfiles] = useState<VisaProfile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editTab, setEditTab] = useState("personal");
+  const [pendingFocusLabel, setPendingFocusLabel] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Jump-to-first-missing-field handler used by tab badges in view mode.
+  const jumpToField = (tabKey: string, fieldLabel: string) => {
+    if (!active) return;
+    const { id, user_id, ...rest } = active;
+    setForm(rest as FormState);
+    setEditing(true);
+    setEditTab(tabKey);
+    setPendingFocusLabel(fieldLabel);
+  };
+
+  // After editing mode opens and the requested tab renders, locate the FormField
+  // with matching data-field-label and focus its first input/textarea.
+  useEffect(() => {
+    if (!editing || !pendingFocusLabel) return;
+    let cancelled = false;
+    const tryFocus = (attempt: number) => {
+      if (cancelled) return;
+      const wrapper = document.querySelector<HTMLElement>(
+        `[data-field-label="${CSS.escape(pendingFocusLabel)}"]`,
+      );
+      if (wrapper) {
+        wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+        const input = wrapper.querySelector<HTMLElement>(
+          'input, textarea, select, [role="combobox"], button',
+        );
+        // Highlight briefly
+        wrapper.classList.add("ring-2", "ring-warning", "rounded-md");
+        setTimeout(() => wrapper.classList.remove("ring-2", "ring-warning", "rounded-md"), 1800);
+        input?.focus();
+        setPendingFocusLabel(null);
+      } else if (attempt < 10) {
+        setTimeout(() => tryFocus(attempt + 1), 60);
+      } else {
+        setPendingFocusLabel(null);
+      }
+    };
+    requestAnimationFrame(() => tryFocus(0));
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, editTab, pendingFocusLabel]);
+
 
   const fetchPrefillFromProfile = async (): Promise<Partial<FormState>> => {
     if (!user) return {};
@@ -1257,27 +1331,27 @@ export default function VisaProfile() {
                   <TooltipProvider delayDuration={150}>
                   <TabsTrigger value="personal" className="shrink-0">
                     <User className="w-3.5 h-3.5 ml-1.5" />شخصية
-                    <TabBadge {...stats.personal} />
+                    <TabBadge {...stats.personal} onJumpFirst={(label) => jumpToField("personal", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">
                     <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
-                    <TabBadge {...stats.passport} />
+                    <TabBadge {...stats.passport} onJumpFirst={(label) => jumpToField("passport", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="contact" className="shrink-0">
                     <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
-                    <TabBadge {...stats.contact} />
+                    <TabBadge {...stats.contact} onJumpFirst={(label) => jumpToField("contact", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="profession" className="shrink-0">
                     <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
-                    <TabBadge {...stats.profession} />
+                    <TabBadge {...stats.profession} onJumpFirst={(label) => jumpToField("profession", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="travel" className="shrink-0">
                     <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
-                    <TabBadge {...stats.travel} />
+                    <TabBadge {...stats.travel} onJumpFirst={(label) => jumpToField("travel", label)} />
                   </TabsTrigger>
                   <TabsTrigger value="family" className="shrink-0">
                     <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
-                    <TabBadge {...stats.family} />
+                    <TabBadge {...stats.family} onJumpFirst={(label) => jumpToField("family", label)} />
                   </TabsTrigger>
                   </TooltipProvider>
                 </TabsList>
@@ -1489,7 +1563,7 @@ export default function VisaProfile() {
                 </FormField>
               </div>
 
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs value={editTab} onValueChange={setEditTab} className="w-full">
                 <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
                   <TabsTrigger value="personal" className="shrink-0">شخصية</TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">جواز</TabsTrigger>
