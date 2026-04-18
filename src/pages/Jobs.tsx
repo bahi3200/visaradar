@@ -8,8 +8,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import JobFilters from "@/components/jobs/JobFilters";
 import JobSubscriptionBanner from "@/components/jobs/JobSubscriptionBanner";
+
+type SubscriptionWithPackage = Tables<"subscriptions"> & {
+  packages: Tables<"packages"> | null;
+};
 
 const countryNames: Record<string, string> = {
   CA: "كندا 🇨🇦",
@@ -44,7 +49,7 @@ export default function JobsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Check active subscription
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<SubscriptionWithPackage | null>({
     queryKey: ["my-subscription", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -54,7 +59,7 @@ export default function JobsPage() {
         .eq("user_id", user.id)
         .eq("status", "active")
         .maybeSingle();
-      return data;
+      return (data as SubscriptionWithPackage | null) ?? null;
     },
     enabled: !!user,
   });
@@ -106,7 +111,7 @@ export default function JobsPage() {
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">مشترك — وصول كامل</p>
-                <p className="text-[10px] text-muted-foreground">{(subscription as any)?.packages?.name_ar}</p>
+                <p className="text-[10px] text-muted-foreground">{subscription?.packages?.name_ar}</p>
               </div>
             </div>
             {subscription && (
