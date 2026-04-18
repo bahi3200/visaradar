@@ -565,6 +565,24 @@ const AdminTelegramUsers = () => {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </td>
+                          <td className="px-3 py-3 text-xs whitespace-nowrap">
+                            {u.last_message_at ? (() => {
+                              const ageDays = (Date.now() - new Date(u.last_message_at).getTime()) / (24 * 60 * 60 * 1000);
+                              const isStale = ageDays >= 7;
+                              return (
+                                <span
+                                  className={isStale ? "text-amber-600 font-medium" : "text-muted-foreground"}
+                                  title={formatDate(u.last_message_at)}
+                                >
+                                  {formatRelativeArabic(u.last_message_at).replace(/^قبل\s/, "منذ ")}
+                                </span>
+                              );
+                            })() : (
+                              <span className="text-destructive/80 font-medium" title="لم يتلقَّ أي رسالة">
+                                لم يستلم بعد
+                              </span>
+                            )}
+                          </td>
                           <td className="px-3 py-3 text-left">
                             <div className="flex gap-1.5 justify-end">
                               <Button
