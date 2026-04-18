@@ -47,6 +47,7 @@ import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import Install from "./pages/Install";
 import ManagePackages from "./pages/ManagePackages";
+import VisaProfile from "./pages/VisaProfile";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,7 @@ const App = () => (
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/profile/visa" element={<ProtectedRoute><VisaProfile /></ProtectedRoute>} />
       <Route path="/profile/conversations" element={<ProtectedRoute><ChatHistory /></ProtectedRoute>} />
       <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/telegram-link" element={<ProtectedRoute><TelegramLink /></ProtectedRoute>} />

@@ -893,6 +893,138 @@ export type Database = {
         }
         Relationships: []
       }
+      visa_profiles: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          birth_place: string | null
+          children_count: number | null
+          children_details: string | null
+          city: string | null
+          created_at: string
+          destination_country: string | null
+          duration_days: number | null
+          email: string | null
+          employer_address: string | null
+          employer_name: string | null
+          employer_phone: string | null
+          father_name: string | null
+          full_name_ar: string | null
+          full_name_latin: string | null
+          gender: string | null
+          hotel_or_host: string | null
+          id: string
+          is_primary: boolean
+          marital_status: string | null
+          monthly_income: string | null
+          mother_name: string | null
+          national_id: string | null
+          nationality: string | null
+          notes: string | null
+          passport_expiry_date: string | null
+          passport_issue_date: string | null
+          passport_issue_place: string | null
+          passport_number: string | null
+          phone: string | null
+          postal_code: string | null
+          profession: string | null
+          profile_label: string
+          return_date: string | null
+          spouse_name: string | null
+          travel_date: string | null
+          travel_purpose: string | null
+          updated_at: string
+          user_id: string
+          wilaya: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
+          children_count?: number | null
+          children_details?: string | null
+          city?: string | null
+          created_at?: string
+          destination_country?: string | null
+          duration_days?: number | null
+          email?: string | null
+          employer_address?: string | null
+          employer_name?: string | null
+          employer_phone?: string | null
+          father_name?: string | null
+          full_name_ar?: string | null
+          full_name_latin?: string | null
+          gender?: string | null
+          hotel_or_host?: string | null
+          id?: string
+          is_primary?: boolean
+          marital_status?: string | null
+          monthly_income?: string | null
+          mother_name?: string | null
+          national_id?: string | null
+          nationality?: string | null
+          notes?: string | null
+          passport_expiry_date?: string | null
+          passport_issue_date?: string | null
+          passport_issue_place?: string | null
+          passport_number?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          profession?: string | null
+          profile_label?: string
+          return_date?: string | null
+          spouse_name?: string | null
+          travel_date?: string | null
+          travel_purpose?: string | null
+          updated_at?: string
+          user_id: string
+          wilaya?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
+          children_count?: number | null
+          children_details?: string | null
+          city?: string | null
+          created_at?: string
+          destination_country?: string | null
+          duration_days?: number | null
+          email?: string | null
+          employer_address?: string | null
+          employer_name?: string | null
+          employer_phone?: string | null
+          father_name?: string | null
+          full_name_ar?: string | null
+          full_name_latin?: string | null
+          gender?: string | null
+          hotel_or_host?: string | null
+          id?: string
+          is_primary?: boolean
+          marital_status?: string | null
+          monthly_income?: string | null
+          mother_name?: string | null
+          national_id?: string | null
+          nationality?: string | null
+          notes?: string | null
+          passport_expiry_date?: string | null
+          passport_issue_date?: string | null
+          passport_issue_place?: string | null
+          passport_number?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          profession?: string | null
+          profile_label?: string
+          return_date?: string | null
+          spouse_name?: string | null
+          travel_date?: string | null
+          travel_purpose?: string | null
+          updated_at?: string
+          user_id?: string
+          wilaya?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
