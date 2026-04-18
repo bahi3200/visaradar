@@ -924,30 +924,32 @@ export default function VisaProfile() {
                 return (
               <Tabs defaultValue="personal" className="w-full">
                 <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
+                  <TooltipProvider delayDuration={150}>
                   <TabsTrigger value="personal" className="shrink-0">
                     <User className="w-3.5 h-3.5 ml-1.5" />شخصية
-                    <TabBadge filled={stats.personal.filled} total={stats.personal.total} />
+                    <TabBadge {...stats.personal} />
                   </TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">
                     <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
-                    <TabBadge filled={stats.passport.filled} total={stats.passport.total} />
+                    <TabBadge {...stats.passport} />
                   </TabsTrigger>
                   <TabsTrigger value="contact" className="shrink-0">
                     <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
-                    <TabBadge filled={stats.contact.filled} total={stats.contact.total} />
+                    <TabBadge {...stats.contact} />
                   </TabsTrigger>
                   <TabsTrigger value="profession" className="shrink-0">
                     <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
-                    <TabBadge filled={stats.profession.filled} total={stats.profession.total} />
+                    <TabBadge {...stats.profession} />
                   </TabsTrigger>
                   <TabsTrigger value="travel" className="shrink-0">
                     <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
-                    <TabBadge filled={stats.travel.filled} total={stats.travel.total} />
+                    <TabBadge {...stats.travel} />
                   </TabsTrigger>
                   <TabsTrigger value="family" className="shrink-0">
                     <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
-                    <TabBadge filled={stats.family.filled} total={stats.family.total} />
+                    <TabBadge {...stats.family} />
                   </TabsTrigger>
+                  </TooltipProvider>
                 </TabsList>
 
                 <TabsContent value="personal" className="pt-2">
