@@ -903,6 +903,17 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
         heightLeft -= pageH;
       }
 
+      // Add page numbers footer (صفحة x من y) on each page
+      const totalPages = pdf.getNumberOfPages();
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(120, 120, 120);
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        const label = `Page ${i} / ${totalPages}`;
+        pdf.text(label, pageW / 2, pageH - 6, { align: "center" });
+      }
+
       const safeName = profile.profile_label.replace(/[^\p{L}\p{N}_-]+/gu, "_") || "visa-profile";
       pdf.save(`${safeName}.pdf`);
       toast.success("تم تصدير الملف بصيغة PDF");
