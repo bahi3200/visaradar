@@ -1,0 +1,688 @@
+import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+import Layout from "@/components/Layout";
+import BackButton from "@/components/BackButton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Copy, Check, Plus, Trash2, Save, FileText, User, BookOpen,
+  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil,
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+
+interface VisaProfile {
+  id: string;
+  user_id: string;
+  profile_label: string;
+  is_primary: boolean;
+  // Personal
+  full_name_ar: string | null;
+  full_name_latin: string | null;
+  gender: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  nationality: string | null;
+  marital_status: string | null;
+  // Passport
+  passport_number: string | null;
+  passport_issue_date: string | null;
+  passport_expiry_date: string | null;
+  passport_issue_place: string | null;
+  national_id: string | null;
+  // Contact
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  wilaya: string | null;
+  postal_code: string | null;
+  // Profession
+  profession: string | null;
+  employer_name: string | null;
+  employer_address: string | null;
+  employer_phone: string | null;
+  monthly_income: string | null;
+  // Travel
+  destination_country: string | null;
+  travel_purpose: string | null;
+  travel_date: string | null;
+  return_date: string | null;
+  duration_days: number | null;
+  hotel_or_host: string | null;
+  // Family
+  father_name: string | null;
+  mother_name: string | null;
+  spouse_name: string | null;
+  children_count: number | null;
+  children_details: string | null;
+  // Notes
+  notes: string | null;
+}
+
+type FormState = Omit<VisaProfile, "id" | "user_id">;
+
+const EMPTY: FormState = {
+  profile_label: "ملفي",
+  is_primary: false,
+  full_name_ar: "", full_name_latin: "", gender: "", birth_date: "", birth_place: "",
+  nationality: "", marital_status: "",
+  passport_number: "", passport_issue_date: "", passport_expiry_date: "",
+  passport_issue_place: "", national_id: "",
+  phone: "", email: "", address: "", city: "", wilaya: "", postal_code: "",
+  profession: "", employer_name: "", employer_address: "", employer_phone: "", monthly_income: "",
+  destination_country: "", travel_purpose: "", travel_date: "", return_date: "",
+  duration_days: null, hotel_or_host: "",
+  father_name: "", mother_name: "", spouse_name: "", children_count: null, children_details: "",
+  notes: "",
+};
+
+const profileSchema = z.object({
+  profile_label: z.string().trim().min(1, "اسم الملف مطلوب").max(50, "أقصى 50 حرف"),
+  full_name_ar: z.string().max(100).nullable().optional(),
+  full_name_latin: z.string().max(100).nullable().optional(),
+  email: z.string().trim().max(255).email("بريد غير صحيح").or(z.literal("")).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+  passport_number: z.string().max(30).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+const CopyField = ({ label, value, type = "text", multiline = false }: {
+  label: string; value: string | null | undefined; type?: string; multiline?: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const text = (value ?? "").toString().trim();
+  const handleCopy = async () => {
+    if (!text) {
+      toast.error("لا يوجد قيمة للنسخ");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(`تم نسخ: ${label}`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-stretch gap-1.5">
+        {multiline ? (
+          <Textarea readOnly value={text} className="min-h-[60px] bg-muted/30 text-sm" />
+        ) : (
+          <Input readOnly value={text} type={type} className="bg-muted/30 text-sm" dir={type === "email" ? "ltr" : undefined} />
+        )}
+        <Button
+          type="button"
+          size="icon"
+          variant={copied ? "default" : "outline"}
+          onClick={handleCopy}
+          className="shrink-0"
+          title="نسخ"
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label className="text-xs text-muted-foreground">{label}</Label>
+    {children}
+  </div>
+);
+
+export default function VisaProfile() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profiles, setProfiles] = useState<VisaProfile[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const fetchProfiles = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("visa_profiles")
+      .select("*")
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+    const list = (data || []) as VisaProfile[];
+    setProfiles(list);
+    if (list.length > 0 && !activeId) {
+      setActiveId(list[0].id);
+    } else if (list.length === 0) {
+      // Auto-open new form if no profiles
+      setEditing(true);
+      setForm({ ...EMPTY, is_primary: true });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const active = useMemo(
+    () => profiles.find((p) => p.id === activeId) || null,
+    [profiles, activeId]
+  );
+
+  const startEdit = () => {
+    if (!active) return;
+    const { id, user_id, ...rest } = active;
+    setForm(rest as FormState);
+    setEditing(true);
+  };
+
+  const startNew = () => {
+    setActiveId(null);
+    setForm({ ...EMPTY, is_primary: profiles.length === 0 });
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    if (profiles.length > 0 && !activeId) {
+      setActiveId(profiles[0].id);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    const result = profileSchema.safeParse(form);
+    if (!result.success) {
+      toast.error(result.error.issues[0]?.message || "يرجى مراجعة الحقول");
+      return;
+    }
+    setSaving(true);
+    try {
+      // Normalize empty strings to null for cleaner data, except profile_label
+      const payload: Record<string, unknown> = { ...form, user_id: user.id };
+      for (const k of Object.keys(payload)) {
+        if (k === "profile_label" || k === "is_primary" || k === "user_id") continue;
+        if (payload[k] === "") payload[k] = null;
+      }
+
+      if (activeId) {
+        const { error } = await supabase
+          .from("visa_profiles")
+          .update(payload)
+          .eq("id", activeId);
+        if (error) throw error;
+        toast.success("تم حفظ التعديلات");
+      } else {
+        const { data, error } = await supabase
+          .from("visa_profiles")
+          .insert(payload as never)
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) setActiveId(data.id);
+        toast.success("تم إنشاء الملف");
+      }
+
+      // If marking primary, unmark others
+      if (form.is_primary) {
+        await supabase
+          .from("visa_profiles")
+          .update({ is_primary: false })
+          .eq("user_id", user.id)
+          .neq("id", activeId || (await supabase.from("visa_profiles").select("id").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).single()).data?.id || "");
+      }
+
+      setEditing(false);
+      await fetchProfiles();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الحفظ");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from("visa_profiles").delete().eq("id", deleteId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("تم حذف الملف");
+    if (activeId === deleteId) setActiveId(null);
+    setDeleteId(null);
+    await fetchProfiles();
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-12 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="container py-6 max-w-5xl" dir="rtl">
+        <BackButton />
+
+        <div className="flex items-center justify-between mt-4 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">ملفي للفيزا</h1>
+              <p className="text-xs text-muted-foreground">
+                احفظ بياناتك مرة واحدة وانسخها بنقرة عند التسجيل في مواقع الفيزا
+              </p>
+            </div>
+          </div>
+          {!editing && (
+            <Button onClick={startNew} size="sm">
+              <Plus className="w-4 h-4 ml-2" />
+              ملف جديد
+            </Button>
+          )}
+        </div>
+
+        {/* Profile selector */}
+        {profiles.length > 0 && !editing && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActiveId(p.id)}
+                className={`inline-flex items-center gap-2 px-3 h-9 rounded-full text-sm border transition-colors ${
+                  activeId === p.id
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {p.is_primary && <Star className="w-3.5 h-3.5 fill-current" />}
+                <span className="truncate max-w-[180px]">{p.profile_label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* View mode */}
+        {!editing && active && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">{active.profile_label}</CardTitle>
+                  {active.is_primary && (
+                    <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                      <Star className="w-3 h-3 ml-1 fill-current" />
+                      أساسي
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={startEdit}>
+                    <Pencil className="w-3.5 h-3.5 ml-1.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                    onClick={() => setDeleteId(active.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="personal" className="w-full">
+                <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
+                  <TabsTrigger value="personal" className="shrink-0">
+                    <User className="w-3.5 h-3.5 ml-1.5" />شخصية
+                  </TabsTrigger>
+                  <TabsTrigger value="passport" className="shrink-0">
+                    <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
+                  </TabsTrigger>
+                  <TabsTrigger value="contact" className="shrink-0">
+                    <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
+                  </TabsTrigger>
+                  <TabsTrigger value="profession" className="shrink-0">
+                    <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
+                  </TabsTrigger>
+                  <TabsTrigger value="travel" className="shrink-0">
+                    <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
+                  </TabsTrigger>
+                  <TabsTrigger value="family" className="shrink-0">
+                    <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="الاسم الكامل (عربي)" value={active.full_name_ar} />
+                  <CopyField label="الاسم الكامل (لاتيني)" value={active.full_name_latin} />
+                  <CopyField label="الجنس" value={active.gender} />
+                  <CopyField label="تاريخ الميلاد" value={active.birth_date} />
+                  <CopyField label="مكان الميلاد" value={active.birth_place} />
+                  <CopyField label="الجنسية" value={active.nationality} />
+                  <CopyField label="الحالة العائلية" value={active.marital_status} />
+                </TabsContent>
+
+                <TabsContent value="passport" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="رقم جواز السفر" value={active.passport_number} />
+                  <CopyField label="تاريخ الإصدار" value={active.passport_issue_date} />
+                  <CopyField label="تاريخ الانتهاء" value={active.passport_expiry_date} />
+                  <CopyField label="مكان الإصدار" value={active.passport_issue_place} />
+                  <CopyField label="رقم البطاقة الوطنية" value={active.national_id} />
+                </TabsContent>
+
+                <TabsContent value="contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="الهاتف" value={active.phone} />
+                  <CopyField label="البريد الإلكتروني" value={active.email} type="email" />
+                  <CopyField label="العنوان" value={active.address} multiline />
+                  <CopyField label="المدينة" value={active.city} />
+                  <CopyField label="الولاية" value={active.wilaya} />
+                  <CopyField label="الرمز البريدي" value={active.postal_code} />
+                </TabsContent>
+
+                <TabsContent value="profession" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="المهنة" value={active.profession} />
+                  <CopyField label="اسم صاحب العمل" value={active.employer_name} />
+                  <CopyField label="عنوان العمل" value={active.employer_address} multiline />
+                  <CopyField label="هاتف العمل" value={active.employer_phone} />
+                  <CopyField label="الدخل الشهري" value={active.monthly_income} />
+                </TabsContent>
+
+                <TabsContent value="travel" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="بلد الوجهة" value={active.destination_country} />
+                  <CopyField label="الغرض من الزيارة" value={active.travel_purpose} />
+                  <CopyField label="تاريخ السفر" value={active.travel_date} />
+                  <CopyField label="تاريخ العودة" value={active.return_date} />
+                  <CopyField label="مدة الإقامة (أيام)" value={active.duration_days?.toString() || ""} />
+                  <CopyField label="الفندق / المضيف" value={active.hotel_or_host} multiline />
+                </TabsContent>
+
+                <TabsContent value="family" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <CopyField label="اسم الأب" value={active.father_name} />
+                  <CopyField label="اسم الأم" value={active.mother_name} />
+                  <CopyField label="اسم الزوج/الزوجة" value={active.spouse_name} />
+                  <CopyField label="عدد الأطفال" value={active.children_count?.toString() || ""} />
+                  <div className="sm:col-span-2">
+                    <CopyField label="بيانات الأطفال (الأسماء وتواريخ الميلاد)" value={active.children_details} multiline />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              {active.notes && (
+                <div className="mt-6 pt-4 border-t">
+                  <CopyField label="ملاحظات" value={active.notes} multiline />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Edit / New mode */}
+        {editing && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {activeId ? "تعديل الملف" : "ملف جديد"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="اسم الملف *">
+                  <Input
+                    value={form.profile_label}
+                    onChange={(e) => setForm({ ...form, profile_label: e.target.value })}
+                    placeholder="مثال: ملفي / ابنتي سارة"
+                    maxLength={50}
+                  />
+                </FormField>
+                <FormField label="ملف أساسي">
+                  <label className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/30 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.is_primary}
+                      onChange={(e) => setForm({ ...form, is_primary: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">جعله الملف الأساسي</span>
+                  </label>
+                </FormField>
+              </div>
+
+              <Tabs defaultValue="personal" className="w-full">
+                <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
+                  <TabsTrigger value="personal" className="shrink-0">شخصية</TabsTrigger>
+                  <TabsTrigger value="passport" className="shrink-0">جواز</TabsTrigger>
+                  <TabsTrigger value="contact" className="shrink-0">اتصال</TabsTrigger>
+                  <TabsTrigger value="profession" className="shrink-0">مهنة</TabsTrigger>
+                  <TabsTrigger value="travel" className="shrink-0">سفر</TabsTrigger>
+                  <TabsTrigger value="family" className="shrink-0">عائلة</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="personal" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="الاسم الكامل (عربي)">
+                    <Input value={form.full_name_ar || ""} onChange={(e) => setForm({ ...form, full_name_ar: e.target.value })} maxLength={100} />
+                  </FormField>
+                  <FormField label="الاسم الكامل (لاتيني)">
+                    <Input value={form.full_name_latin || ""} onChange={(e) => setForm({ ...form, full_name_latin: e.target.value })} dir="ltr" maxLength={100} />
+                  </FormField>
+                  <FormField label="الجنس">
+                    <Select value={form.gender || ""} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                      <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ذكر">ذكر</SelectItem>
+                        <SelectItem value="أنثى">أنثى</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="تاريخ الميلاد">
+                    <Input type="date" value={form.birth_date || ""} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+                  </FormField>
+                  <FormField label="مكان الميلاد">
+                    <Input value={form.birth_place || ""} onChange={(e) => setForm({ ...form, birth_place: e.target.value })} />
+                  </FormField>
+                  <FormField label="الجنسية">
+                    <Input value={form.nationality || ""} onChange={(e) => setForm({ ...form, nationality: e.target.value })} placeholder="جزائرية" />
+                  </FormField>
+                  <FormField label="الحالة العائلية">
+                    <Select value={form.marital_status || ""} onValueChange={(v) => setForm({ ...form, marital_status: v })}>
+                      <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="أعزب">أعزب</SelectItem>
+                        <SelectItem value="متزوج">متزوج</SelectItem>
+                        <SelectItem value="مطلق">مطلق</SelectItem>
+                        <SelectItem value="أرمل">أرمل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </TabsContent>
+
+                <TabsContent value="passport" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="رقم جواز السفر">
+                    <Input value={form.passport_number || ""} onChange={(e) => setForm({ ...form, passport_number: e.target.value })} dir="ltr" maxLength={30} />
+                  </FormField>
+                  <FormField label="رقم البطاقة الوطنية">
+                    <Input value={form.national_id || ""} onChange={(e) => setForm({ ...form, national_id: e.target.value })} dir="ltr" />
+                  </FormField>
+                  <FormField label="تاريخ الإصدار">
+                    <Input type="date" value={form.passport_issue_date || ""} onChange={(e) => setForm({ ...form, passport_issue_date: e.target.value })} />
+                  </FormField>
+                  <FormField label="تاريخ الانتهاء">
+                    <Input type="date" value={form.passport_expiry_date || ""} onChange={(e) => setForm({ ...form, passport_expiry_date: e.target.value })} />
+                  </FormField>
+                  <FormField label="مكان الإصدار">
+                    <Input value={form.passport_issue_place || ""} onChange={(e) => setForm({ ...form, passport_issue_place: e.target.value })} />
+                  </FormField>
+                </TabsContent>
+
+                <TabsContent value="contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="الهاتف">
+                    <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" />
+                  </FormField>
+                  <FormField label="البريد الإلكتروني">
+                    <Input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} dir="ltr" />
+                  </FormField>
+                  <div className="sm:col-span-2">
+                    <FormField label="العنوان الكامل">
+                      <Textarea value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} />
+                    </FormField>
+                  </div>
+                  <FormField label="المدينة">
+                    <Input value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                  </FormField>
+                  <FormField label="الولاية">
+                    <Input value={form.wilaya || ""} onChange={(e) => setForm({ ...form, wilaya: e.target.value })} />
+                  </FormField>
+                  <FormField label="الرمز البريدي">
+                    <Input value={form.postal_code || ""} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} dir="ltr" />
+                  </FormField>
+                </TabsContent>
+
+                <TabsContent value="profession" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="المهنة">
+                    <Input value={form.profession || ""} onChange={(e) => setForm({ ...form, profession: e.target.value })} />
+                  </FormField>
+                  <FormField label="اسم صاحب العمل">
+                    <Input value={form.employer_name || ""} onChange={(e) => setForm({ ...form, employer_name: e.target.value })} />
+                  </FormField>
+                  <div className="sm:col-span-2">
+                    <FormField label="عنوان العمل">
+                      <Textarea value={form.employer_address || ""} onChange={(e) => setForm({ ...form, employer_address: e.target.value })} rows={2} />
+                    </FormField>
+                  </div>
+                  <FormField label="هاتف العمل">
+                    <Input value={form.employer_phone || ""} onChange={(e) => setForm({ ...form, employer_phone: e.target.value })} dir="ltr" />
+                  </FormField>
+                  <FormField label="الدخل الشهري">
+                    <Input value={form.monthly_income || ""} onChange={(e) => setForm({ ...form, monthly_income: e.target.value })} placeholder="مثال: 80000 دج" />
+                  </FormField>
+                </TabsContent>
+
+                <TabsContent value="travel" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="بلد الوجهة">
+                    <Input value={form.destination_country || ""} onChange={(e) => setForm({ ...form, destination_country: e.target.value })} />
+                  </FormField>
+                  <FormField label="الغرض من الزيارة">
+                    <Input value={form.travel_purpose || ""} onChange={(e) => setForm({ ...form, travel_purpose: e.target.value })} placeholder="سياحة / دراسة / عمل..." />
+                  </FormField>
+                  <FormField label="تاريخ السفر">
+                    <Input type="date" value={form.travel_date || ""} onChange={(e) => setForm({ ...form, travel_date: e.target.value })} />
+                  </FormField>
+                  <FormField label="تاريخ العودة">
+                    <Input type="date" value={form.return_date || ""} onChange={(e) => setForm({ ...form, return_date: e.target.value })} />
+                  </FormField>
+                  <FormField label="مدة الإقامة (أيام)">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.duration_days ?? ""}
+                      onChange={(e) => setForm({ ...form, duration_days: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </FormField>
+                  <div className="sm:col-span-2">
+                    <FormField label="الفندق / المضيف">
+                      <Textarea value={form.hotel_or_host || ""} onChange={(e) => setForm({ ...form, hotel_or_host: e.target.value })} rows={2} />
+                    </FormField>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="family" className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <FormField label="اسم الأب">
+                    <Input value={form.father_name || ""} onChange={(e) => setForm({ ...form, father_name: e.target.value })} />
+                  </FormField>
+                  <FormField label="اسم الأم">
+                    <Input value={form.mother_name || ""} onChange={(e) => setForm({ ...form, mother_name: e.target.value })} />
+                  </FormField>
+                  <FormField label="اسم الزوج/الزوجة">
+                    <Input value={form.spouse_name || ""} onChange={(e) => setForm({ ...form, spouse_name: e.target.value })} />
+                  </FormField>
+                  <FormField label="عدد الأطفال">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.children_count ?? ""}
+                      onChange={(e) => setForm({ ...form, children_count: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                  </FormField>
+                  <div className="sm:col-span-2">
+                    <FormField label="بيانات الأطفال (الأسماء وتواريخ الميلاد)">
+                      <Textarea value={form.children_details || ""} onChange={(e) => setForm({ ...form, children_details: e.target.value })} rows={3} />
+                    </FormField>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <FormField label="ملاحظات إضافية">
+                <Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} maxLength={2000} />
+              </FormField>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                {profiles.length > 0 && (
+                  <Button variant="outline" onClick={cancelEdit} disabled={saving}>
+                    إلغاء
+                  </Button>
+                )}
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
+                  حفظ
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>حذف الملف؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                لا يمكن التراجع عن هذا الإجراء. سيتم حذف بيانات هذا الملف نهائياً.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                حذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </Layout>
+  );
+}
