@@ -30,6 +30,8 @@ interface TelegramUser {
   sub_expires_at: string | null;
   last_message_at: string | null;
   last_message_status: string | null;
+  last_message_text: string | null;
+  last_message_error: string | null;
 }
 
 const formatDate = (iso: string | null) => {
