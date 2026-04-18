@@ -496,6 +496,74 @@ const COUNTRY_DIAL_CODES: { code: string; label: string; flag: string }[] = [
 
 const WA_STORAGE_KEY = "visa_profile_wa_recipient_v1";
 
+const CountryDialPopover = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+  const [open, setOpen] = useState(false);
+  const selected = COUNTRY_DIAL_CODES.find((c) => c.code === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-[130px] shrink-0 justify-between px-2 font-normal"
+        >
+          <span className="inline-flex items-center gap-1.5 truncate">
+            <span>{selected?.flag ?? "🌐"}</span>
+            <span className="font-mono text-sm">+{selected?.code ?? value}</span>
+          </span>
+          <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start" dir="rtl">
+        <Command
+          filter={(itemValue, search) => {
+            // itemValue is `${name} ${code}` lowercased; match anywhere
+            const q = search.trim().toLowerCase();
+            if (!q) return 1;
+            return itemValue.toLowerCase().includes(q) ? 1 : 0;
+          }}
+        >
+          <CommandInput placeholder="ابحث عن دولة أو رمز..." className="h-9" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>لا توجد نتائج</CommandEmpty>
+            <CommandGroup>
+              {COUNTRY_DIAL_CODES.map((c) => (
+                <CommandItem
+                  key={c.code}
+                  value={`${c.label} ${c.code} +${c.code}`}
+                  onSelect={() => {
+                    onChange(c.code);
+                    setOpen(false);
+                  }}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span className="text-base">{c.flag}</span>
+                    <span>{c.label}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="font-mono text-xs text-muted-foreground" dir="ltr">+{c.code}</span>
+                    <CheckIcon
+                      className={cn(
+                        "h-4 w-4",
+                        value === c.code ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+
 const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
   const [open, setOpen] = useState(false);
   const [dialCode, setDialCode] = useState("213");
