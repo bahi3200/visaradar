@@ -709,6 +709,14 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([...ALL_PDF_SECTIONS]);
   const [includeQr, setIncludeQr] = useState(true);
+  // Default QR fields: passport-essentials only (name + passport core).
+  const [qrFields, setQrFields] = useState<string[]>([
+    "name", "passport", "nationality", "dob", "issued", "expires",
+  ]);
+
+  const toggleQrField = (key: string, checked: boolean) => {
+    setQrFields((prev) => (checked ? [...prev, key] : prev.filter((k) => k !== key)));
+  };
 
   const toggleSection = (name: string, checked: boolean) => {
     setSelected((prev) => (checked ? [...new Set([...prev, name])] : prev.filter((s) => s !== name)));
