@@ -82,6 +82,7 @@ const AdminTelegramUsers = () => {
   const [sending, setSending] = useState(false);
   const [templateId, setTemplateId] = useState<string>("custom");
   const [quickSendingId, setQuickSendingId] = useState<string | null>(null);
+  const [msgDetailUser, setMsgDetailUser] = useState<TelegramUser | null>(null);
 
   const handleQuickTest = async (u: TelegramUser) => {
     setQuickSendingId(u.telegram_id);
