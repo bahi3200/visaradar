@@ -616,6 +616,19 @@ const AdminTelegramUsers = () => {
                               {staleCount}
                             </button>
                           )}
+                          {activityFilter === "inactive_7d" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActivityFilter("all");
+                                setStaleSort("none");
+                              }}
+                              title="مسح فلتر الخاملين والعودة لعرض الكل"
+                              className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/10 text-destructive h-5 w-5 hover:bg-destructive/20 hover:border-destructive/60 transition-colors cursor-pointer"
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </button>
+                          )}
                         </span>
                       </th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
