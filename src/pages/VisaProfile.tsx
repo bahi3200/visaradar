@@ -820,6 +820,10 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
         </section>`
       : "";
 
+    const headerQrHtml = qrDataUrl
+      ? `<img src="${qrDataUrl}" alt="QR" title="QR — البيانات الأساسية للجواز" style="width:60px;height:60px;border:1px solid #c9a227;border-radius:6px;padding:2px;background:#fff;flex-shrink:0;" />`
+      : "";
+
     return `
       <div id="pdf-root" dir="rtl" style="font-family: Cairo, Tajawal, system-ui, sans-serif; background: #fff; color: #0f172a; width: 794px; padding: 48px 40px; box-sizing: border-box;">
         <header style="border-bottom: 3px solid #c9a227; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
@@ -830,9 +834,12 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
               <div style="margin-top: 4px; font-size: 13px; color: #64748b;">${profile.profile_label}</div>
             </div>
           </div>
-          <div style="font-size: 12px; color: #64748b; text-align: left;">
-            <div>تاريخ التصدير</div>
-            <div style="font-weight: 600; color: #0b1d39;">${today}</div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            ${headerQrHtml}
+            <div style="font-size: 12px; color: #64748b; text-align: left;">
+              <div>تاريخ التصدير</div>
+              <div style="font-weight: 600; color: #0b1d39;">${today}</div>
+            </div>
           </div>
         </header>
         ${sectionsHtml || '<p style="color:#64748b;">لا توجد بيانات معبّأة بعد.</p>'}
