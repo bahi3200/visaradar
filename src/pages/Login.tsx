@@ -44,13 +44,12 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.includes("Invalid login")) {
+        const translated = translateAuthError(error);
+        if (error.message.includes("Invalid login") || error.message.includes("invalid_credentials")) {
           setFieldErrors({ password: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
-          toast.error("بيانات الدخول غير صحيحة، تحقق وأعد المحاولة");
-        } else if (error.message.includes("Email not confirmed")) {
-          toast.error("يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك");
+          toast.error(translated || "بيانات الدخول غير صحيحة، تحقق وأعد المحاولة");
         } else {
-          toast.error(error.message);
+          toast.error(translated || error.message);
         }
         return;
       }
