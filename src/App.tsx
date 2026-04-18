@@ -46,6 +46,7 @@ import TelegramLink from "./pages/TelegramLink";
 import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import Install from "./pages/Install";
+import ManagePackages from "./pages/ManagePackages";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ const App = () => (
       <Route path="/dashboard/backup" element={<AdminRoute adminOnly><Backup /></AdminRoute>} />
       <Route path="/dashboard/telegram-users" element={<AdminRoute adminOnly><AdminTelegramUsers /></AdminRoute>} />
       <Route path="/dashboard/telegram-broadcast" element={<AdminRoute adminOnly><AdminTelegramBroadcast /></AdminRoute>} />
+      <Route path="/dashboard/packages" element={<AdminRoute adminOnly><ManagePackages /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
