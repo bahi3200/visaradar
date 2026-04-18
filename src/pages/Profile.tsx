@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar, Send, CheckCircle2, Unlink } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Phone, MessageCircle, Volume2, BarChart3, UserCog, RefreshCw, Calendar, Send, CheckCircle2, Unlink, IdCard, ChevronLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,6 +142,22 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-heading font-bold text-foreground text-center">
             الملف الشخصي
           </h1>
+
+          <Link
+            to="/profile/visa"
+            className="group relative block overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4 hover:border-primary/50 hover:shadow-lg transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                <IdCard className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-foreground text-sm">ملفي للفيزا</div>
+                <div className="text-xs text-muted-foreground mt-0.5">بياناتك الجاهزة لتعبئة استمارات التأشيرة بنقرة واحدة</div>
+              </div>
+              <ChevronLeft className="w-5 h-5 text-primary shrink-0 group-hover:-translate-x-1 transition-transform" />
+            </div>
+          </Link>
 
           <Tabs defaultValue="info" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
