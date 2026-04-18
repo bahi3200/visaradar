@@ -193,6 +193,129 @@ const CopySectionButton = ({ title, fields }: { title: string; fields: SectionFi
   );
 };
 
+type ProfileSection = { title: string; fields: SectionField[] };
+
+const buildFullProfileText = (profileLabel: string, sections: ProfileSection[]) => {
+  const blocks: string[] = [];
+  let totalFields = 0;
+  for (const section of sections) {
+    const lines = section.fields
+      .map((f) => {
+        const v = f.value === null || f.value === undefined ? "" : String(f.value).trim();
+        return v ? `${f.label}: ${v}` : null;
+      })
+      .filter(Boolean) as string[];
+    if (lines.length === 0) continue;
+    totalFields += lines.length;
+    blocks.push(`━━━ ${section.title} ━━━\n${lines.join("\n")}`);
+  }
+  const header = `📋 ${profileLabel}\n`;
+  return { text: blocks.length ? `${header}\n${blocks.join("\n\n")}` : "", totalFields };
+};
+
+const getAllSections = (p: VisaProfile): ProfileSection[] => [
+  {
+    title: "بيانات شخصية",
+    fields: [
+      { label: "الاسم الكامل (عربي)", value: p.full_name_ar },
+      { label: "الاسم الكامل (لاتيني)", value: p.full_name_latin },
+      { label: "الجنس", value: p.gender },
+      { label: "تاريخ الميلاد", value: p.birth_date },
+      { label: "مكان الميلاد", value: p.birth_place },
+      { label: "الجنسية", value: p.nationality },
+      { label: "الحالة العائلية", value: p.marital_status },
+    ],
+  },
+  {
+    title: "بيانات الجواز",
+    fields: [
+      { label: "رقم جواز السفر", value: p.passport_number },
+      { label: "تاريخ الإصدار", value: p.passport_issue_date },
+      { label: "تاريخ الانتهاء", value: p.passport_expiry_date },
+      { label: "مكان الإصدار", value: p.passport_issue_place },
+      { label: "رقم البطاقة الوطنية", value: p.national_id },
+    ],
+  },
+  {
+    title: "بيانات الاتصال",
+    fields: [
+      { label: "الهاتف", value: p.phone },
+      { label: "البريد الإلكتروني", value: p.email },
+      { label: "العنوان", value: p.address },
+      { label: "المدينة", value: p.city },
+      { label: "الولاية", value: p.wilaya },
+      { label: "الرمز البريدي", value: p.postal_code },
+    ],
+  },
+  {
+    title: "بيانات المهنة",
+    fields: [
+      { label: "المهنة", value: p.profession },
+      { label: "اسم صاحب العمل", value: p.employer_name },
+      { label: "عنوان العمل", value: p.employer_address },
+      { label: "هاتف العمل", value: p.employer_phone },
+      { label: "الدخل الشهري", value: p.monthly_income },
+    ],
+  },
+  {
+    title: "بيانات السفر",
+    fields: [
+      { label: "بلد الوجهة", value: p.destination_country },
+      { label: "الغرض من الزيارة", value: p.travel_purpose },
+      { label: "تاريخ السفر", value: p.travel_date },
+      { label: "تاريخ العودة", value: p.return_date },
+      { label: "مدة الإقامة (أيام)", value: p.duration_days },
+      { label: "الفندق / المضيف", value: p.hotel_or_host },
+    ],
+  },
+  {
+    title: "بيانات العائلة",
+    fields: [
+      { label: "اسم الأب", value: p.father_name },
+      { label: "اسم الأم", value: p.mother_name },
+      { label: "اسم الزوج/الزوجة", value: p.spouse_name },
+      { label: "عدد الأطفال", value: p.children_count },
+      { label: "بيانات الأطفال", value: p.children_details },
+    ],
+  },
+  {
+    title: "ملاحظات",
+    fields: [{ label: "ملاحظات", value: p.notes }],
+  },
+];
+
+const CopyFullProfileButton = ({ profile }: { profile: VisaProfile }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const sections = getAllSections(profile);
+    const { text, totalFields } = buildFullProfileText(profile.profile_label, sections);
+    if (!text) {
+      toast.error("لا توجد بيانات لنسخها بعد");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(`تم نسخ كامل الملف (${totalFields} حقل)`);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast.error("فشل النسخ");
+    }
+  };
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={copied ? "default" : "secondary"}
+      onClick={handleCopy}
+      className="h-8"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 ml-1.5" /> : <ClipboardCopy className="w-3.5 h-3.5 ml-1.5" />}
+      نسخ كل الملف
+    </Button>
+  );
+};
+
 export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -445,31 +568,32 @@ export default function VisaProfile() {
         {!editing && active && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">{active.profile_label}</CardTitle>
-                  {active.is_primary && (
-                    <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
-                      <Star className="w-3 h-3 ml-1 fill-current" />
-                      أساسي
-                    </Badge>
-                  )}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">{active.profile_label}</CardTitle>
+                    {active.is_primary && (
+                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                        <Star className="w-3 h-3 ml-1 fill-current" />
+                        أساسي
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CopyFullProfileButton profile={active} />
+                    <Button size="sm" variant="outline" onClick={startEdit}>
+                      <Pencil className="w-3.5 h-3.5 ml-1.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                      onClick={() => setDeleteId(active.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={startEdit}>
-                    <Pencil className="w-3.5 h-3.5 ml-1.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                    onClick={() => setDeleteId(active.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="personal" className="w-full">
