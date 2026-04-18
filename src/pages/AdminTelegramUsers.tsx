@@ -703,8 +703,7 @@ const AdminTelegramUsers = () => {
 
               {/* Desktop: table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b">
+                <table className="w-full text-sm border-separate border-spacing-0">
                     <tr className="text-right text-muted-foreground">
                       <th className="px-3 py-2 w-10">
                         <Checkbox
