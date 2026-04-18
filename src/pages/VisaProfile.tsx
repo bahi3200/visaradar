@@ -212,6 +212,8 @@ const buildFullProfileText = (profileLabel: string, sections: ProfileSection[]) 
   const header = `📋 ${profileLabel}\n`;
   return { text: blocks.length ? `${header}\n${blocks.join("\n\n")}` : "", totalFields };
 };
+
+export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
