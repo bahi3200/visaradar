@@ -104,7 +104,13 @@ const AdminTelegramUsers = () => {
         setUsers((prev) =>
           prev.map((x) =>
             x.telegram_id === u.telegram_id
-              ? { ...x, last_message_at: new Date().toISOString(), last_message_status: "sent" }
+              ? {
+                  ...x,
+                  last_message_at: new Date().toISOString(),
+                  last_message_status: "sent",
+                  last_message_text: quickTestMessage,
+                  last_message_error: null,
+                }
               : x
           )
         );
