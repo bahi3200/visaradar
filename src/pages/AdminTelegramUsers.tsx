@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { TELEGRAM_TEMPLATES, TELEGRAM_TEMPLATES_MAP } from "@/lib/telegramTemplates";
 
 type SubStatus = "active" | "expired" | "none";
 
