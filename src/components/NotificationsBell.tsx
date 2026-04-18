@@ -205,7 +205,7 @@ export default function NotificationsBell() {
           const statusLabel =
             r.status === "approved" ? "✅ تمت الموافقة" :
             r.status === "rejected" ? "❌ مرفوض" : `📋 ${r.status}`;
-          const pkg = r.packages as any;
+          const pkg = r.packages as { name_ar: string } | null;
           items.push({
             id: `req-${r.id}`,
             type: "request",
