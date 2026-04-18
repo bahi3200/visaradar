@@ -17,6 +17,67 @@ const QUICK_TEST_KEY = "telegram_quick_test_message";
 const QUICK_TEST_DEFAULT = "مرحباً من VisaRadar 👋";
 const QUICK_TEST_MAX = 500;
 
+// Telegram-supported HTML tags (subset). Anything else is escaped.
+// Reference: https://core.telegram.org/bots/api#html-style
+const TELEGRAM_ALLOWED = ["b", "strong", "i", "em", "u", "s", "strike", "del", "code", "pre", "a", "br"];
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Sanitize user text the way Telegram would render it: only whitelisted tags
+ * survive (with safe href on <a>). Everything else is shown as escaped text.
+ */
+function renderTelegramHtml(input: string): { html: string; error: string | null } {
+  if (!input) return { html: "", error: null };
+  // Tokenize: split on tags vs text
+  const tokenRe = /<\s*(\/?)\s*([a-zA-Z]+)([^>]*)>/g;
+  let out = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let unsupported: string | null = null;
+
+  while ((match = tokenRe.exec(input)) !== null) {
+    const [full, slash, rawTag, attrs] = match;
+    const tag = rawTag.toLowerCase();
+    out += escapeHtml(input.slice(lastIndex, match.index));
+    lastIndex = match.index + full.length;
+
+    if (!TELEGRAM_ALLOWED.includes(tag)) {
+      if (!unsupported) unsupported = tag;
+      out += escapeHtml(full);
+      continue;
+    }
+
+    if (tag === "br") {
+      out += "<br/>";
+      continue;
+    }
+
+    if (tag === "a" && !slash) {
+      const hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'/i);
+      const href = (hrefMatch?.[1] || hrefMatch?.[2] || "").trim();
+      const safe = /^(https?:|tg:|mailto:)/i.test(href) ? href : "#";
+      out += `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer" class="text-[#168acd] underline">`;
+      continue;
+    }
+
+    out += slash ? `</${tag}>` : `<${tag}>`;
+  }
+  out += escapeHtml(input.slice(lastIndex));
+  // Convert real newlines to <br/>
+  out = out.replace(/\r?\n/g, "<br/>");
+
+  return {
+    html: out,
+    error: unsupported ? `الوسم <${unsupported}> غير مدعوم في Telegram وسيظهر كنص` : null,
+  };
+}
+
 function normalizeReminderDays(raw: string): { value: string; days: number[]; error?: string } {
   const parts = raw
     .split(",")
@@ -217,6 +278,69 @@ export default function SiteSettingsPage() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Live Telegram preview */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-foreground/80">معاينة مباشرة في Telegram</p>
+            <div
+              className="rounded-2xl p-4 border border-border/50"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(210 40% 92%) 0%, hsl(210 40% 96%) 100%)",
+              }}
+            >
+              <div className="flex justify-end" dir="ltr">
+                <div className="relative max-w-[85%] bg-[#effdde] text-[#000] rounded-2xl rounded-br-sm px-3.5 py-2 shadow-sm">
+                  {(values[QUICK_TEST_KEY] ?? "").trim() ? (
+                    <div
+                      dir="auto"
+                      className="text-[14px] leading-[1.35] whitespace-pre-wrap break-words [&_a]:text-[#168acd] [&_a]:underline [&_code]:bg-black/5 [&_code]:px-1 [&_code]:rounded [&_code]:font-mono [&_code]:text-[13px] [&_pre]:bg-black/5 [&_pre]:p-2 [&_pre]:rounded [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:my-1"
+                      dangerouslySetInnerHTML={{
+                        __html: renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").html,
+                      }}
+                    />
+                  ) : (
+                    <span className="text-[13px] text-black/40 italic">
+                      اكتب رسالة لرؤية المعاينة...
+                    </span>
+                  )}
+                  <div className="flex items-center justify-end gap-1 mt-1 -mb-0.5">
+                    <span className="text-[10px] text-black/45">
+                      {new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
+                    </span>
+                    <svg width="14" height="10" viewBox="0 0 16 11" fill="none" className="text-[#4fae4e]">
+                      <path
+                        d="M11.5 1L4.5 8L1.5 5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M14.5 1L7.5 8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").error && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                ⚠️ {renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").error}
+              </p>
+            )}
+            <p className="text-[11px] text-muted-foreground/70">
+              الوسوم المدعومة: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;s&gt;, &lt;a href&gt;, &lt;code&gt;, &lt;pre&gt;
+            </p>
           </div>
         </motion.div>
 
