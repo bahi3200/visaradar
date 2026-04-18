@@ -361,23 +361,52 @@ const getTabStats = (p: VisaProfile) => ({
   ]),
 });
 
-const TabBadge = ({ filled, total, missing }: { filled: number; total: number; missing: string[] }) => {
+const TabBadge = ({
+  filled,
+  total,
+  missing,
+  onJumpFirst,
+}: {
+  filled: number;
+  total: number;
+  missing: string[];
+  onJumpFirst?: (firstLabel: string) => void;
+}) => {
   const isComplete = filled === total && total > 0;
   const isEmpty = filled === 0;
   const variant: "default" | "destructive" | "secondary" = isComplete ? "default" : isEmpty ? "destructive" : "secondary";
   const isMobile = useIsMobile();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
+  const handleJump = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (missing[0]) onJumpFirst?.(missing[0]);
+    setPopoverOpen(false);
+  };
+
   const content = isComplete ? (
     <p className="text-xs">كل الحقول مكتملة ✓</p>
   ) : (
-    <div className="text-xs space-y-1">
+    <div className="text-xs space-y-2">
       <p className="font-semibold">حقول ناقصة ({missing.length}):</p>
       <ul className="list-disc pr-4 space-y-0.5">
         {missing.map((m) => (
           <li key={m}>{m}</li>
         ))}
       </ul>
+      {onJumpFirst && missing[0] && (
+        <Button
+          type="button"
+          size="sm"
+          variant="default"
+          className="w-full h-7 text-[11px] mt-1"
+          onClick={handleJump}
+        >
+          <Pencil className="w-3 h-3 ml-1" />
+          انتقل لأول حقل ناقص
+        </Button>
+      )}
     </div>
   );
 
@@ -419,7 +448,7 @@ const TabBadge = ({ filled, total, missing }: { filled: number; total: number; m
   return (
     <Tooltip>
       <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[260px]">
+      <TooltipContent side="top" className="max-w-[260px] p-3">
         {content}
       </TooltipContent>
     </Tooltip>
