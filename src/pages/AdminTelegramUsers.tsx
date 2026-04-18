@@ -563,6 +563,33 @@ const AdminTelegramUsers = () => {
               <>
               {/* Mobile: cards */}
               <div className="md:hidden space-y-3">
+                {/* Quick filter: inactive only */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activityFilter === "inactive_7d" ? "default" : "outline"}
+                    onClick={() => {
+                      if (activityFilter === "inactive_7d") {
+                        setActivityFilter("all");
+                        setStaleSort("none");
+                      } else {
+                        setActivityFilter("inactive_7d");
+                        setStaleSort("stalest");
+                      }
+                    }}
+                    className={
+                      activityFilter === "inactive_7d"
+                        ? "h-9 bg-amber-600 hover:bg-amber-700 text-white border-amber-600 flex-1"
+                        : "h-9 flex-1 border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
+                    }
+                    disabled={staleCount === 0 && activityFilter !== "inactive_7d"}
+                  >
+                    <Clock className="w-3.5 h-3.5 ml-1.5" />
+                    {activityFilter === "inactive_7d" ? "إلغاء فلتر الخاملين" : `الخاملون فقط (${staleCount})`}
+                  </Button>
+                </div>
+
                 {filtered.length > 0 && (
                   <div className="flex items-center justify-between gap-2 p-2 rounded-md border bg-muted/30">
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
