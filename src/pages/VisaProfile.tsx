@@ -1116,8 +1116,38 @@ export default function VisaProfile() {
     );
   }
 
+  // Compute overall completion for the active profile (used by mobile sticky bar)
+  const overallStats = useMemo(() => {
+    if (!active) return { filled: 0, total: 0, pct: 0 };
+    const stats = getTabStats(active);
+    const filled = Object.values(stats).reduce((a, s) => a + s.filled, 0);
+    const total = Object.values(stats).reduce((a, s) => a + s.total, 0);
+    const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+    return { filled, total, pct };
+  }, [active]);
+
   return (
     <Layout>
+      {/* Mobile-only sticky completion bar — visible while scrolling */}
+      {!editing && active && (
+        <div
+          className="md:hidden sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border"
+          dir="rtl"
+        >
+          <div className="container py-2 max-w-5xl">
+            <div className="flex items-center justify-between gap-3 text-xs mb-1">
+              <span className="text-muted-foreground truncate">
+                اكتمال: <span className="text-foreground font-medium">{active.profile_label}</span>
+              </span>
+              <span className="font-semibold tabular-nums shrink-0">
+                {overallStats.filled}/{overallStats.total} · {overallStats.pct}%
+              </span>
+            </div>
+            <Progress value={overallStats.pct} variant="auto" className="h-1.5" />
+          </div>
+        </div>
+      )}
+
       <div className="container py-6 max-w-5xl" dir="rtl">
         <BackButton />
 
