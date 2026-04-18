@@ -550,40 +550,46 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
                       <th className="px-3 py-2 font-medium">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setStaleSort((s) =>
-                              s === "none" ? "stalest" : s === "stalest" ? "freshest" : "none"
-                            )
-                          }
-                          className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
-                          title={
-                            staleSort === "stalest"
-                              ? "مرتّب: الأكثر خمولاً أولاً (انقر للعكس)"
-                              : staleSort === "freshest"
-                              ? "مرتّب: الأكثر نشاطاً أولاً (انقر لإلغاء الفرز)"
-                              : "انقر للفرز حسب آخر نشاط"
-                          }
-                        >
-                          منذ
-                          {staleSort === "stalest" ? (
-                            <ArrowDown className="w-3.5 h-3.5 text-amber-600" />
-                          ) : staleSort === "freshest" ? (
-                            <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
-                          )}
+                        <span className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setStaleSort((s) =>
+                                s === "none" ? "stalest" : s === "stalest" ? "freshest" : "none"
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
+                            title={
+                              staleSort === "stalest"
+                                ? "مرتّب: الأكثر خمولاً أولاً (انقر للعكس)"
+                                : staleSort === "freshest"
+                                ? "مرتّب: الأكثر نشاطاً أولاً (انقر لإلغاء الفرز)"
+                                : "انقر للفرز حسب آخر نشاط"
+                            }
+                          >
+                            منذ
+                            {staleSort === "stalest" ? (
+                              <ArrowDown className="w-3.5 h-3.5 text-amber-600" />
+                            ) : staleSort === "freshest" ? (
+                              <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                            )}
+                          </button>
                           {staleCount > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="text-amber-600 border-amber-500/40 bg-amber-500/10 h-5 px-1.5 text-[10px] font-bold"
-                              title={`${staleCount} مستخدم لم يستلم رسالة منذ أكثر من 7 أيام`}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActivityFilter("inactive_7d");
+                                setStaleSort("stalest");
+                              }}
+                              title={`${staleCount} مستخدم لم يستلم رسالة منذ أكثر من 7 أيام — انقر لتصفيتهم`}
+                              className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 h-5 px-1.5 text-[10px] font-bold hover:bg-amber-500/20 hover:border-amber-500/60 transition-colors cursor-pointer"
                             >
                               {staleCount}
-                            </Badge>
+                            </button>
                           )}
-                        </button>
+                        </span>
                       </th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
