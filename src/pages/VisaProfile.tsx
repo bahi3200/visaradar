@@ -950,8 +950,53 @@ export default function VisaProfile() {
   const [profiles, setProfiles] = useState<VisaProfile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editTab, setEditTab] = useState("personal");
+  const [pendingFocusLabel, setPendingFocusLabel] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Jump-to-first-missing-field handler used by tab badges in view mode.
+  const jumpToField = (tabKey: string, fieldLabel: string) => {
+    if (!active) return;
+    const { id, user_id, ...rest } = active;
+    setForm(rest as FormState);
+    setEditing(true);
+    setEditTab(tabKey);
+    setPendingFocusLabel(fieldLabel);
+  };
+
+  // After editing mode opens and the requested tab renders, locate the FormField
+  // with matching data-field-label and focus its first input/textarea.
+  useEffect(() => {
+    if (!editing || !pendingFocusLabel) return;
+    let cancelled = false;
+    const tryFocus = (attempt: number) => {
+      if (cancelled) return;
+      const wrapper = document.querySelector<HTMLElement>(
+        `[data-field-label="${CSS.escape(pendingFocusLabel)}"]`,
+      );
+      if (wrapper) {
+        wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+        const input = wrapper.querySelector<HTMLElement>(
+          'input, textarea, select, [role="combobox"], button',
+        );
+        // Highlight briefly
+        wrapper.classList.add("ring-2", "ring-warning", "rounded-md");
+        setTimeout(() => wrapper.classList.remove("ring-2", "ring-warning", "rounded-md"), 1800);
+        input?.focus();
+        setPendingFocusLabel(null);
+      } else if (attempt < 10) {
+        setTimeout(() => tryFocus(attempt + 1), 60);
+      } else {
+        setPendingFocusLabel(null);
+      }
+    };
+    requestAnimationFrame(() => tryFocus(0));
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, editTab, pendingFocusLabel]);
+
 
   const fetchPrefillFromProfile = async (): Promise<Partial<FormState>> => {
     if (!user) return {};
