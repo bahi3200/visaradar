@@ -651,25 +651,34 @@ export default function VisaProfile() {
                 </div>
             </CardHeader>
             <CardContent>
+              {(() => {
+                const stats = getTabStats(active);
+                return (
               <Tabs defaultValue="personal" className="w-full">
                 <TabsList className="w-full overflow-x-auto flex-nowrap justify-start scrollbar-hide">
                   <TabsTrigger value="personal" className="shrink-0">
                     <User className="w-3.5 h-3.5 ml-1.5" />شخصية
+                    <TabBadge filled={stats.personal.filled} total={stats.personal.total} />
                   </TabsTrigger>
                   <TabsTrigger value="passport" className="shrink-0">
                     <BookOpen className="w-3.5 h-3.5 ml-1.5" />جواز
+                    <TabBadge filled={stats.passport.filled} total={stats.passport.total} />
                   </TabsTrigger>
                   <TabsTrigger value="contact" className="shrink-0">
                     <Phone className="w-3.5 h-3.5 ml-1.5" />اتصال
+                    <TabBadge filled={stats.contact.filled} total={stats.contact.total} />
                   </TabsTrigger>
                   <TabsTrigger value="profession" className="shrink-0">
                     <Briefcase className="w-3.5 h-3.5 ml-1.5" />مهنة
+                    <TabBadge filled={stats.profession.filled} total={stats.profession.total} />
                   </TabsTrigger>
                   <TabsTrigger value="travel" className="shrink-0">
                     <Plane className="w-3.5 h-3.5 ml-1.5" />سفر
+                    <TabBadge filled={stats.travel.filled} total={stats.travel.total} />
                   </TabsTrigger>
                   <TabsTrigger value="family" className="shrink-0">
                     <Users className="w-3.5 h-3.5 ml-1.5" />عائلة
+                    <TabBadge filled={stats.family.filled} total={stats.family.total} />
                   </TabsTrigger>
                 </TabsList>
 
