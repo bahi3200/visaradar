@@ -371,6 +371,31 @@ const CopyFullProfileButton = forwardRef<
 });
 CopyFullProfileButton.displayName = "CopyFullProfileButton";
 
+const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
+  const handleShare = () => {
+    const sections = getAllSections(profile);
+    const { text, totalFields } = buildFullProfileText(profile.profile_label, sections);
+    if (!text || totalFields === 0) {
+      toast.error("لا توجد بيانات للمشاركة بعد");
+      return;
+    }
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={handleShare}
+      className="h-8 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+    >
+      <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
+      مشاركة واتساب
+    </Button>
+  );
+};
+
 export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
