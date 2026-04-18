@@ -289,7 +289,10 @@ const getAllSections = (p: VisaProfile): ProfileSection[] => [
   },
 ];
 
-const CopyFullProfileButton = ({ profile }: { profile: VisaProfile }) => {
+const CopyFullProfileButton = forwardRef<
+  HTMLButtonElement,
+  { profile: VisaProfile }
+>(({ profile }, ref) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     const sections = getAllSections(profile);
@@ -309,6 +312,7 @@ const CopyFullProfileButton = ({ profile }: { profile: VisaProfile }) => {
   };
   return (
     <Button
+      ref={ref}
       type="button"
       size="sm"
       variant={copied ? "default" : "secondary"}
@@ -319,7 +323,8 @@ const CopyFullProfileButton = ({ profile }: { profile: VisaProfile }) => {
       نسخ كل الملف
     </Button>
   );
-};
+});
+CopyFullProfileButton.displayName = "CopyFullProfileButton";
 
 export default function VisaProfile() {
   const { user } = useAuth();
