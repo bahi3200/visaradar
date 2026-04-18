@@ -17,6 +17,67 @@ const QUICK_TEST_KEY = "telegram_quick_test_message";
 const QUICK_TEST_DEFAULT = "مرحباً من VisaRadar 👋";
 const QUICK_TEST_MAX = 500;
 
+// Telegram-supported HTML tags (subset). Anything else is escaped.
+// Reference: https://core.telegram.org/bots/api#html-style
+const TELEGRAM_ALLOWED = ["b", "strong", "i", "em", "u", "s", "strike", "del", "code", "pre", "a", "br"];
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Sanitize user text the way Telegram would render it: only whitelisted tags
+ * survive (with safe href on <a>). Everything else is shown as escaped text.
+ */
+function renderTelegramHtml(input: string): { html: string; error: string | null } {
+  if (!input) return { html: "", error: null };
+  // Tokenize: split on tags vs text
+  const tokenRe = /<\s*(\/?)\s*([a-zA-Z]+)([^>]*)>/g;
+  let out = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let unsupported: string | null = null;
+
+  while ((match = tokenRe.exec(input)) !== null) {
+    const [full, slash, rawTag, attrs] = match;
+    const tag = rawTag.toLowerCase();
+    out += escapeHtml(input.slice(lastIndex, match.index));
+    lastIndex = match.index + full.length;
+
+    if (!TELEGRAM_ALLOWED.includes(tag)) {
+      if (!unsupported) unsupported = tag;
+      out += escapeHtml(full);
+      continue;
+    }
+
+    if (tag === "br") {
+      out += "<br/>";
+      continue;
+    }
+
+    if (tag === "a" && !slash) {
+      const hrefMatch = attrs.match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'/i);
+      const href = (hrefMatch?.[1] || hrefMatch?.[2] || "").trim();
+      const safe = /^(https?:|tg:|mailto:)/i.test(href) ? href : "#";
+      out += `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer" class="text-[#168acd] underline">`;
+      continue;
+    }
+
+    out += slash ? `</${tag}>` : `<${tag}>`;
+  }
+  out += escapeHtml(input.slice(lastIndex));
+  // Convert real newlines to <br/>
+  out = out.replace(/\r?\n/g, "<br/>");
+
+  return {
+    html: out,
+    error: unsupported ? `الوسم <${unsupported}> غير مدعوم في Telegram وسيظهر كنص` : null,
+  };
+}
+
 function normalizeReminderDays(raw: string): { value: string; days: number[]; error?: string } {
   const parts = raw
     .split(",")
