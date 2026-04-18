@@ -224,13 +224,52 @@ export default function VisaProfile() {
     }
     setSaving(true);
     try {
-      // Normalize empty strings to null for cleaner data, except profile_label
-      const payload: Record<string, unknown> = { ...form, user_id: user.id };
-      for (const k of Object.keys(payload)) {
-        if (k === "profile_label" || k === "is_primary" || k === "user_id") continue;
-        if (payload[k] === "") payload[k] = null;
-      }
+      // Build typed payload, normalizing empty strings to null
+      const normalize = <T,>(v: T): T | null =>
+        (typeof v === "string" && v.trim() === "" ? null : v) as T | null;
 
+      const payload = {
+        user_id: user.id,
+        profile_label: form.profile_label.trim() || "ملفي",
+        is_primary: form.is_primary,
+        full_name_ar: normalize(form.full_name_ar),
+        full_name_latin: normalize(form.full_name_latin),
+        gender: normalize(form.gender),
+        birth_date: normalize(form.birth_date),
+        birth_place: normalize(form.birth_place),
+        nationality: normalize(form.nationality),
+        marital_status: normalize(form.marital_status),
+        passport_number: normalize(form.passport_number),
+        passport_issue_date: normalize(form.passport_issue_date),
+        passport_expiry_date: normalize(form.passport_expiry_date),
+        passport_issue_place: normalize(form.passport_issue_place),
+        national_id: normalize(form.national_id),
+        phone: normalize(form.phone),
+        email: normalize(form.email),
+        address: normalize(form.address),
+        city: normalize(form.city),
+        wilaya: normalize(form.wilaya),
+        postal_code: normalize(form.postal_code),
+        profession: normalize(form.profession),
+        employer_name: normalize(form.employer_name),
+        employer_address: normalize(form.employer_address),
+        employer_phone: normalize(form.employer_phone),
+        monthly_income: normalize(form.monthly_income),
+        destination_country: normalize(form.destination_country),
+        travel_purpose: normalize(form.travel_purpose),
+        travel_date: normalize(form.travel_date),
+        return_date: normalize(form.return_date),
+        duration_days: form.duration_days,
+        hotel_or_host: normalize(form.hotel_or_host),
+        father_name: normalize(form.father_name),
+        mother_name: normalize(form.mother_name),
+        spouse_name: normalize(form.spouse_name),
+        children_count: form.children_count,
+        children_details: normalize(form.children_details),
+        notes: normalize(form.notes),
+      };
+
+      let savedId = activeId;
       if (activeId) {
         const { error } = await supabase
           .from("visa_profiles")
@@ -241,21 +280,24 @@ export default function VisaProfile() {
       } else {
         const { data, error } = await supabase
           .from("visa_profiles")
-          .insert(payload as never)
+          .insert(payload)
           .select()
           .single();
         if (error) throw error;
-        if (data) setActiveId(data.id);
+        if (data) {
+          savedId = data.id;
+          setActiveId(data.id);
+        }
         toast.success("تم إنشاء الملف");
       }
 
       // If marking primary, unmark others
-      if (form.is_primary) {
+      if (form.is_primary && savedId) {
         await supabase
           .from("visa_profiles")
           .update({ is_primary: false })
           .eq("user_id", user.id)
-          .neq("id", activeId || (await supabase.from("visa_profiles").select("id").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).single()).data?.id || "");
+          .neq("id", savedId);
       }
 
       setEditing(false);
