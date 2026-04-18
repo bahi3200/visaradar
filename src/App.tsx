@@ -47,6 +47,7 @@ import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import Install from "./pages/Install";
 import ManagePackages from "./pages/ManagePackages";
+import VisaProfile from "./pages/VisaProfile";
 
 const queryClient = new QueryClient();
 
