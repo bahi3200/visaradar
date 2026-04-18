@@ -297,7 +297,7 @@ export default function SiteSettingsPage() {
                       dir="auto"
                       className="text-[14px] leading-[1.35] whitespace-pre-wrap break-words [&_a]:text-[#168acd] [&_a]:underline [&_code]:bg-black/5 [&_code]:px-1 [&_code]:rounded [&_code]:font-mono [&_code]:text-[13px] [&_pre]:bg-black/5 [&_pre]:p-2 [&_pre]:rounded [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:my-1"
                       dangerouslySetInnerHTML={{
-                        html: renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").html,
+                        __html: renderTelegramHtml(values[QUICK_TEST_KEY] ?? "").html,
                       }}
                     />
                   ) : (
