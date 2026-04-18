@@ -8,8 +8,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import JobFilters from "@/components/jobs/JobFilters";
 import JobSubscriptionBanner from "@/components/jobs/JobSubscriptionBanner";
+
+type SubscriptionWithPackage = Tables<"subscriptions"> & {
+  packages: Tables<"packages"> | null;
+};
 
 const countryNames: Record<string, string> = {
   CA: "كندا 🇨🇦",
