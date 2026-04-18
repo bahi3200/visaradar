@@ -1119,7 +1119,7 @@ export default function VisaProfile() {
                           {filled}/{total} حقل · {pct}%
                         </span>
                       </div>
-                      <Progress value={pct} className="h-2" />
+                      <Progress value={pct} variant="auto" className="h-2" />
                     </div>
                   );
                 })()}
