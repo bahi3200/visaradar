@@ -593,6 +593,29 @@ const AdminTelegramUsers = () => {
                     <Clock className="w-3.5 h-3.5 ml-1.5" />
                     {activityFilter === "inactive_7d" ? "إلغاء فلتر الخاملين" : `الخاملون فقط (${staleCount})`}
                   </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activityFilter === "never" ? "default" : "outline"}
+                    onClick={() => {
+                      if (activityFilter === "never") {
+                        setActivityFilter("all");
+                        setStaleSort("none");
+                      } else {
+                        setActivityFilter("never");
+                        setStaleSort("stalest");
+                      }
+                    }}
+                    className={
+                      activityFilter === "never"
+                        ? "h-9 bg-rose-600 hover:bg-rose-700 text-white border-rose-600 flex-1"
+                        : "h-9 flex-1 border-rose-500/40 text-rose-700 hover:bg-rose-500/10"
+                    }
+                    disabled={neverCount === 0 && activityFilter !== "never"}
+                  >
+                    <Clock className="w-3.5 h-3.5 ml-1.5" />
+                    {activityFilter === "never" ? "إلغاء" : `بدون رسالة أبداً (${neverCount})`}
+                  </Button>
                 </div>
 
                 {filtered.length > 0 && (
