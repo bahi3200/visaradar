@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { formatLinkedSince, formatFullDateAr } from "@/lib/relativeTime";
 
 const BOT_USERNAME = "VisaRadar16_bot";
 const BOT_LINK = `https://t.me/${BOT_USERNAME}`;
@@ -18,6 +19,7 @@ const TelegramLink = () => {
   const { user } = useAuth();
   const [chatId, setChatId] = useState("");
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [linkedAt, setLinkedAt] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
 
@@ -25,13 +27,14 @@ const TelegramLink = () => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("telegram_id")
+      .select("telegram_id, telegram_linked_at")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.telegram_id) {
           setCurrentChatId(data.telegram_id);
           setChatId(data.telegram_id);
+          setLinkedAt((data as any).telegram_linked_at || null);
         }
       });
   }, [user]);
@@ -57,6 +60,7 @@ const TelegramLink = () => {
         return;
       }
       setCurrentChatId(cleaned);
+      setLinkedAt(new Date().toISOString());
       toast.success("تم الربط بنجاح! تحقق من رسالة Telegram.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "فشل التحقق");
@@ -79,6 +83,7 @@ const TelegramLink = () => {
       }
       setCurrentChatId(null);
       setChatId("");
+      setLinkedAt(null);
       toast.success("تم فك الربط");
     } finally {
       setUnlinking(false);
@@ -113,6 +118,14 @@ const TelegramLink = () => {
                   <p className="text-sm text-muted-foreground">
                     chat_id: <span className="font-mono">{currentChatId}</span>
                   </p>
+                  {linkedAt && (
+                    <p
+                      className="text-xs text-muted-foreground/80 mt-1"
+                      title={formatFullDateAr(linkedAt)}
+                    >
+                      🕒 {formatLinkedSince(linkedAt)}
+                    </p>
+                  )}
                 </div>
               </div>
               <Button variant="outline" onClick={handleUnlink} disabled={unlinking}>
