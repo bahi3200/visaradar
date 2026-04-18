@@ -429,23 +429,17 @@ const TabBadge = ({
             type="button"
             onPointerDown={(e) => {
               e.stopPropagation();
-              e.preventDefault();
             }}
             onMouseDown={(e) => {
               e.stopPropagation();
-              e.preventDefault();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.stopPropagation();
-                e.preventDefault();
-                setPopoverOpen((v) => !v);
               }
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setPopoverOpen((v) => !v);
             }}
             className="inline-flex items-center"
             aria-label={`${filled} من ${total} حقل مكتمل، اضغط لعرض الحقول الناقصة`}
