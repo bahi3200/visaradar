@@ -718,24 +718,7 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium">آخر رسالة</th>
-                      <th className="px-3 py-2 font-medium">
-                        <span className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setStaleSort((s) =>
-                                s === "none" ? "stalest" : s === "stalest" ? "freshest" : "none"
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
-                            title={
-                              staleSort === "stalest"
-                                ? "مرتّب: الأكثر خمولاً أولاً (انقر للعكس)"
-                                : staleSort === "freshest"
-                                ? "مرتّب: الأكثر نشاطاً أولاً (انقر لإلغاء الفرز)"
-                                : "انقر للفرز حسب آخر نشاط"
-                            }
-                          >
+                      <th className="px-3 py-2 font-medium sticky left-[120px] z-10 bg-card shadow-[1px_0_0_0_hsl(var(--border))]">
                             منذ
                             {staleSort === "stalest" ? (
                               <ArrowDown className="w-3.5 h-3.5 text-amber-600" />
