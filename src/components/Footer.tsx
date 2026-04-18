@@ -1,4 +1,4 @@
-import { Radar } from "lucide-react";
+import { Radar, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
