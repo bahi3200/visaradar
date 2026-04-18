@@ -571,22 +571,17 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
           <div>
             <Label className="text-xs">رقم المستلم (اختياري)</Label>
             <div className="flex gap-2 mt-1" dir="ltr">
-              <Select value={dialCode} onValueChange={setDialCode}>
-                <SelectTrigger className="h-9 w-[120px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {COUNTRY_DIAL_CODES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span>{c.flag}</span>
-                        <span className="font-mono">+{c.code}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CountryDialPopover value={dialCode} onChange={setDialCode} />
               <Input
+                id="wa-phone"
+                dir="ltr"
+                inputMode="tel"
+                maxLength={15}
+                placeholder="555123456"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                className="h-9 flex-1"
+              />
                 id="wa-phone"
                 dir="ltr"
                 inputMode="tel"
