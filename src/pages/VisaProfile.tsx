@@ -508,10 +508,34 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
     }
   };
 
+  const buildPassportQrPayload = (): string | null => {
+    const lines: string[] = [];
+    if (profile.full_name_latin?.trim()) lines.push(`Name: ${profile.full_name_latin.trim()}`);
+    else if (profile.full_name_ar?.trim()) lines.push(`Name: ${profile.full_name_ar.trim()}`);
+    if (profile.passport_number?.trim()) lines.push(`Passport: ${profile.passport_number.trim()}`);
+    if (profile.nationality?.trim()) lines.push(`Nationality: ${profile.nationality.trim()}`);
+    if (profile.birth_date) lines.push(`DOB: ${profile.birth_date}`);
+    if (profile.passport_issue_date) lines.push(`Issued: ${profile.passport_issue_date}`);
+    if (profile.passport_expiry_date) lines.push(`Expires: ${profile.passport_expiry_date}`);
+    if (profile.national_id?.trim()) lines.push(`NID: ${profile.national_id.trim()}`);
+    return lines.length ? lines.join("\n") : null;
+  };
+
   const buildHtml = async (): Promise<string> => {
     const sections = getAllSections(profile);
     const today = new Date().toLocaleDateString("ar-DZ");
     const logo = await fetchLogoDataUrl();
+
+    const qrPayload = buildPassportQrPayload();
+    let qrDataUrl: string | null = null;
+    if (qrPayload) {
+      try {
+        const QR = await import("qrcode");
+        qrDataUrl = await QR.toDataURL(qrPayload, { margin: 1, width: 220, errorCorrectionLevel: "M" });
+      } catch {
+        qrDataUrl = null;
+      }
+    }
 
     const sectionsHtml = sections
       .map((s) => {
@@ -534,6 +558,16 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
 
     const logoHtml = logo
       ? `<img src="${logo}" alt="logo" style="width:56px;height:56px;border-radius:12px;object-fit:cover;box-shadow:0 2px 6px rgba(11,29,57,0.15);" />`
+      : "";
+
+    const qrHtml = qrDataUrl
+      ? `<section class="qr-block" style="margin-top:24px; padding:14px; border:1px dashed #c9a227; border-radius:8px; display:flex; align-items:center; gap:16px; background:#fffdf7; page-break-inside: avoid;">
+          <img src="${qrDataUrl}" alt="QR" style="width:110px;height:110px;flex-shrink:0;" />
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;color:#0b1d39;margin-bottom:4px;">QR — البيانات الأساسية للجواز</div>
+            <div style="font-size:11.5px;color:#475569;line-height:1.6;">امسح الرمز للوصول السريع إلى رقم الجواز، الجنسية، تاريخ الميلاد، تاريخ الإصدار والانتهاء.</div>
+          </div>
+        </section>`
       : "";
 
     return `
