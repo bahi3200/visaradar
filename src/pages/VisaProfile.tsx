@@ -1316,24 +1316,53 @@ export default function VisaProfile() {
   return (
     <Layout>
       {/* Mobile-only sticky completion bar — visible while scrolling */}
-      {!editing && active && (
-        <div
-          className="md:hidden sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border"
-          dir="rtl"
-        >
-          <div className="container py-2 max-w-5xl">
-            <div className="flex items-center justify-between gap-3 text-xs mb-1">
-              <span className="text-muted-foreground truncate">
-                اكتمال: <span className="text-foreground font-medium">{active.profile_label}</span>
-              </span>
-              <span className="font-semibold tabular-nums shrink-0">
-                {overallStats.filled}/{overallStats.total} · {overallStats.pct}%
-              </span>
-            </div>
-            <Progress value={overallStats.pct} variant="auto" className="h-1.5" />
+      {!editing && active && (() => {
+        const stats = getTabStats(active);
+        const tabOrder: Array<keyof ReturnType<typeof getTabStats>> = [
+          "personal", "passport", "contact", "profession", "travel", "family",
+        ];
+        const firstIncomplete = tabOrder.find((k) => stats[k].missing.length > 0);
+        const firstMissingLabel = firstIncomplete ? stats[firstIncomplete].missing[0] : null;
+        const isComplete = !firstIncomplete;
+
+        const handleClick = () => {
+          if (firstIncomplete && firstMissingLabel) {
+            jumpToField(firstIncomplete as string, firstMissingLabel);
+          }
+        };
+
+        return (
+          <div
+            className="md:hidden sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border"
+            dir="rtl"
+          >
+            <button
+              type="button"
+              onClick={handleClick}
+              disabled={isComplete}
+              className="container py-2 max-w-5xl w-full text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-default enabled:active:bg-muted/40 transition-colors"
+              aria-label={
+                isComplete
+                  ? "كل الحقول مكتملة"
+                  : `انتقل إلى أول حقل ناقص: ${firstMissingLabel} في تبويب ${firstIncomplete}`
+              }
+            >
+              <div className="flex items-center justify-between gap-3 text-xs mb-1">
+                <span className="text-muted-foreground truncate">
+                  اكتمال: <span className="text-foreground font-medium">{active.profile_label}</span>
+                  {!isComplete && (
+                    <span className="text-primary mr-2">← انتقل للنقص</span>
+                  )}
+                </span>
+                <span className="font-semibold tabular-nums shrink-0">
+                  {overallStats.filled}/{overallStats.total} · {overallStats.pct}%
+                </span>
+              </div>
+              <Progress value={overallStats.pct} variant="auto" className="h-1.5" />
+            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="container py-6 max-w-5xl" dir="rtl">
         <BackButton />
