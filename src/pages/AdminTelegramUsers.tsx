@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap } from "lucide-react";
+import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff, Zap, Eye } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ interface TelegramUser {
   sub_expires_at: string | null;
   last_message_at: string | null;
   last_message_status: string | null;
+  last_message_text: string | null;
+  last_message_error: string | null;
 }
 
 const formatDate = (iso: string | null) => {
@@ -80,6 +82,7 @@ const AdminTelegramUsers = () => {
   const [sending, setSending] = useState(false);
   const [templateId, setTemplateId] = useState<string>("custom");
   const [quickSendingId, setQuickSendingId] = useState<string | null>(null);
+  const [msgDetailUser, setMsgDetailUser] = useState<TelegramUser | null>(null);
 
   const handleQuickTest = async (u: TelegramUser) => {
     setQuickSendingId(u.telegram_id);
@@ -102,7 +105,13 @@ const AdminTelegramUsers = () => {
         setUsers((prev) =>
           prev.map((x) =>
             x.telegram_id === u.telegram_id
-              ? { ...x, last_message_at: new Date().toISOString(), last_message_status: "sent" }
+              ? {
+                  ...x,
+                  last_message_at: new Date().toISOString(),
+                  last_message_status: "sent",
+                  last_message_text: quickTestMessage,
+                  last_message_error: null,
+                }
               : x
           )
         );
@@ -130,7 +139,7 @@ const AdminTelegramUsers = () => {
         .select("user_id, status, expires_at"),
       supabase
         .from("telegram_admin_messages")
-        .select("chat_id, status, created_at")
+        .select("chat_id, status, created_at, message, error_message")
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
@@ -157,11 +166,16 @@ const AdminTelegramUsers = () => {
     }
 
     // Pick latest admin message per chat_id
-    const latestMsgByChat = new Map<string, { status: string; created_at: string }>();
+    const latestMsgByChat = new Map<string, { status: string; created_at: string; message: string; error_message: string | null }>();
     for (const m of msgsRes.data || []) {
       if (!m.chat_id) continue;
       if (!latestMsgByChat.has(m.chat_id)) {
-        latestMsgByChat.set(m.chat_id, { status: m.status, created_at: m.created_at });
+        latestMsgByChat.set(m.chat_id, {
+          status: m.status,
+          created_at: m.created_at,
+          message: m.message,
+          error_message: m.error_message,
+        });
       }
     }
 
@@ -186,6 +200,8 @@ const AdminTelegramUsers = () => {
         sub_expires_at,
         last_message_at: lastMsg?.created_at || null,
         last_message_status: lastMsg?.status || null,
+        last_message_text: lastMsg?.message || null,
+        last_message_error: lastMsg?.error_message || null,
       };
     });
 
@@ -486,8 +502,16 @@ const AdminTelegramUsers = () => {
                           </td>
                           <td className="px-3 py-3 text-xs">
                             {u.last_message_at ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-muted-foreground">{formatDate(u.last_message_at)}</span>
+                              <button
+                                type="button"
+                                onClick={() => setMsgDetailUser(u)}
+                                className="flex flex-col gap-0.5 text-right rounded-md p-1 -m-1 hover:bg-muted/60 transition-colors group cursor-pointer"
+                                title="عرض تفاصيل آخر رسالة"
+                              >
+                                <span className="text-muted-foreground group-hover:text-foreground flex items-center gap-1">
+                                  <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  {formatDate(u.last_message_at)}
+                                </span>
                                 {u.last_message_status === "sent" ? (
                                   <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15 w-fit">
                                     <CheckCircle2 className="w-3 h-3 ml-1" />
@@ -499,7 +523,7 @@ const AdminTelegramUsers = () => {
                                     {u.last_message_status === "failed" ? "فشلت" : u.last_message_status}
                                   </Badge>
                                 )}
-                              </div>
+                              </button>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
@@ -599,6 +623,81 @@ const AdminTelegramUsers = () => {
                 </>
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Last message detail dialog */}
+      <Dialog open={!!msgDetailUser} onOpenChange={(o) => !o && setMsgDetailUser(null)}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              تفاصيل آخر رسالة
+            </DialogTitle>
+            <DialogDescription>
+              المستلم:{" "}
+              <span className="font-semibold text-foreground">
+                {msgDetailUser?.full_name || msgDetailUser?.telegram_username || msgDetailUser?.telegram_id}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {msgDetailUser && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {msgDetailUser.last_message_status === "sent" ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15">
+                    <CheckCircle2 className="w-3 h-3 ml-1" />
+                    تم الإرسال بنجاح
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-destructive border-destructive/40">
+                    <XCircle className="w-3 h-3 ml-1" />
+                    {msgDetailUser.last_message_status === "failed"
+                      ? "فشل الإرسال"
+                      : msgDetailUser.last_message_status || "—"}
+                  </Badge>
+                )}
+                <span className="text-muted-foreground">
+                  <Clock className="w-3 h-3 inline ml-1" />
+                  {formatDate(msgDetailUser.last_message_at)}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">نص الرسالة</label>
+                <div className="rounded-md border bg-muted/30 p-3 max-h-72 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                  {msgDetailUser.last_message_text || (
+                    <span className="text-muted-foreground italic">لا يوجد محتوى</span>
+                  )}
+                </div>
+              </div>
+
+              {msgDetailUser.last_message_error && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-destructive">رسالة الخطأ</label>
+                  <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs font-mono text-destructive whitespace-pre-wrap">
+                    {msgDetailUser.last_message_error}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t">
+                <div>
+                  <p className="text-muted-foreground mb-0.5">chat_id</p>
+                  <p className="font-mono" dir="ltr">{msgDetailUser.telegram_id}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-0.5">Username</p>
+                  <p className="font-mono" dir="ltr">
+                    {msgDetailUser.telegram_username ? `@${msgDetailUser.telegram_username}` : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMsgDetailUser(null)}>إغلاق</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
