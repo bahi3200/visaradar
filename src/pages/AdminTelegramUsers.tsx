@@ -502,8 +502,16 @@ const AdminTelegramUsers = () => {
                           </td>
                           <td className="px-3 py-3 text-xs">
                             {u.last_message_at ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-muted-foreground">{formatDate(u.last_message_at)}</span>
+                              <button
+                                type="button"
+                                onClick={() => setMsgDetailUser(u)}
+                                className="flex flex-col gap-0.5 text-right rounded-md p-1 -m-1 hover:bg-muted/60 transition-colors group cursor-pointer"
+                                title="عرض تفاصيل آخر رسالة"
+                              >
+                                <span className="text-muted-foreground group-hover:text-foreground flex items-center gap-1">
+                                  <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  {formatDate(u.last_message_at)}
+                                </span>
                                 {u.last_message_status === "sent" ? (
                                   <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15 w-fit">
                                     <CheckCircle2 className="w-3 h-3 ml-1" />
@@ -515,7 +523,7 @@ const AdminTelegramUsers = () => {
                                     {u.last_message_status === "failed" ? "فشلت" : u.last_message_status}
                                   </Badge>
                                 )}
-                              </div>
+                              </button>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
