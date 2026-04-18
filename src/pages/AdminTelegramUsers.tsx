@@ -260,6 +260,11 @@ const AdminTelegramUsers = () => {
     return { active, expired, none };
   }, [users]);
 
+  const staleCount = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return users.filter((u) => !u.last_message_at || new Date(u.last_message_at).getTime() < cutoff).length;
+  }, [users]);
+
   const toggleAll = (checked: boolean) => {
     if (checked) setSelected(new Set(filtered.map((u) => u.telegram_id)));
     else setSelected(new Set());
