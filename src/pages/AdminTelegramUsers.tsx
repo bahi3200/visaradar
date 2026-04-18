@@ -66,6 +66,14 @@ const SUB_FILTERS: { value: "all" | SubStatus; label: string }[] = [
   { value: "none", label: "بلا اشتراك" },
 ];
 
+type ActivityFilter = "all" | "inactive_7d" | "inactive_30d" | "never";
+const ACTIVITY_FILTERS: { value: ActivityFilter; label: string }[] = [
+  { value: "all", label: "كل النشاطات" },
+  { value: "inactive_7d", label: "بدون رسالة منذ 7 أيام" },
+  { value: "inactive_30d", label: "بدون رسالة منذ 30 يوم" },
+  { value: "never", label: "لم يتلقَّ أي رسالة" },
+];
+
 const AdminTelegramUsers = () => {
   const { settings } = useSiteSettings();
   const quickTestMessage = (settings?.telegram_quick_test_message || "مرحباً من VisaRadar 👋").trim();
