@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -803,6 +804,27 @@ export default function VisaProfile() {
                     </Button>
                   </div>
                 </div>
+                {(() => {
+                  const stats = getTabStats(active);
+                  const filled = Object.values(stats).reduce((a, s) => a + s.filled, 0);
+                  const total = Object.values(stats).reduce((a, s) => a + s.total, 0);
+                  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+                  const tone =
+                    pct === 100 ? "text-emerald-600 dark:text-emerald-400"
+                    : pct >= 50 ? "text-foreground"
+                    : "text-muted-foreground";
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">اكتمال الملف</span>
+                        <span className={`font-semibold tabular-nums ${tone}`}>
+                          {filled}/{total} حقل · {pct}%
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </div>
+                  );
+                })()}
             </CardHeader>
             <CardContent>
               {(() => {
