@@ -159,11 +159,16 @@ const AdminTelegramUsers = () => {
     }
 
     // Pick latest admin message per chat_id
-    const latestMsgByChat = new Map<string, { status: string; created_at: string }>();
+    const latestMsgByChat = new Map<string, { status: string; created_at: string; message: string; error_message: string | null }>();
     for (const m of msgsRes.data || []) {
       if (!m.chat_id) continue;
       if (!latestMsgByChat.has(m.chat_id)) {
-        latestMsgByChat.set(m.chat_id, { status: m.status, created_at: m.created_at });
+        latestMsgByChat.set(m.chat_id, {
+          status: m.status,
+          created_at: m.created_at,
+          message: m.message,
+          error_message: m.error_message,
+        });
       }
     }
 
@@ -188,6 +193,8 @@ const AdminTelegramUsers = () => {
         sub_expires_at,
         last_message_at: lastMsg?.created_at || null,
         last_message_status: lastMsg?.status || null,
+        last_message_text: lastMsg?.message || null,
+        last_message_error: lastMsg?.error_message || null,
       };
     });
 
