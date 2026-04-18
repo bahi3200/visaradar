@@ -622,14 +622,18 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   };
 
   const handleExport = async () => {
+    if (selected.length === 0) {
+      toast.error("اختر قسماً واحداً على الأقل");
+      return;
+    }
     setLoading(true);
     try {
-      const sections = getAllSections(profile);
+      const sections = getAllSections(profile).filter((s) => selected.includes(s.title));
       const hasData = sections.some((s) =>
         s.fields.some((f) => f.value !== null && f.value !== undefined && String(f.value).trim() !== "")
       );
       if (!hasData) {
-        toast.error("لا توجد بيانات للتصدير بعد");
+        toast.error("لا توجد بيانات في الأقسام المختارة");
         setLoading(false);
         return;
       }
@@ -644,7 +648,7 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       container.style.position = "fixed";
       container.style.left = "-10000px";
       container.style.top = "0";
-      container.innerHTML = await buildHtml();
+      container.innerHTML = await buildHtml(selected, includeQr);
       document.body.appendChild(container);
 
       const node = container.querySelector("#pdf-root") as HTMLElement;
@@ -672,6 +676,7 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       const safeName = profile.profile_label.replace(/[^\p{L}\p{N}_-]+/gu, "_") || "visa-profile";
       pdf.save(`${safeName}.pdf`);
       toast.success("تم تصدير الملف بصيغة PDF");
+      setOpen(false);
     } catch (err) {
       console.error(err);
       toast.error("فشل تصدير الـ PDF");
@@ -681,17 +686,55 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   };
 
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={handleExport}
-      disabled={loading}
-      className="h-8"
-    >
-      {loading ? <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 ml-1.5" />}
-      تصدير PDF
-    </Button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="h-8" disabled={loading}>
+          {loading ? <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 ml-1.5" />}
+          تصدير PDF
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">الأقسام المُصدّرة</Label>
+            <button
+              type="button"
+              onClick={() => toggleAll(!allChecked)}
+              className="text-[11px] text-primary hover:underline"
+            >
+              {allChecked ? "إلغاء الكل" : "اختيار الكل"}
+            </button>
+          </div>
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {ALL_PDF_SECTIONS.map((name) => (
+              <label key={name} className="flex items-center gap-2 cursor-pointer text-sm">
+                <Checkbox
+                  checked={selected.includes(name)}
+                  onCheckedChange={(c) => toggleSection(name, !!c)}
+                />
+                <span>{name}</span>
+              </label>
+            ))}
+          </div>
+          <div className="border-t pt-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <Checkbox checked={includeQr} onCheckedChange={(c) => setIncludeQr(!!c)} />
+              <span>إضافة QR code للجواز</span>
+            </label>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="w-full"
+            onClick={handleExport}
+            disabled={loading || selected.length === 0}
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 ml-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 ml-1.5" />}
+            تصدير ({selected.length} قسم)
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
