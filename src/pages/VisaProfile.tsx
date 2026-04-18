@@ -519,6 +519,40 @@ export default function VisaProfile() {
                 </TabsContent>
 
                 <TabsContent value="passport" className="pt-2">
+                  {(() => {
+                    if (!active.passport_expiry_date) return null;
+                    const expiry = new Date(active.passport_expiry_date);
+                    if (Number.isNaN(expiry.getTime())) return null;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const msPerDay = 1000 * 60 * 60 * 24;
+                    const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / msPerDay);
+                    const sixMonthsMs = 1000 * 60 * 60 * 24 * 30 * 6;
+                    const isExpired = daysLeft < 0;
+                    const isExpiringSoon = !isExpired && expiry.getTime() - today.getTime() < sixMonthsMs;
+                    if (!isExpired && !isExpiringSoon) return null;
+                    return (
+                      <div
+                        role="alert"
+                        className="mt-3 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-destructive"
+                      >
+                        <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div className="flex-1 text-sm leading-relaxed">
+                          {isExpired ? (
+                            <>
+                              <strong className="font-semibold">جوازك منتهي الصلاحية!</strong>{" "}
+                              انتهى منذ {Math.abs(daysLeft)} يوماً ({expiry.toLocaleDateString("ar-DZ")}). معظم الدول تشترط صلاحية 6 أشهر متبقية على الأقل لقبول طلب الفيزا.
+                            </>
+                          ) : (
+                            <>
+                              <strong className="font-semibold">تنبيه: جوازك يقترب من الانتهاء</strong>{" "}
+                              — متبقّي {daysLeft} يوماً فقط (ينتهي في {expiry.toLocaleDateString("ar-DZ")}). معظم الدول تشترط صلاحية 6 أشهر متبقية على الأقل، يُنصح بتجديده قبل التقديم.
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <CopySectionButton
                     title="بيانات الجواز"
                     fields={[
