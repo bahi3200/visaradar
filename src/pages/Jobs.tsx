@@ -106,7 +106,7 @@ export default function JobsPage() {
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">مشترك — وصول كامل</p>
-                <p className="text-[10px] text-muted-foreground">{(subscription as any).packages?.name_ar}</p>
+                <p className="text-[10px] text-muted-foreground">{(subscription as any)?.packages?.name_ar}</p>
               </div>
             </div>
             <div className="flex gap-4 text-xs text-muted-foreground">
