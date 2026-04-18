@@ -704,11 +704,31 @@ const ALL_PDF_SECTIONS = [
   "ملاحظات",
 ] as const;
 
+const QR_FIELD_OPTIONS: { key: string; label: string }[] = [
+  { key: "name", label: "الاسم" },
+  { key: "passport", label: "رقم الجواز" },
+  { key: "nationality", label: "الجنسية" },
+  { key: "dob", label: "تاريخ الميلاد" },
+  { key: "issued", label: "تاريخ الإصدار" },
+  { key: "expires", label: "تاريخ الانتهاء" },
+  { key: "nid", label: "رقم البطاقة الوطنية" },
+  { key: "phone", label: "رقم الهاتف" },
+  { key: "email", label: "البريد الإلكتروني" },
+];
+
 const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([...ALL_PDF_SECTIONS]);
   const [includeQr, setIncludeQr] = useState(true);
+  // Default QR fields: passport-essentials only (name + passport core).
+  const [qrFields, setQrFields] = useState<string[]>([
+    "name", "passport", "nationality", "dob", "issued", "expires",
+  ]);
+
+  const toggleQrField = (key: string, checked: boolean) => {
+    setQrFields((prev) => (checked ? [...prev, key] : prev.filter((k) => k !== key)));
+  };
 
   const toggleSection = (name: string, checked: boolean) => {
     setSelected((prev) => (checked ? [...new Set([...prev, name])] : prev.filter((s) => s !== name)));
@@ -733,25 +753,30 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
     }
   };
 
-  const buildPassportQrPayload = (): string | null => {
+  const buildPassportQrPayload = (allowedKeys: string[]): string | null => {
+    const keys = new Set(allowedKeys);
     const lines: string[] = [];
-    if (profile.full_name_latin?.trim()) lines.push(`Name: ${profile.full_name_latin.trim()}`);
-    else if (profile.full_name_ar?.trim()) lines.push(`Name: ${profile.full_name_ar.trim()}`);
-    if (profile.passport_number?.trim()) lines.push(`Passport: ${profile.passport_number.trim()}`);
-    if (profile.nationality?.trim()) lines.push(`Nationality: ${profile.nationality.trim()}`);
-    if (profile.birth_date) lines.push(`DOB: ${profile.birth_date}`);
-    if (profile.passport_issue_date) lines.push(`Issued: ${profile.passport_issue_date}`);
-    if (profile.passport_expiry_date) lines.push(`Expires: ${profile.passport_expiry_date}`);
-    if (profile.national_id?.trim()) lines.push(`NID: ${profile.national_id.trim()}`);
+    if (keys.has("name")) {
+      if (profile.full_name_latin?.trim()) lines.push(`Name: ${profile.full_name_latin.trim()}`);
+      else if (profile.full_name_ar?.trim()) lines.push(`Name: ${profile.full_name_ar.trim()}`);
+    }
+    if (keys.has("passport") && profile.passport_number?.trim()) lines.push(`Passport: ${profile.passport_number.trim()}`);
+    if (keys.has("nationality") && profile.nationality?.trim()) lines.push(`Nationality: ${profile.nationality.trim()}`);
+    if (keys.has("dob") && profile.birth_date) lines.push(`DOB: ${profile.birth_date}`);
+    if (keys.has("issued") && profile.passport_issue_date) lines.push(`Issued: ${profile.passport_issue_date}`);
+    if (keys.has("expires") && profile.passport_expiry_date) lines.push(`Expires: ${profile.passport_expiry_date}`);
+    if (keys.has("nid") && profile.national_id?.trim()) lines.push(`NID: ${profile.national_id.trim()}`);
+    if (keys.has("phone") && profile.phone?.trim()) lines.push(`Phone: ${profile.phone.trim()}`);
+    if (keys.has("email") && profile.email?.trim()) lines.push(`Email: ${profile.email.trim()}`);
     return lines.length ? lines.join("\n") : null;
   };
 
-  const buildHtml = async (selectedSections: string[], withQr: boolean): Promise<string> => {
+  const buildHtml = async (selectedSections: string[], withQr: boolean, qrKeys: string[]): Promise<string> => {
     const sections = getAllSections(profile).filter((s) => selectedSections.includes(s.title));
     const today = new Date().toLocaleDateString("ar-DZ");
     const logo = await fetchLogoDataUrl();
 
-    const qrPayload = withQr ? buildPassportQrPayload() : null;
+    const qrPayload = withQr ? buildPassportQrPayload(qrKeys) : null;
     let qrDataUrl: string | null = null;
     if (qrPayload) {
       try {
@@ -853,7 +878,7 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
       container.style.position = "fixed";
       container.style.left = "-10000px";
       container.style.top = "0";
-      container.innerHTML = await buildHtml(selected, includeQr);
+      container.innerHTML = await buildHtml(selected, includeQr, qrFields);
       document.body.appendChild(container);
 
       const node = container.querySelector("#pdf-root") as HTMLElement;
@@ -921,11 +946,28 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
               </label>
             ))}
           </div>
-          <div className="border-t pt-2">
+          <div className="border-t pt-2 space-y-2">
             <label className="flex items-center gap-2 cursor-pointer text-sm">
               <Checkbox checked={includeQr} onCheckedChange={(c) => setIncludeQr(!!c)} />
               <span>إضافة QR code للجواز</span>
             </label>
+            {includeQr && (
+              <div className="pr-6 space-y-1.5 border-r-2 border-warning/40 pt-1">
+                <p className="text-[11px] text-muted-foreground">البيانات المضمَّنة في الـQR:</p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                  {QR_FIELD_OPTIONS.map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-1.5 cursor-pointer text-[12px]">
+                      <Checkbox
+                        checked={qrFields.includes(opt.key)}
+                        onCheckedChange={(c) => toggleQrField(opt.key, !!c)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <Button
             type="button"
