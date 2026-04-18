@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Send, Search, Users, MessageSquare, CheckCircle2, XCircle, Loader2, Clock, ShieldOff } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+
+type SubStatus = "active" | "expired" | "none";
 
 interface TelegramUser {
   user_id: string;
@@ -19,6 +24,8 @@ interface TelegramUser {
   telegram_id: string;
   telegram_username: string | null;
   telegram_linked_at: string | null;
+  sub_status: SubStatus;
+  sub_expires_at: string | null;
 }
 
 const formatDate = (iso: string | null) => {
@@ -34,10 +41,30 @@ const formatDate = (iso: string | null) => {
   }
 };
 
+const formatDateOnly = (iso: string | null) => {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ar-DZ", {
+      timeZone: "Africa/Algiers",
+      year: "numeric", month: "short", day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+};
+
+const SUB_FILTERS: { value: "all" | SubStatus; label: string }[] = [
+  { value: "all", label: "كل الاشتراكات" },
+  { value: "active", label: "اشتراك نشط" },
+  { value: "expired", label: "اشتراك منتهٍ" },
+  { value: "none", label: "بلا اشتراك" },
+];
+
 const AdminTelegramUsers = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<TelegramUser[]>([]);
   const [search, setSearch] = useState("");
+  const [subFilter, setSubFilter] = useState<"all" | SubStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -48,17 +75,61 @@ const AdminTelegramUsers = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, telegram_id, telegram_username, telegram_linked_at")
-      .not("telegram_id", "is", null)
-      .order("telegram_linked_at", { ascending: false, nullsFirst: false });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setUsers((data || []) as TelegramUser[]);
+    const [profilesRes, subsRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, telegram_id, telegram_username, telegram_linked_at")
+        .not("telegram_id", "is", null)
+        .order("telegram_linked_at", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("subscriptions")
+        .select("user_id, status, expires_at"),
+    ]);
+
+    if (profilesRes.error) {
+      toast.error(profilesRes.error.message);
+      setLoading(false);
+      return;
     }
+    if (subsRes.error) {
+      toast.error(subsRes.error.message);
+      setLoading(false);
+      return;
+    }
+
+    // Pick the latest-expiring sub per user
+    const latestByUser = new Map<string, { status: string; expires_at: string }>();
+    for (const s of subsRes.data || []) {
+      if (!s.user_id || !s.expires_at) continue;
+      const prev = latestByUser.get(s.user_id);
+      if (!prev || new Date(s.expires_at) > new Date(prev.expires_at)) {
+        latestByUser.set(s.user_id, { status: s.status, expires_at: s.expires_at });
+      }
+    }
+
+    const now = Date.now();
+    const merged: TelegramUser[] = (profilesRes.data || []).map((p) => {
+      const sub = latestByUser.get(p.user_id);
+      let sub_status: SubStatus = "none";
+      let sub_expires_at: string | null = null;
+      if (sub) {
+        sub_expires_at = sub.expires_at;
+        const isLive = sub.status === "active" && new Date(sub.expires_at).getTime() > now;
+        sub_status = isLive ? "active" : "expired";
+      }
+      return {
+        user_id: p.user_id,
+        full_name: p.full_name,
+        telegram_id: p.telegram_id as string,
+        telegram_username: p.telegram_username,
+        telegram_linked_at: p.telegram_linked_at,
+        sub_status,
+        sub_expires_at,
+      };
+    });
+
+    setUsers(merged);
     setLoading(false);
   };
 
@@ -68,13 +139,24 @@ const AdminTelegramUsers = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      [u.full_name, u.telegram_id, u.telegram_username]
+    return users.filter((u) => {
+      if (subFilter !== "all" && u.sub_status !== subFilter) return false;
+      if (!q) return true;
+      return [u.full_name, u.telegram_id, u.telegram_username]
         .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    );
-  }, [users, search]);
+        .some((v) => String(v).toLowerCase().includes(q));
+    });
+  }, [users, search, subFilter]);
+
+  const counts = useMemo(() => {
+    let active = 0, expired = 0, none = 0;
+    for (const u of users) {
+      if (u.sub_status === "active") active++;
+      else if (u.sub_status === "expired") expired++;
+      else none++;
+    }
+    return { active, expired, none };
+  }, [users]);
 
   const toggleAll = (checked: boolean) => {
     if (checked) setSelected(new Set(filtered.map((u) => u.telegram_id)));
@@ -140,6 +222,37 @@ const AdminTelegramUsers = () => {
 
   const allSelected = filtered.length > 0 && filtered.every((u) => selected.has(u.telegram_id));
 
+  const renderSubBadge = (u: TelegramUser) => {
+    if (u.sub_status === "active") {
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/15">
+          <CheckCircle2 className="w-3 h-3 ml-1" />
+          نشط
+          {u.sub_expires_at && (
+            <span className="mr-1 opacity-70">• ينتهي {formatDateOnly(u.sub_expires_at)}</span>
+          )}
+        </Badge>
+      );
+    }
+    if (u.sub_status === "expired") {
+      return (
+        <Badge variant="outline" className="text-amber-600 border-amber-500/40">
+          <Clock className="w-3 h-3 ml-1" />
+          منتهٍ
+          {u.sub_expires_at && (
+            <span className="mr-1 opacity-70">• {formatDateOnly(u.sub_expires_at)}</span>
+          )}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        <ShieldOff className="w-3 h-3 ml-1" />
+        لا يوجد
+      </Badge>
+    );
+  };
+
   return (
     <AdminLayout
       title="مستخدمو Telegram"
@@ -147,7 +260,7 @@ const AdminTelegramUsers = () => {
     >
       <div className="space-y-6" dir="rtl">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -161,23 +274,34 @@ const AdminTelegramUsers = () => {
           </Card>
           <Card>
             <CardContent className="pt-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-accent" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{selected.size}</p>
-                <p className="text-xs text-muted-foreground">محدّد للإرسال</p>
+                <p className="text-2xl font-bold">{counts.active}</p>
+                <p className="text-xs text-muted-foreground">اشتراك نشط</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{counts.expired}</p>
+                <p className="text-xs text-muted-foreground">اشتراك منتهٍ</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-foreground" />
+                <ShieldOff className="w-5 h-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{filtered.length}</p>
-                <p className="text-xs text-muted-foreground">نتيجة البحث</p>
+                <p className="text-2xl font-bold">{counts.none}</p>
+                <p className="text-xs text-muted-foreground">بلا اشتراك</p>
               </div>
             </CardContent>
           </Card>
@@ -187,8 +311,24 @@ const AdminTelegramUsers = () => {
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-              <CardTitle>القائمة</CardTitle>
-              <div className="flex gap-2">
+              <CardTitle className="flex items-center gap-2">
+                القائمة
+                <Badge variant="secondary" className="font-normal">
+                  <MessageSquare className="w-3 h-3 ml-1" />
+                  {filtered.length} نتيجة
+                </Badge>
+              </CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Select value={subFilter} onValueChange={(v) => setSubFilter(v as "all" | SubStatus)}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUB_FILTERS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="relative flex-1 md:w-72">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -214,7 +354,7 @@ const AdminTelegramUsers = () => {
             ) : filtered.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
                 <XCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                لا يوجد مستخدمون مرتبطون بـ Telegram
+                لا توجد نتائج مطابقة للفلاتر الحالية
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -230,6 +370,7 @@ const AdminTelegramUsers = () => {
                       <th className="px-3 py-2 font-medium">الاسم</th>
                       <th className="px-3 py-2 font-medium">Username</th>
                       <th className="px-3 py-2 font-medium">chat_id</th>
+                      <th className="px-3 py-2 font-medium">الاشتراك</th>
                       <th className="px-3 py-2 font-medium">تاريخ الربط</th>
                       <th className="px-3 py-2 font-medium text-left">إجراء</th>
                     </tr>
@@ -256,6 +397,7 @@ const AdminTelegramUsers = () => {
                             )}
                           </td>
                           <td className="px-3 py-3 font-mono text-xs" dir="ltr">{u.telegram_id}</td>
+                          <td className="px-3 py-3">{renderSubBadge(u)}</td>
                           <td className="px-3 py-3 text-xs text-muted-foreground">
                             {formatDate(u.telegram_linked_at)}
                           </td>
