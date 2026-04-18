@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
       setSuccess(true);
       toast.success("تم تغيير كلمة المرور بنجاح!");
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء تغيير كلمة المرور");
+      toast.error(translateAuthError(err) || err.message || "حدث خطأ أثناء تغيير كلمة المرور");
     } finally {
       setLoading(false);
     }
