@@ -704,6 +704,18 @@ const ALL_PDF_SECTIONS = [
   "ملاحظات",
 ] as const;
 
+const QR_FIELD_OPTIONS: { key: string; label: string }[] = [
+  { key: "name", label: "الاسم" },
+  { key: "passport", label: "رقم الجواز" },
+  { key: "nationality", label: "الجنسية" },
+  { key: "dob", label: "تاريخ الميلاد" },
+  { key: "issued", label: "تاريخ الإصدار" },
+  { key: "expires", label: "تاريخ الانتهاء" },
+  { key: "nid", label: "رقم البطاقة الوطنية" },
+  { key: "phone", label: "رقم الهاتف" },
+  { key: "email", label: "البريد الإلكتروني" },
+];
+
 const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
