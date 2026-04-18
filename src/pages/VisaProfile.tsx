@@ -456,10 +456,29 @@ const COUNTRY_DIAL_CODES: { code: string; label: string; flag: string }[] = [
   { code: "47", label: "النرويج", flag: "🇳🇴" },
 ];
 
+const WA_STORAGE_KEY = "visa_profile_wa_recipient_v1";
+
 const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
   const [open, setOpen] = useState(false);
   const [dialCode, setDialCode] = useState("213");
   const [phone, setPhone] = useState("");
+
+  // Load last used dial code + phone from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WA_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { dialCode?: string; phone?: string };
+      if (saved.dialCode && COUNTRY_DIAL_CODES.some((c) => c.code === saved.dialCode)) {
+        setDialCode(saved.dialCode);
+      }
+      if (saved.phone && /^\d{0,15}$/.test(saved.phone)) {
+        setPhone(saved.phone);
+      }
+    } catch {
+      // ignore corrupted storage
+    }
+  }, []);
 
   const handleShare = () => {
     const sections = getAllSections(profile);
@@ -484,6 +503,16 @@ const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
         return;
       }
       target = full;
+    }
+
+    // Persist last used dial code + phone for next time
+    try {
+      localStorage.setItem(
+        WA_STORAGE_KEY,
+        JSON.stringify({ dialCode, phone: phone.replace(/\D/g, "").replace(/^0+/, "") }),
+      );
+    } catch {
+      // storage may be unavailable (private mode); ignore
     }
 
     const url = `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
