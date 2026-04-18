@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Copy, Check, Plus, Trash2, Save, FileText, User, BookOpen,
-  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil, ClipboardCopy, AlertTriangle,
+  Phone, Briefcase, Plane, Users, Loader2, Star, Pencil, ClipboardCopy, AlertTriangle, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -371,6 +371,31 @@ const CopyFullProfileButton = forwardRef<
 });
 CopyFullProfileButton.displayName = "CopyFullProfileButton";
 
+const ShareWhatsAppButton = ({ profile }: { profile: VisaProfile }) => {
+  const handleShare = () => {
+    const sections = getAllSections(profile);
+    const { text, totalFields } = buildFullProfileText(profile.profile_label, sections);
+    if (!text || totalFields === 0) {
+      toast.error("لا توجد بيانات للمشاركة بعد");
+      return;
+    }
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={handleShare}
+      className="h-8"
+    >
+      <MessageCircle className="w-3.5 h-3.5 ml-1.5" />
+      مشاركة واتساب
+    </Button>
+  );
+};
+
 export default function VisaProfile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -635,6 +660,7 @@ export default function VisaProfile() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <CopyFullProfileButton profile={active} />
+                    <ShareWhatsAppButton profile={active} />
                     <Button size="sm" variant="outline" onClick={startEdit}>
                       <Pencil className="w-3.5 h-3.5 ml-1.5" />
                       تعديل
