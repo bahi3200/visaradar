@@ -741,25 +741,30 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
     }
   };
 
-  const buildPassportQrPayload = (): string | null => {
+  const buildPassportQrPayload = (allowedKeys: string[]): string | null => {
+    const keys = new Set(allowedKeys);
     const lines: string[] = [];
-    if (profile.full_name_latin?.trim()) lines.push(`Name: ${profile.full_name_latin.trim()}`);
-    else if (profile.full_name_ar?.trim()) lines.push(`Name: ${profile.full_name_ar.trim()}`);
-    if (profile.passport_number?.trim()) lines.push(`Passport: ${profile.passport_number.trim()}`);
-    if (profile.nationality?.trim()) lines.push(`Nationality: ${profile.nationality.trim()}`);
-    if (profile.birth_date) lines.push(`DOB: ${profile.birth_date}`);
-    if (profile.passport_issue_date) lines.push(`Issued: ${profile.passport_issue_date}`);
-    if (profile.passport_expiry_date) lines.push(`Expires: ${profile.passport_expiry_date}`);
-    if (profile.national_id?.trim()) lines.push(`NID: ${profile.national_id.trim()}`);
+    if (keys.has("name")) {
+      if (profile.full_name_latin?.trim()) lines.push(`Name: ${profile.full_name_latin.trim()}`);
+      else if (profile.full_name_ar?.trim()) lines.push(`Name: ${profile.full_name_ar.trim()}`);
+    }
+    if (keys.has("passport") && profile.passport_number?.trim()) lines.push(`Passport: ${profile.passport_number.trim()}`);
+    if (keys.has("nationality") && profile.nationality?.trim()) lines.push(`Nationality: ${profile.nationality.trim()}`);
+    if (keys.has("dob") && profile.birth_date) lines.push(`DOB: ${profile.birth_date}`);
+    if (keys.has("issued") && profile.passport_issue_date) lines.push(`Issued: ${profile.passport_issue_date}`);
+    if (keys.has("expires") && profile.passport_expiry_date) lines.push(`Expires: ${profile.passport_expiry_date}`);
+    if (keys.has("nid") && profile.national_id?.trim()) lines.push(`NID: ${profile.national_id.trim()}`);
+    if (keys.has("phone") && profile.phone?.trim()) lines.push(`Phone: ${profile.phone.trim()}`);
+    if (keys.has("email") && profile.email?.trim()) lines.push(`Email: ${profile.email.trim()}`);
     return lines.length ? lines.join("\n") : null;
   };
 
-  const buildHtml = async (selectedSections: string[], withQr: boolean): Promise<string> => {
+  const buildHtml = async (selectedSections: string[], withQr: boolean, qrKeys: string[]): Promise<string> => {
     const sections = getAllSections(profile).filter((s) => selectedSections.includes(s.title));
     const today = new Date().toLocaleDateString("ar-DZ");
     const logo = await fetchLogoDataUrl();
 
-    const qrPayload = withQr ? buildPassportQrPayload() : null;
+    const qrPayload = withQr ? buildPassportQrPayload(qrKeys) : null;
     let qrDataUrl: string | null = null;
     if (qrPayload) {
       try {
