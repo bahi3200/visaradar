@@ -27,6 +27,8 @@ interface TelegramUser {
   telegram_linked_at: string | null;
   sub_status: SubStatus;
   sub_expires_at: string | null;
+  last_message_at: string | null;
+  last_message_status: string | null;
 }
 
 const formatDate = (iso: string | null) => {
