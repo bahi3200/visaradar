@@ -417,6 +417,21 @@ const AdminTelegramUsers = () => {
 
   const allSelected = filtered.length > 0 && filtered.every((u) => selected.has(u.telegram_id));
 
+  // Count of selected items not present in the current filtered view
+  const visibleIds = useMemo(() => new Set(filtered.map((u) => u.telegram_id)), [filtered]);
+  const hiddenSelectedCount = useMemo(() => {
+    let n = 0;
+    selected.forEach((id) => { if (!visibleIds.has(id)) n++; });
+    return n;
+  }, [selected, visibleIds]);
+
+  const keepOnlyVisibleSelected = () => {
+    const next = new Set<string>();
+    selected.forEach((id) => { if (visibleIds.has(id)) next.add(id); });
+    setSelected(next);
+    toast.success(`تم الاحتفاظ بـ ${next.size} من المرئيين فقط`);
+  };
+
   const renderSubBadge = (u: TelegramUser) => {
     if (u.sub_status === "active") {
       return (
@@ -571,6 +586,19 @@ const AdminTelegramUsers = () => {
                     className="pr-9"
                   />
                 </div>
+                {hiddenSelectedCount > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={keepOnlyVisibleSelected}
+                    className="hidden md:inline-flex border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                    title={`${hiddenSelectedCount} من المحدّدين خارج النتائج المرئية`}
+                  >
+                    <Eye className="w-4 h-4 ml-2" />
+                    احتفظ بالمرئيين ({hiddenSelectedCount} مخفي)
+                  </Button>
+                )}
                 <Button onClick={openSendBulk} disabled={selected.size === 0}>
                   <Send className="w-4 h-4 ml-2" />
                   إرسال للمحدّدين ({selected.size})
@@ -673,7 +701,7 @@ const AdminTelegramUsers = () => {
               <div className="md:hidden space-y-3">
                 {/* Sticky bulk-send action when items are selected */}
                 {selected.size > 0 && (
-                  <div className="sticky top-2 z-30 -mx-2 px-2">
+                  <div className="sticky top-2 z-30 -mx-2 px-2 space-y-1.5">
                     <div className="flex items-center gap-2 p-2 rounded-lg border border-primary/40 bg-primary/10 backdrop-blur-md shadow-lg">
                       <Badge className="bg-primary text-primary-foreground shrink-0">
                         {selected.size}
@@ -708,6 +736,23 @@ const AdminTelegramUsers = () => {
                         إرسال جماعي
                       </Button>
                     </div>
+                    {hiddenSelectedCount > 0 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg border border-amber-500/40 bg-amber-500/10 backdrop-blur-md text-[11px]">
+                        <Eye className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="flex-1 text-amber-700 dark:text-amber-400 leading-tight">
+                          {hiddenSelectedCount} من المحدّدين خارج النتائج المرئية
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px] border-amber-500/40"
+                          onClick={keepOnlyVisibleSelected}
+                        >
+                          احتفظ بالمرئيين فقط
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
