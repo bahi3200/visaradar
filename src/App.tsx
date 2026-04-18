@@ -71,6 +71,7 @@ const App = () => (
       <Route path="/contact" element={<ContactUs />} />
       <Route path="/visa" element={<VisaCountries />} />
       <Route path="/visa/:slug" element={<CountryVisa />} />
+      <Route path="/install" element={<Install />} />
 
       {/* Protected routes */}
       <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
