@@ -846,6 +846,8 @@ export default function VisaProfile() {
                   </div>
                 </TabsContent>
               </Tabs>
+                );
+              })()}
 
               {active.notes && (
                 <div className="mt-6 pt-4 border-t">
