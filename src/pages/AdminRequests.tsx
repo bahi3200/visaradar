@@ -256,26 +256,34 @@ export default function AdminRequestsPage() {
     <AdminLayout title="طلبات الاشتراك" subtitle="مراجعة وإدارة طلبات المشتركين">
       <div className="max-w-4xl">
 
-        {/* Status Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {statusFilters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                statusFilter === f.value
-                  ? "gradient-primary text-primary-foreground"
-                  : "border border-border/50 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {f.label}
-              {f.value !== "all" && requests && (
-                <span className="mr-1 text-xs opacity-70">
-                  ({requests.filter((r: any) => r.status === f.value).length})
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Status Filters — horizontal scrollable chips */}
+        <div className="-mx-4 sm:mx-0 mb-6">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-0 sm:flex-wrap pb-1 snap-x snap-mandatory">
+            {statusFilters.map((f) => {
+              const count = f.value === "all"
+                ? requests?.length || 0
+                : requests?.filter((r: any) => r.status === f.value).length || 0;
+              const active = statusFilter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  className={`shrink-0 snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                    active
+                      ? "gradient-primary text-primary-foreground border-transparent shadow-sm"
+                      : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border bg-card/30"
+                  }`}
+                >
+                  {f.label}
+                  {requests && (
+                    <span className={`mr-1.5 text-xs ${active ? "opacity-80" : "opacity-60"}`}>
+                      ({count})
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Fraud Alert Banner */}
