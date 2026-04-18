@@ -124,12 +124,8 @@ Deno.serve(async (req) => {
             })
             .eq("user_id", profile.user_id);
 
-          await supabase.from("telegram_link_log").insert({
-            user_id: profile.user_id,
-            chat_id: chatId,
-            username,
-            action: "linked",
-          });
+          // Note: telegram_link_log is now written automatically by DB trigger
+          // (trg_log_telegram_link_change on profiles)
 
           await tg("sendMessage", {
             chat_id: chatId,
