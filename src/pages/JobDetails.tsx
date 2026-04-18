@@ -100,8 +100,8 @@ export default function JobDetailsPage() {
   return (
     <Layout>
       <SEO
-        title={`${job.title} — ${job.company} | VisaRadar`}
-        description={`عرض عمل: ${job.title} لدى ${job.company} في ${countryNames[job.countryCode] || job.countryCode}. ${job.salary ? `راتب ${job.salary}.` : ""} اشترك في VisaRadar للوصول الكامل.`}
+        title={`${job.titleAr} — ${job.sourceName} | VisaRadar`}
+        description={`عرض عمل: ${job.titleAr} في ${countryNames[job.countryCode] || job.countryCode}. ${job.salaryText ? `راتب ${job.salaryText}.` : ""} اشترك في VisaRadar للوصول الكامل للعروض.`}
         path={`/jobs/${job.id}`}
         type="article"
       />
