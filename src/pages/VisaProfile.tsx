@@ -586,7 +586,8 @@ const ExportPdfButton = ({ profile }: { profile: VisaProfile }) => {
           </div>
         </header>
         ${sectionsHtml || '<p style="color:#64748b;">لا توجد بيانات معبّأة بعد.</p>'}
-        <footer style="margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+        ${qrHtml}
+        <footer style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
           هذا الملف يُستخدم للمساعدة في تعبئة طلبات التأشيرة. يرجى التحقق من جميع البيانات قبل التقديم.
         </footer>
         <style>
