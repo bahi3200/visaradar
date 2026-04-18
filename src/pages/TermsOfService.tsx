@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { FileText, CheckCircle, XCircle, CreditCard, Ban, RefreshCw, Scale } from "lucide-react";
 
@@ -65,6 +66,11 @@ const sections = [
 export default function TermsOfService() {
   return (
     <Layout>
+      <SEO
+        title="شروط الاستخدام — VisaRadar"
+        description="الشروط والأحكام التي تحكم استخدامك لمنصة VisaRadar للاشتراكات والمدفوعات والمحتوى."
+        path="/terms"
+      />
       <div className="container max-w-4xl py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

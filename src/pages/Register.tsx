@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -120,6 +121,12 @@ export default function RegisterPage() {
 
   return (
     <Layout>
+      <SEO
+        title="إنشاء حساب جديد — VisaRadar"
+        description="أنشئ حسابك مجاناً في VisaRadar وابدأ بمتابعة فتح مواعيد التأشيرات وعروض العمل في أوروبا وكندا."
+        path="/auth/register"
+        noindex
+      />
       <div className="container flex items-center justify-center min-h-[70vh] py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

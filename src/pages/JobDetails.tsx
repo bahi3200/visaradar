@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { sampleJobs } from "@/data/sample";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -98,6 +99,12 @@ export default function JobDetailsPage() {
 
   return (
     <Layout>
+      <SEO
+        title={`${job.titleAr} — ${job.sourceName} | VisaRadar`}
+        description={`عرض عمل: ${job.titleAr} في ${countryNames[job.countryCode] || job.countryCode}. ${job.salaryText ? `راتب ${job.salaryText}.` : ""} اشترك في VisaRadar للوصول الكامل للعروض.`}
+        path={`/jobs/${job.id}`}
+        type="article"
+      />
       <div className="container py-8 max-w-3xl">
         <Link
           to="/jobs"

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, MessageCircle, Mail, User } from "lucide-react";
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +50,11 @@ export default function ContactUs() {
 
   return (
     <Layout>
+      <SEO
+        title="تواصل معنا — VisaRadar"
+        description="هل لديك سؤال أو اقتراح؟ راسلنا مباشرة عبر النموذج وسيرد فريق VisaRadar في أقرب وقت ممكن."
+        path="/contact"
+      />
       <div className="container max-w-2xl py-12" dir="rtl">
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center space-y-2">

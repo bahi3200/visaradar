@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";
@@ -134,6 +135,11 @@ export default function PricingPage() {
   if (isLoading) {
     return (
       <Layout>
+        <SEO
+          title="باقات الاشتراك والأسعار — VisaRadar"
+          description="اختر الباقة المناسبة: تنبيهات فيزا، عقود عمل، أو الباقة الشاملة. أسعار شفافة لـ 3/6/12 شهر مع تجربة Gold للوصول لكل الدول."
+          path="/pricing"
+        />
         <div className="container py-20 text-center">
           <div className="animate-pulse text-muted-foreground">جاري التحميل...</div>
         </div>

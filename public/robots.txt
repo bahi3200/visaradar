@@ -12,3 +12,13 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /dashboard/
+Disallow: /my-requests
+Disallow: /my-devices
+Disallow: /profile
+Disallow: /notification-settings
+Disallow: /telegram-link
+Disallow: /reset-password
+Disallow: /subscribe
+
+Sitemap: /sitemap.xml
