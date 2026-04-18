@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Radar, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export default function ResetPasswordPage() {
       setSuccess(true);
       toast.success("تم تغيير كلمة المرور بنجاح!");
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء تغيير كلمة المرور");
+      toast.error(translateAuthError(err) || err.message || "حدث خطأ أثناء تغيير كلمة المرور");
     } finally {
       setLoading(false);
     }

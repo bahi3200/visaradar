@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -82,11 +83,7 @@ export default function RegisterPage() {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          toast.error("هذا البريد الإلكتروني مسجل بالفعل");
-        } else {
-          toast.error(signUpError.message);
-        }
+        toast.error(translateAuthError(signUpError) || signUpError.message);
         return;
       }
 
