@@ -12,6 +12,15 @@ const BodySchema = z.object({
 });
 
 Deno.serve(async (req) => {
+  const reqId = crypto.randomUUID().slice(0, 8);
+  const log = (msg: string, data?: unknown) =>
+    console.log(`[verify-receipt:${reqId}] ${msg}`, data !== undefined ? JSON.stringify(data) : '');
+  const logErr = (msg: string, err?: unknown) =>
+    console.error(`[verify-receipt:${reqId}] ${msg}`, err);
+
+  const t0 = Date.now();
+  log('▶ request received', { method: req.method });
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -19,6 +28,7 @@ Deno.serve(async (req) => {
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
+      logErr('LOVABLE_API_KEY missing from env');
       return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -28,52 +38,60 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      logErr('Missing Authorization header');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const body = await req.json();
+    log('payload received', { hasRequestId: !!body?.requestId, hasReceiptUrl: !!body?.receiptUrl });
+
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
+      logErr('Body validation failed', parsed.error.flatten().fieldErrors);
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { requestId, receiptUrl } = parsed.data;
+    log('processing', { requestId, receiptUrlSample: receiptUrl.slice(0, 80) });
 
-    // Download image via service role (bucket is private) and convert to base64 data URL
     let imageDataUrl: string;
+    let imageSizeKb = 0;
     try {
-      // Extract storage path from public URL: .../object/public/receipts/<path> OR .../object/receipts/<path>
       const match = receiptUrl.match(/\/object\/(?:public\/)?receipts\/(.+)$/);
-      if (!match) throw new Error('Invalid receipt URL format');
+      if (!match) throw new Error(`Invalid receipt URL format: ${receiptUrl}`);
       const storagePath = decodeURIComponent(match[1]);
+      log('storage path extracted', { storagePath });
 
+      const dlStart = Date.now();
       const { data: blob, error: dlError } = await supabase.storage
         .from('receipts')
         .download(storagePath);
-      if (dlError || !blob) throw dlError || new Error('Download failed');
+      if (dlError || !blob) throw dlError || new Error('Download returned empty blob');
+      log('image downloaded', { ms: Date.now() - dlStart, mime: blob.type, bytes: blob.size });
 
       const buf = new Uint8Array(await blob.arrayBuffer());
-      // Base64 encode
       let binary = '';
       for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
       const b64 = btoa(binary);
       const mime = blob.type || 'image/jpeg';
       imageDataUrl = `data:${mime};base64,${b64}`;
+      imageSizeKb = Math.round(buf.length / 1024);
+      log('image encoded', { sizeKb: imageSizeKb });
     } catch (e) {
-      console.error('Failed to fetch receipt image:', e);
+      logErr('Failed to fetch/encode receipt image', e instanceof Error ? e.message : e);
       return new Response(JSON.stringify({ error: 'تعذر تحميل صورة الوصل' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Call AI to analyze the receipt image
+    log('calling AI gateway', { model: 'google/gemini-3-flash-preview', payloadKb: imageSizeKb });
+    const aiStart = Date.now();
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -110,14 +128,8 @@ Respond ONLY in valid JSON with this exact structure:
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: 'Analyze this CCP payment receipt for authenticity. Check for any signs of forgery or manipulation.',
-              },
-              {
-                type: 'image_url',
-                image_url: { url: imageDataUrl },
-              },
+              { type: 'text', text: 'Analyze this CCP payment receipt for authenticity. Check for any signs of forgery or manipulation.' },
+              { type: 'image_url', image_url: { url: imageDataUrl } },
             ],
           },
         ],
@@ -130,14 +142,14 @@ Respond ONLY in valid JSON with this exact structure:
               parameters: {
                 type: 'object',
                 properties: {
-                  is_genuine: { type: 'boolean', description: 'Whether the receipt appears genuine' },
-                  confidence: { type: 'number', description: 'Confidence score 0-100' },
-                  amount_detected: { type: 'string', description: 'Amount detected on receipt' },
-                  date_detected: { type: 'string', description: 'Date detected on receipt' },
-                  reference_detected: { type: 'string', description: 'Transaction reference if found' },
-                  fraud_indicators: { type: 'array', items: { type: 'string' }, description: 'List of suspicious findings' },
-                  analysis_summary_ar: { type: 'string', description: 'Arabic summary of analysis' },
-                  recommendation: { type: 'string', enum: ['approve', 'review', 'reject'], description: 'Recommendation' },
+                  is_genuine: { type: 'boolean' },
+                  confidence: { type: 'number' },
+                  amount_detected: { type: 'string' },
+                  date_detected: { type: 'string' },
+                  reference_detected: { type: 'string' },
+                  fraud_indicators: { type: 'array', items: { type: 'string' } },
+                  analysis_summary_ar: { type: 'string' },
+                  recommendation: { type: 'string', enum: ['approve', 'review', 'reject'] },
                 },
                 required: ['is_genuine', 'confidence', 'fraud_indicators', 'analysis_summary_ar', 'recommendation'],
               },
@@ -147,11 +159,12 @@ Respond ONLY in valid JSON with this exact structure:
         tool_choice: { type: 'function', function: { name: 'verify_receipt' } },
       }),
     });
+    log('AI gateway responded', { ms: Date.now() - aiStart, status: aiResponse.status });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errText);
-      
+      logErr(`AI gateway non-OK ${aiResponse.status}`, errText.slice(0, 500));
+
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: 'تم تجاوز حد الطلبات، حاول مرة أخرى لاحقاً' }), {
           status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -163,53 +176,66 @@ Respond ONLY in valid JSON with this exact structure:
         });
       }
 
-      return new Response(JSON.stringify({ error: 'AI verification failed' }), {
+      return new Response(JSON.stringify({ error: 'AI verification failed', details: errText.slice(0, 200) }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const aiData = await aiResponse.json();
     let verificationResult: any;
+    let parseSource = 'unknown';
 
-    // Extract from tool call response
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {
         verificationResult = JSON.parse(toolCall.function.arguments);
-      } catch {
+        parseSource = 'tool_call';
+      } catch (e) {
+        logErr('Failed to JSON.parse tool_call args', e instanceof Error ? e.message : e);
         verificationResult = { is_genuine: false, confidence: 0, fraud_indicators: ['Failed to parse AI response'], analysis_summary_ar: 'فشل في تحليل الوصل', recommendation: 'review' };
+        parseSource = 'fallback_tool_parse_error';
       }
     } else {
-      // Fallback: try parsing content as JSON
       const content = aiData.choices?.[0]?.message?.content || '';
       try {
         verificationResult = JSON.parse(content);
+        parseSource = 'content_json';
       } catch {
+        logErr('No tool_call and content not JSON', { contentSample: String(content).slice(0, 200) });
         verificationResult = { is_genuine: false, confidence: 0, fraud_indicators: ['No structured response'], analysis_summary_ar: 'لم يتمكن النظام من تحليل الوصل', recommendation: 'review' };
+        parseSource = 'fallback_no_structure';
       }
     }
+    log('AI result parsed', {
+      source: parseSource,
+      recommendation: verificationResult?.recommendation,
+      confidence: verificationResult?.confidence,
+      is_genuine: verificationResult?.is_genuine,
+      fraud_indicators_count: Array.isArray(verificationResult?.fraud_indicators) ? verificationResult.fraud_indicators.length : 0,
+    });
 
-    const fraudDetected = verificationResult.recommendation === 'reject' || 
+    const fraudDetected = verificationResult.recommendation === 'reject' ||
       (!verificationResult.is_genuine && verificationResult.confidence > 60);
 
-    // Update the subscription request with AI results
-    await supabase
+    const { error: updateError } = await supabase
       .from('subscription_requests')
       .update({
         ai_verification_result: verificationResult,
         ai_fraud_detected: fraudDetected,
       })
       .eq('id', requestId);
+    if (updateError) {
+      logErr('Failed to update subscription_requests', updateError);
+    } else {
+      log('subscription_requests updated', { requestId, fraudDetected });
+    }
 
-    return new Response(JSON.stringify({
-      success: true,
-      verification: verificationResult,
-      fraudDetected,
-    }), {
+    log('✔ done', { totalMs: Date.now() - t0 });
+    return new Response(JSON.stringify({ success: true, verification: verificationResult, fraudDetected }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
-    console.error('Error:', error);
+    logErr('Unhandled error', error instanceof Error ? error.stack || error.message : error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
