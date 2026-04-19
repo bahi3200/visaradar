@@ -200,8 +200,14 @@ export default function AdminRequestsPage() {
   const retriggerAI = async (id: string, receiptUrl: string) => {
     setProcessing(id);
     try {
+      const normalizedReceiptRef = receiptUrl.includes("/storage/v1/object/")
+        ? receiptUrl
+        : receiptUrl.startsWith("receipts/")
+          ? receiptUrl
+          : `receipts/${receiptUrl}`;
+
       const { data, error } = await supabase.functions.invoke("verify-receipt", {
-        body: { requestId: id, receiptUrl },
+        body: { requestId: id, receiptUrl: normalizedReceiptRef },
       });
       if (error) throw error;
       toast.success("تم إعادة فحص الوصل بالذكاء الاصطناعي");

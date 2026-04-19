@@ -178,10 +178,9 @@ export default function SubscribeRequestPage() {
 
       const fileExt = receiptFile.name.split(".").pop();
       const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
+      const receiptStoragePath = `receipts/${filePath}`;
       const { error: uploadError } = await supabase.storage.from("receipts").upload(filePath, receiptFile);
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(filePath);
 
       const { data: request, error: insertError } = await supabase
         .from("subscription_requests")
@@ -194,7 +193,7 @@ export default function SubscribeRequestPage() {
           email: email || currentUser.email,
           telegram_chat_id: telegramChatId,
           service_type: serviceType,
-          receipt_url: publicUrl,
+          receipt_url: receiptStoragePath,
           admin_notes: isRenewal ? `تجديد اشتراك — الباقة: "${selectedPkg?.name_ar}" — ينتهي الاشتراك الحالي: ${activeSubscription ? new Date(activeSubscription.expires_at).toLocaleDateString("ar") : "—"}` : isUpgrade ? `ترقية من باقة "${activeSubscription?.packages?.name_ar}" — الفارق: ${priceDifference} د.ج` : null,
           // Note: isSelectingDifferentPkg auto-detected upgrade is handled via admin_notes above when isUpgrade is true
         } as any)
@@ -207,7 +206,7 @@ export default function SubscribeRequestPage() {
       }
 
       supabase.functions.invoke("verify-receipt", {
-        body: { requestId: (request as any).id, receiptUrl: publicUrl },
+        body: { requestId: (request as any).id, receiptUrl: receiptStoragePath },
       }).catch((err) => console.error("AI verification error:", err));
 
       toast.success(isRenewal ? "تم إرسال طلب التجديد بنجاح!" : isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");

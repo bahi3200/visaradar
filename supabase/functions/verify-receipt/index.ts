@@ -8,8 +8,21 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   requestId: z.string().uuid(),
-  receiptUrl: z.string().url(),
+  receiptUrl: z.string().min(1),
 });
+
+const extractStoragePath = (receiptUrl: string) => {
+  if (receiptUrl.startsWith('receipts/')) {
+    return receiptUrl.replace(/^receipts\//, '');
+  }
+
+  const match = receiptUrl.match(/\/object\/(?:public\/|sign\/receipts\/[^/]+\/)?receipts\/(.+)$/);
+  if (!match) {
+    throw new Error(`Invalid receipt path format: ${receiptUrl}`);
+  }
+
+  return decodeURIComponent(match[1]);
+};
 
 Deno.serve(async (req) => {
   const reqId = crypto.randomUUID().slice(0, 8);
@@ -63,9 +76,7 @@ Deno.serve(async (req) => {
     let imageDataUrl: string;
     let imageSizeKb = 0;
     try {
-      const match = receiptUrl.match(/\/object\/(?:public\/)?receipts\/(.+)$/);
-      if (!match) throw new Error(`Invalid receipt URL format: ${receiptUrl}`);
-      const storagePath = decodeURIComponent(match[1]);
+      const storagePath = extractStoragePath(receiptUrl);
       log('storage path extracted', { storagePath });
 
       const dlStart = Date.now();
