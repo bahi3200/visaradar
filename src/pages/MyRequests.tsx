@@ -185,6 +185,16 @@ export default function MyRequestsPage() {
                         )}
                       </div>
 
+                      {req.receipt_url && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                            <FileImage className="w-4 h-4 text-primary" />
+                            وصل الدفع CCP
+                          </p>
+                          <ReceiptImage receiptUrl={req.receipt_url} />
+                        </div>
+                      )}
+
                       {req.ai_fraud_detected && (
                         <p className="text-xs text-destructive flex items-center gap-1 mt-3 bg-destructive/10 rounded-lg px-3 py-2">
                           <AlertTriangle className="w-3.5 h-3.5" />
