@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { ReceiptImage } from "@/components/admin/ReceiptImage";
 
 const statusFilters = [
   { value: "all", label: "الكل" },
@@ -392,9 +393,7 @@ export default function AdminRequestsPage() {
                                 <FileImage className="w-4 h-4 text-primary" />
                                 وصل الدفع CCP
                               </p>
-                              <a href={req.receipt_url} target="_blank" rel="noopener noreferrer">
-                                <img src={req.receipt_url} alt="Receipt" className="max-h-56 rounded-xl border border-border/50 hover:opacity-90 transition-opacity" />
-                              </a>
+                              <ReceiptImage receiptUrl={req.receipt_url} />
                             </div>
                           )}
 
