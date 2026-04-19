@@ -116,7 +116,7 @@ Respond ONLY in valid JSON with this exact structure:
               },
               {
                 type: 'image_url',
-                image_url: { url: receiptUrl },
+                image_url: { url: imageDataUrl },
               },
             ],
           },
