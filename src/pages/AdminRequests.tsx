@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ReceiptImage } from "@/components/admin/ReceiptImage";
+import { ReceiptImage } from "@/components/ReceiptImage";
 
 const statusFilters = [
   { value: "all", label: "الكل" },
