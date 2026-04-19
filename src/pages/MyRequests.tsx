@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Link } from "react-router-dom";
-import { Clock, CheckCircle2, XCircle, Snowflake, ArrowRight, Package, MapPin, Calendar, AlertTriangle, RefreshCw, ArrowUpCircle } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Snowflake, ArrowRight, Package, MapPin, Calendar, AlertTriangle, RefreshCw, ArrowUpCircle, FileImage } from "lucide-react";
+import { ReceiptImage } from "@/components/admin/ReceiptImage";
 
 const statusConfig: Record<string, { text: string; icon: typeof Clock; cls: string; bgCls: string }> = {
   pending: { text: "قيد المراجعة", icon: Clock, cls: "text-yellow-400", bgCls: "bg-yellow-500/10 border-yellow-500/30" },
@@ -183,6 +184,16 @@ export default function MyRequestsPage() {
                           </div>
                         )}
                       </div>
+
+                      {req.receipt_url && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                            <FileImage className="w-4 h-4 text-primary" />
+                            وصل الدفع CCP
+                          </p>
+                          <ReceiptImage receiptUrl={req.receipt_url} />
+                        </div>
+                      )}
 
                       {req.ai_fraud_detected && (
                         <p className="text-xs text-destructive flex items-center gap-1 mt-3 bg-destructive/10 rounded-lg px-3 py-2">
