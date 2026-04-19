@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw } from "lucide-react";
+import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
