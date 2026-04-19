@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Download, ZoomIn, X } from "lucide-react";
+import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const extractStoragePath = (receiptUrl: string): string | null => {
   if (!receiptUrl) return null;
@@ -130,38 +131,81 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       </div>
 
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-4xl p-0 bg-background/95 border-border/50 [&>button]:hidden">
+        <DialogContent className="max-w-5xl p-0 bg-background/95 border-border/50 [&>button]:hidden">
           <VisuallyHidden>
             <DialogTitle>صورة الوصل</DialogTitle>
           </VisuallyHidden>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setLightboxOpen(false)}
-              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
-              aria-label="إغلاق"
-            >
-              <X className="w-4 h-4 text-foreground" />
-            </button>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloading}
-              className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              {downloading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5" />
-              )}
-              <span>تنزيل</span>
-            </button>
-            <img
-              src={signedUrl}
-              alt="Receipt full view"
-              className="w-full max-h-[85vh] object-contain rounded-lg"
-            />
-          </div>
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.5}
+            maxScale={6}
+            doubleClick={{ mode: "toggle", step: 1.5 }}
+            wheel={{ step: 0.15 }}
+            pinch={{ step: 5 }}
+          >
+            {({ zoomIn, zoomOut, resetTransform }) => (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(false)}
+                  className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X className="w-4 h-4 text-foreground" />
+                </button>
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => zoomIn()}
+                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="تكبير"
+                  >
+                    <Plus className="w-4 h-4 text-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => zoomOut()}
+                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="تصغير"
+                  >
+                    <Minus className="w-4 h-4 text-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => resetTransform()}
+                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="إعادة الضبط"
+                  >
+                    <RotateCcw className="w-4 h-4 text-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {downloading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                    <span>تنزيل</span>
+                  </button>
+                </div>
+                <TransformComponent
+                  wrapperClass="!w-full !max-h-[85vh] rounded-lg bg-background/40"
+                  contentClass="!w-full"
+                >
+                  <img
+                    src={signedUrl}
+                    alt="Receipt full view"
+                    className="w-full max-h-[85vh] object-contain select-none"
+                    draggable={false}
+                  />
+                </TransformComponent>
+              </div>
+            )}
+          </TransformWrapper>
         </DialogContent>
       </Dialog>
     </>
