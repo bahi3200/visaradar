@@ -203,9 +203,25 @@ export default function MyRequestsPage() {
                       )}
 
                       {req.admin_notes && (
-                        <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">
-                          ملاحظة الإدارة: {req.admin_notes}
-                        </p>
+                        req.status === "rejected" ? (
+                          <div className="mt-3 rounded-xl border-2 border-red-500/40 bg-red-500/10 p-4 shadow-[0_0_0_1px_hsl(var(--destructive)/0.2)]">
+                            <div className="flex items-start gap-3">
+                              <div className="shrink-0 w-9 h-9 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
+                                <AlertTriangle className="w-5 h-5 text-red-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-red-400 mb-1">سبب الرفض من الإدارة</p>
+                                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
+                                  {req.admin_notes}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">
+                            ملاحظة الإدارة: {req.admin_notes}
+                          </p>
+                        )
                       )}
                     </div>
                   );
