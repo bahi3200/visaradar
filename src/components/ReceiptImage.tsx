@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw } from "lucide-react";
+import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -23,6 +23,26 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await fullscreenRef.current?.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      toast.error("تعذر تفعيل ملء الشاشة");
+    }
+  };
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -135,77 +155,91 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
           <VisuallyHidden>
             <DialogTitle>صورة الوصل</DialogTitle>
           </VisuallyHidden>
-          <TransformWrapper
-            initialScale={1}
-            minScale={0.5}
-            maxScale={6}
-            doubleClick={{ mode: "toggle", step: 1.5 }}
-            wheel={{ step: 0.15 }}
-            pinch={{ step: 5 }}
-          >
-            {({ zoomIn, zoomOut, resetTransform }) => (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setLightboxOpen(false)}
-                  className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
-                  aria-label="إغلاق"
-                >
-                  <X className="w-4 h-4 text-foreground" />
-                </button>
-                <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+          <div ref={fullscreenRef} className="relative bg-background/95">
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.5}
+              maxScale={6}
+              doubleClick={{ mode: "toggle", step: 1.5 }}
+              wheel={{ step: 0.15 }}
+              pinch={{ step: 5 }}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => zoomIn()}
-                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
-                    aria-label="تكبير"
+                    onClick={() => setLightboxOpen(false)}
+                    className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="إغلاق"
                   >
-                    <Plus className="w-4 h-4 text-foreground" />
+                    <X className="w-4 h-4 text-foreground" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => zoomOut()}
-                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
-                    aria-label="تصغير"
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => zoomIn()}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="تكبير"
+                    >
+                      <Plus className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => zoomOut()}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="تصغير"
+                    >
+                      <Minus className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => resetTransform()}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="إعادة الضبط"
+                    >
+                      <RotateCcw className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label={isFullscreen ? "الخروج من ملء الشاشة" : "ملء الشاشة"}
+                    >
+                      {isFullscreen ? (
+                        <Minimize2 className="w-4 h-4 text-foreground" />
+                      ) : (
+                        <Maximize2 className="w-4 h-4 text-foreground" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={downloading}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {downloading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5" />
+                      )}
+                      <span>تنزيل</span>
+                    </button>
+                  </div>
+                  <TransformComponent
+                    wrapperClass={`!w-full ${isFullscreen ? "!h-screen !max-h-screen" : "!max-h-[85vh]"} rounded-lg bg-background/40`}
+                    contentClass="!w-full"
                   >
-                    <Minus className="w-4 h-4 text-foreground" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => resetTransform()}
-                    className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
-                    aria-label="إعادة الضبط"
-                  >
-                    <RotateCcw className="w-4 h-4 text-foreground" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {downloading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Download className="w-3.5 h-3.5" />
-                    )}
-                    <span>تنزيل</span>
-                  </button>
+                    <img
+                      src={signedUrl}
+                      alt="Receipt full view"
+                      className={`w-full ${isFullscreen ? "h-screen max-h-screen" : "max-h-[85vh]"} object-contain select-none`}
+                      draggable={false}
+                    />
+                  </TransformComponent>
                 </div>
-                <TransformComponent
-                  wrapperClass="!w-full !max-h-[85vh] rounded-lg bg-background/40"
-                  contentClass="!w-full"
-                >
-                  <img
-                    src={signedUrl}
-                    alt="Receipt full view"
-                    className="w-full max-h-[85vh] object-contain select-none"
-                    draggable={false}
-                  />
-                </TransformComponent>
-              </div>
-            )}
-          </TransformWrapper>
+              )}
+            </TransformWrapper>
+          </div>
         </DialogContent>
       </Dialog>
     </>
