@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Link } from "react-router-dom";
-import { Clock, CheckCircle2, XCircle, Snowflake, ArrowRight, Package, MapPin, Calendar, AlertTriangle, RefreshCw, ArrowUpCircle } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Snowflake, ArrowRight, Package, MapPin, Calendar, AlertTriangle, RefreshCw, ArrowUpCircle, FileImage } from "lucide-react";
+import { ReceiptImage } from "@/components/admin/ReceiptImage";
 
 const statusConfig: Record<string, { text: string; icon: typeof Clock; cls: string; bgCls: string }> = {
   pending: { text: "قيد المراجعة", icon: Clock, cls: "text-yellow-400", bgCls: "bg-yellow-500/10 border-yellow-500/30" },
