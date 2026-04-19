@@ -12,6 +12,15 @@ const BodySchema = z.object({
 });
 
 Deno.serve(async (req) => {
+  const reqId = crypto.randomUUID().slice(0, 8);
+  const log = (msg: string, data?: unknown) =>
+    console.log(`[verify-receipt:${reqId}] ${msg}`, data !== undefined ? JSON.stringify(data) : '');
+  const logErr = (msg: string, err?: unknown) =>
+    console.error(`[verify-receipt:${reqId}] ${msg}`, err);
+
+  const t0 = Date.now();
+  log('▶ request received', { method: req.method });
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -19,6 +28,7 @@ Deno.serve(async (req) => {
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
+      logErr('LOVABLE_API_KEY missing from env');
       return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -28,46 +38,53 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      logErr('Missing Authorization header');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const body = await req.json();
+    log('payload received', { hasRequestId: !!body?.requestId, hasReceiptUrl: !!body?.receiptUrl });
+
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
+      logErr('Body validation failed', parsed.error.flatten().fieldErrors);
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { requestId, receiptUrl } = parsed.data;
+    log('processing', { requestId, receiptUrlSample: receiptUrl.slice(0, 80) });
 
-    // Download image via service role (bucket is private) and convert to base64 data URL
     let imageDataUrl: string;
+    let imageSizeKb = 0;
     try {
-      // Extract storage path from public URL: .../object/public/receipts/<path> OR .../object/receipts/<path>
       const match = receiptUrl.match(/\/object\/(?:public\/)?receipts\/(.+)$/);
-      if (!match) throw new Error('Invalid receipt URL format');
+      if (!match) throw new Error(`Invalid receipt URL format: ${receiptUrl}`);
       const storagePath = decodeURIComponent(match[1]);
+      log('storage path extracted', { storagePath });
 
+      const dlStart = Date.now();
       const { data: blob, error: dlError } = await supabase.storage
         .from('receipts')
         .download(storagePath);
-      if (dlError || !blob) throw dlError || new Error('Download failed');
+      if (dlError || !blob) throw dlError || new Error('Download returned empty blob');
+      log('image downloaded', { ms: Date.now() - dlStart, mime: blob.type, bytes: blob.size });
 
       const buf = new Uint8Array(await blob.arrayBuffer());
-      // Base64 encode
       let binary = '';
       for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
       const b64 = btoa(binary);
       const mime = blob.type || 'image/jpeg';
       imageDataUrl = `data:${mime};base64,${b64}`;
+      imageSizeKb = Math.round(buf.length / 1024);
+      log('image encoded', { sizeKb: imageSizeKb });
     } catch (e) {
-      console.error('Failed to fetch receipt image:', e);
+      logErr('Failed to fetch/encode receipt image', e instanceof Error ? e.message : e);
       return new Response(JSON.stringify({ error: 'تعذر تحميل صورة الوصل' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
