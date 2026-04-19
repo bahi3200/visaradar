@@ -46,6 +46,33 @@ Deno.serve(async (req) => {
 
     const { requestId, receiptUrl } = parsed.data;
 
+    // Download image via service role (bucket is private) and convert to base64 data URL
+    let imageDataUrl: string;
+    try {
+      // Extract storage path from public URL: .../object/public/receipts/<path> OR .../object/receipts/<path>
+      const match = receiptUrl.match(/\/object\/(?:public\/)?receipts\/(.+)$/);
+      if (!match) throw new Error('Invalid receipt URL format');
+      const storagePath = decodeURIComponent(match[1]);
+
+      const { data: blob, error: dlError } = await supabase.storage
+        .from('receipts')
+        .download(storagePath);
+      if (dlError || !blob) throw dlError || new Error('Download failed');
+
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      // Base64 encode
+      let binary = '';
+      for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+      const b64 = btoa(binary);
+      const mime = blob.type || 'image/jpeg';
+      imageDataUrl = `data:${mime};base64,${b64}`;
+    } catch (e) {
+      console.error('Failed to fetch receipt image:', e);
+      return new Response(JSON.stringify({ error: 'تعذر تحميل صورة الوصل' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Call AI to analyze the receipt image
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
