@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw } from "lucide-react";
+import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -27,6 +27,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
   }, [open]);
 
   const handleRotate = () => setRotation((r) => (r + 90) % 360);
+  const handleRotateCcw = () => setRotation((r) => (r - 90 + 360) % 360);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -46,7 +47,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate });
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw });
 
   return (
     <>
@@ -102,6 +103,14 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </button>
                     <button
                       type="button"
+                      onClick={handleRotateCcw}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="تدوير عكسي 90°"
+                    >
+                      <RotateCcw className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleRotate}
                       className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
                       aria-label="تدوير 90°"
@@ -114,7 +123,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                       className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
                       aria-label="إعادة الضبط"
                     >
-                      <RotateCcw className="w-4 h-4 text-foreground" />
+                      <RefreshCw className="w-4 h-4 text-foreground" />
                     </button>
                     <button
                       type="button"
@@ -176,6 +185,11 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </span>
                     <span className="text-border">•</span>
                     <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">⇧R</kbd>
+                      عكسي
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">F</kbd>
                       ملء الشاشة
                     </span>
@@ -205,6 +219,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                 { k: "−", label: "تصغير" },
                 { k: "0", label: "إعادة الضبط" },
                 { k: "R", label: "تدوير 90°" },
+                { k: "⇧R", label: "تدوير عكسي 90°" },
                 { k: "F", label: "ملء الشاشة" },
                 { k: "Esc", label: "إغلاق" },
               ].map((row) => (
