@@ -297,6 +297,37 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Shortcuts help modal (mobile) */}
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent className="max-w-xs p-0 bg-background border-border/50">
+          <div className="p-5">
+            <DialogTitle className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-primary" />
+              اختصارات لوحة المفاتيح
+            </DialogTitle>
+            <ul className="space-y-2 text-sm text-foreground">
+              {[
+                { k: "+", label: "تكبير" },
+                { k: "−", label: "تصغير" },
+                { k: "0", label: "إعادة الضبط" },
+                { k: "F", label: "ملء الشاشة" },
+                { k: "Esc", label: "إغلاق" },
+              ].map((row) => (
+                <li key={row.k} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                  <span className="text-muted-foreground">{row.label}</span>
+                  <kbd className="px-2 py-0.5 rounded bg-background border border-border/50 text-foreground font-mono text-xs">
+                    {row.k}
+                  </kbd>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground mt-3 text-center">
+              يمكنك أيضاً قرص الصورة بإصبعين للتكبير
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
