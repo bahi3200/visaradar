@@ -131,7 +131,7 @@ describe("ShortcutsPage – search filtering", () => {
 
   it("clears the search query when Esc is pressed inside the input", () => {
     renderPage();
-    typeQuery("esc");
+    typeQuery("إغلاق العارض");
 
     // Filtered – touch-gestures category should be hidden
     expect(
