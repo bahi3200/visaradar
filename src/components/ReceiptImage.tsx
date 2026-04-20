@@ -51,24 +51,16 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     if (!lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      console.log("[ReceiptLightbox] keydown:", e.key, "target:", target?.tagName, "transformRef:", !!transformRef.current);
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        console.log("[ReceiptLightbox] ignored — focus is in input");
-        return;
-      }
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       const t = transformRef.current;
-      if ((e.key === "+" || e.key === "=") && t) { console.log("[ReceiptLightbox] → zoomIn"); e.preventDefault(); t.zoomIn(); }
-      else if ((e.key === "-" || e.key === "_") && t) { console.log("[ReceiptLightbox] → zoomOut"); e.preventDefault(); t.zoomOut(); }
-      else if (e.key === "0" && t) { console.log("[ReceiptLightbox] → reset"); e.preventDefault(); t.resetTransform(); }
-      else if (e.key === "f" || e.key === "F") { console.log("[ReceiptLightbox] → toggleFullscreen"); e.preventDefault(); toggleFullscreen(); }
+      if ((e.key === "+" || e.key === "=") && t) { e.preventDefault(); t.zoomIn(); }
+      else if ((e.key === "-" || e.key === "_") && t) { e.preventDefault(); t.zoomOut(); }
+      else if (e.key === "0" && t) { e.preventDefault(); t.resetTransform(); }
+      else if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); }
       // Esc is handled by Dialog automatically; let it close.
     };
     window.addEventListener("keydown", onKey);
-    console.log("[ReceiptLightbox] keydown listener attached");
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      console.log("[ReceiptLightbox] keydown listener removed");
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [lightboxOpen]);
   useEffect(() => {
     let cancelled = false;
