@@ -33,7 +33,8 @@ export default function JobFilters({
         <div className="relative flex-1 max-w-md">
           <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
-            type="text"
+            type="search"
+            data-global-search
             placeholder="ابحث عن وظيفة..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
