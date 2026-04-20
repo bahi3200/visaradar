@@ -161,6 +161,10 @@ export default function VisaChatBot() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
+    if (!user) {
+      toast.error("يرجى تسجيل الدخول لاستخدام مساعد التأشيرات");
+      return;
+    }
     const userMsg: Msg = { role: "user", content: text.trim() };
     const newHistory = [...messages, userMsg];
     setMessages(newHistory);
@@ -187,12 +191,20 @@ export default function VisaChatBot() {
     };
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error("انتهت الجلسة، يرجى تسجيل الدخول من جديد");
+        setMessages((prev) => prev.slice(0, -1));
+        setIsLoading(false);
+        return;
+      }
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/visa-chat`;
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ messages: newHistory }),
       });
