@@ -126,4 +126,21 @@ describe("ShortcutsPage – search filtering", () => {
 
     expect(screen.getByText(/نتيجة لـ "الذهاب"/)).toBeInTheDocument();
   });
+
+  it("clears the search query when Esc is pressed inside the input", () => {
+    renderPage();
+    typeQuery("esc");
+
+    // Filtered – touch-gestures category should be hidden
+    expect(
+      screen.queryByRole("heading", { name: "إيماءات اللمس" })
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(getSearchInput(), { key: "Escape" });
+
+    expect(getSearchInput().value).toBe("");
+    expect(screen.getByRole("heading", { name: "التنقل العام" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /عارض الوصل/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "إيماءات اللمس" })).toBeInTheDocument();
+  });
 });
