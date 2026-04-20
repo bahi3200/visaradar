@@ -185,6 +185,11 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </span>
                     <span className="text-border">•</span>
                     <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">⇧R</kbd>
+                      عكسي
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">F</kbd>
                       ملء الشاشة
                     </span>
@@ -214,6 +219,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                 { k: "−", label: "تصغير" },
                 { k: "0", label: "إعادة الضبط" },
                 { k: "R", label: "تدوير 90°" },
+                { k: "⇧R", label: "تدوير عكسي 90°" },
                 { k: "F", label: "ملء الشاشة" },
                 { k: "Esc", label: "إغلاق" },
               ].map((row) => (
