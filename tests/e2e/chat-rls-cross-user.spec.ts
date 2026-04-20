@@ -43,11 +43,40 @@ async function confirmE2eEmail(email: string): Promise<boolean> {
   return res.ok;
 }
 
+async function deleteE2eUser(email: string): Promise<boolean> {
+  const secret = process.env.E2E_ADMIN_SECRET;
+  if (!secret) return false;
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/e2e-confirm-user`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-e2e-secret": secret,
+      apikey: SUPABASE_ANON_KEY,
+      authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ email, action: "delete" }),
+  });
+  return res.ok;
+}
+
 test.describe("chat_messages RLS — cross-user insert", () => {
+  const createdEmails: string[] = [];
+
+  test.afterEach(async () => {
+    // Clean up all created test users from the live backend
+    for (const email of createdEmails) {
+      await deleteE2eUser(email);
+    }
+    createdEmails.length = 0;
+  });
+
   test("rejects inserting a message into another user's conversation", async () => {
     const password = "TestPassw0rd!Strong";
     const emailA = uniqueEmail("rls-a");
     const emailB = uniqueEmail("rls-b");
+
+    // Track emails for cleanup
+    createdEmails.push(emailA, emailB);
 
     // ---- 1) Create user A and a conversation owned by A ----
     const clientA = newClient();
