@@ -309,6 +309,9 @@ export default function VisaChatBot() {
         await saveMessage(convId, "assistant", assistantContent);
       }
 
+      // Refresh remaining quota after a successful exchange
+      refreshQuota();
+
       // Fetch smart follow-up suggestions based on full context
       if (assistantContent) {
         const finalHistory: Msg[] = [...newHistory, { role: "assistant", content: assistantContent }];
