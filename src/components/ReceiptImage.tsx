@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maxi
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
 const extractStoragePath = (receiptUrl: string): string | null => {
   if (!receiptUrl) return null;
@@ -25,6 +25,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -43,6 +44,23 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       toast.error("تعذر تفعيل ملء الشاشة");
     }
   };
+
+  // Keyboard shortcuts: + zoom in, - zoom out, 0 reset, F fullscreen, Esc close
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const t = transformRef.current;
+      if ((e.key === "+" || e.key === "=") && t) { e.preventDefault(); t.zoomIn(); }
+      else if ((e.key === "-" || e.key === "_") && t) { e.preventDefault(); t.zoomOut(); }
+      else if (e.key === "0" && t) { e.preventDefault(); t.resetTransform(); }
+      else if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); }
+      // Esc is handled by Dialog automatically; let it close.
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen]);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -157,6 +175,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
           </VisuallyHidden>
           <div ref={fullscreenRef} className="relative bg-background/95">
             <TransformWrapper
+              ref={transformRef}
               initialScale={1}
               minScale={0.5}
               maxScale={6}
