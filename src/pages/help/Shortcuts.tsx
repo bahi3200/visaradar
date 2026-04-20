@@ -83,13 +83,14 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   const trimmed = query.trim();
   if (!trimmed) return <>{text}</>;
 
-  const regex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
-  const parts = text.split(regex);
+  const splitRegex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
+  const lower = trimmed.toLowerCase();
+  const parts = text.split(splitRegex);
 
   return (
     <>
       {parts.map((part, i) =>
-        regex.test(part) ? (
+        part.toLowerCase() === lower ? (
           <mark
             key={i}
             className="rounded-sm bg-accent/25 text-foreground px-0.5"
