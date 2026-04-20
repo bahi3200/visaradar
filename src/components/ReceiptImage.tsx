@@ -44,6 +44,23 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       toast.error("تعذر تفعيل ملء الشاشة");
     }
   };
+
+  // Keyboard shortcuts: + zoom in, - zoom out, 0 reset, F fullscreen, Esc close
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const t = transformRef.current;
+      if ((e.key === "+" || e.key === "=") && t) { e.preventDefault(); t.zoomIn(); }
+      else if ((e.key === "-" || e.key === "_") && t) { e.preventDefault(); t.zoomOut(); }
+      else if (e.key === "0" && t) { e.preventDefault(); t.resetTransform(); }
+      else if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); }
+      // Esc is handled by Dialog automatically; let it close.
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen]);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
