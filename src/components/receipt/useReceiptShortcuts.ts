@@ -7,9 +7,10 @@ interface UseReceiptShortcutsParams {
   onToggleFullscreen: () => void;
   onRotate: () => void;
   onRotateCcw: () => void;
+  onPrint?: () => void;
 }
 
-export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen, onRotate, onRotateCcw }: UseReceiptShortcutsParams) {
+export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen, onRotate, onRotateCcw, onPrint }: UseReceiptShortcutsParams) {
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
@@ -24,8 +25,9 @@ export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen,
       else if (e.key === "f" || e.key === "F") { e.preventDefault(); onToggleFullscreen(); }
       else if ((e.key === "r" || e.key === "R") && e.shiftKey) { e.preventDefault(); onRotateCcw(); }
       else if (e.key === "r" || e.key === "R") { e.preventDefault(); onRotate(); }
+      else if ((e.key === "p" || e.key === "P") && onPrint) { e.preventDefault(); onPrint(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [enabled, transformRef, onToggleFullscreen, onRotate, onRotateCcw]);
+  }, [enabled, transformRef, onToggleFullscreen, onRotate, onRotateCcw, onPrint]);
 }
