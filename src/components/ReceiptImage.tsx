@@ -49,26 +49,20 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   // Keyboard shortcuts: + zoom in, - zoom out, 0 reset, F fullscreen, Esc close
   useEffect(() => {
     if (!lightboxOpen) return;
-    console.log("[ReceiptLightbox] keydown listener ATTACHED");
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      console.log("[ReceiptLightbox] keydown:", e.key, "target:", target?.tagName, "transformRef:", !!transformRef.current);
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        console.log("[ReceiptLightbox] → ignored (input field)");
         return;
       }
       const t = transformRef.current;
-      if ((e.key === "+" || e.key === "=") && t) { console.log("[ReceiptLightbox] → zoomIn"); e.preventDefault(); t.zoomIn(); }
-      else if ((e.key === "-" || e.key === "_") && t) { console.log("[ReceiptLightbox] → zoomOut"); e.preventDefault(); t.zoomOut(); }
-      else if (e.key === "0" && t) { console.log("[ReceiptLightbox] → reset"); e.preventDefault(); t.resetTransform(); }
-      else if (e.key === "f" || e.key === "F") { console.log("[ReceiptLightbox] → toggleFullscreen"); e.preventDefault(); toggleFullscreen(); }
+      if ((e.key === "+" || e.key === "=") && t) { e.preventDefault(); t.zoomIn(); }
+      else if ((e.key === "-" || e.key === "_") && t) { e.preventDefault(); t.zoomOut(); }
+      else if (e.key === "0" && t) { e.preventDefault(); t.resetTransform(); }
+      else if (e.key === "f" || e.key === "F") { e.preventDefault(); toggleFullscreen(); }
       // Esc is handled by Dialog automatically; let it close.
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      console.log("[ReceiptLightbox] keydown listener REMOVED");
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [lightboxOpen]);
   useEffect(() => {
     let cancelled = false;
