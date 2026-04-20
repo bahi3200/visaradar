@@ -194,6 +194,14 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
                   >
                     <X className="w-4 h-4 text-foreground" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutsOpen(true)}
+                    className="sm:hidden absolute top-3 right-14 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="عرض الاختصارات"
+                  >
+                    <HelpCircle className="w-4 h-4 text-foreground" />
+                  </button>
                   <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
