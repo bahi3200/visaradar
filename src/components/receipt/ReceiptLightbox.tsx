@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw, RefreshCw, Printer, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { useReceiptShortcuts } from "./useReceiptShortcuts";
@@ -75,6 +75,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
         <DialogContent className="max-w-5xl p-0 bg-background/95 border-border/50 [&>button]:hidden">
           <VisuallyHidden>
             <DialogTitle>صورة الوصل</DialogTitle>
+            <DialogDescription>عارض صورة الوصل مع أدوات التكبير والتدوير والطباعة والتنزيل</DialogDescription>
           </VisuallyHidden>
           <div ref={fullscreenRef} className="relative bg-background/95">
             <TransformWrapper
@@ -256,9 +257,9 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
               <HelpCircle className="w-4 h-4 text-accent" />
               دليل الاختصارات
             </DialogTitle>
-            <p className="text-xs text-muted-foreground mb-4">
+            <DialogDescription className="text-xs text-muted-foreground mb-4">
               استخدم لوحة المفاتيح للتحكم السريع بالعارض
-            </p>
+            </DialogDescription>
             <ul className="space-y-1.5 text-sm">
               {[
                 { k: ["+"], label: "تكبير الصورة", Icon: Plus },
