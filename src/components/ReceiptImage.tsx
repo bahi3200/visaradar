@@ -180,7 +180,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
               initialScale={1}
               minScale={0.5}
               maxScale={6}
-              doubleClick={{ mode: "toggle", step: 1.5 }}
+              doubleClick={{ mode: "toggle", step: 2 }}
               wheel={{ step: 0.15 }}
               pinch={{ step: 5 }}
             >
