@@ -242,7 +242,9 @@ export default function ShortcutsPage() {
                             {Icon && (
                               <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
                             )}
-                            <span className="text-sm text-foreground truncate">{s.label}</span>
+                            <span className="text-sm text-foreground truncate">
+                              <HighlightedText text={s.label} query={normalizedQuery} />
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {s.keys.map((k, i) => (
@@ -250,7 +252,7 @@ export default function ShortcutsPage() {
                                 {i > 0 && (
                                   <span className="text-muted-foreground text-xs">+</span>
                                 )}
-                                <KeyChip k={k} />
+                                <KeyChip k={k} query={normalizedQuery} />
                               </span>
                             ))}
                           </div>
