@@ -134,12 +134,22 @@ export default function ManagePackages() {
       };
 
       if (editing) {
-        const { error } = await supabase.from("packages").update(payload).eq("id", editing.id);
+        const { data, error } = await supabase
+          .from("packages")
+          .update(payload)
+          .eq("id", editing.id)
+          .select();
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error("لم يتم تطبيق التحديث — تحقق من صلاحياتك");
+        }
         toast.success("تم تحديث الباقة بنجاح");
       } else {
-        const { error } = await supabase.from("packages").insert(payload);
+        const { data, error } = await supabase.from("packages").insert(payload).select();
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error("لم يتم إنشاء الباقة — تحقق من صلاحياتك");
+        }
         toast.success("تم إنشاء الباقة بنجاح");
       }
 
