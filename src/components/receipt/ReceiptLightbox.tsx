@@ -158,6 +158,14 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </button>
                     <button
                       type="button"
+                      onClick={handlePrint}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="طباعة"
+                    >
+                      <Printer className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={onDownload}
                       disabled={downloading}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
