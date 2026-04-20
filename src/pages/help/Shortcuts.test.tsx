@@ -73,7 +73,9 @@ describe("ShortcutsPage – search filtering", () => {
 
   it("filters by key chip text (case-insensitive)", () => {
     renderPage();
-    typeQuery("esc");
+    // Use the lightbox-specific label so we don't also match the new
+    // global "Esc → clear search" shortcut in التنقل العام.
+    typeQuery("إغلاق العارض");
 
     expect(screen.getByText("إغلاق العارض")).toBeInTheDocument();
     expect(
