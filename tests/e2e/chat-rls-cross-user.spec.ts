@@ -27,6 +27,22 @@ function uniqueEmail(prefix: string) {
   return `${prefix}-${stamp}@e2e.test.local`;
 }
 
+async function confirmE2eEmail(email: string): Promise<boolean> {
+  const secret = process.env.E2E_ADMIN_SECRET;
+  if (!secret) return false;
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/e2e-confirm-user`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-e2e-secret": secret,
+      apikey: SUPABASE_ANON_KEY,
+      authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ email, action: "confirm" }),
+  });
+  return res.ok;
+}
+
 test.describe("chat_messages RLS — cross-user insert", () => {
   test("rejects inserting a message into another user's conversation", async () => {
     const password = "TestPassw0rd!Strong";
@@ -44,11 +60,15 @@ test.describe("chat_messages RLS — cross-user insert", () => {
     expect(userA?.id).toBeTruthy();
 
     // If the project requires email confirmation there will be no session.
-    // Skip cleanly in that case — the RLS itself can still be unit-asserted
-    // and we don't have an admin key in e2e.
+    // Use the E2E admin edge function to confirm the address, then sign in.
     if (!signA.session) {
-      test.skip(true, "Email confirmation required — cannot get an authenticated session in e2e.");
-      return;
+      const confirmed = await confirmE2eEmail(emailA);
+      if (!confirmed) {
+        test.skip(true, "Email confirmation required and E2E_ADMIN_SECRET is not configured — cannot bootstrap session.");
+        return;
+      }
+      const { error: signInErr } = await clientA.auth.signInWithPassword({ email: emailA, password });
+      expect(signInErr, `signIn A after confirm: ${signInErr?.message}`).toBeNull();
     }
 
     const { data: convo, error: convoErr } = await clientA
@@ -71,8 +91,13 @@ test.describe("chat_messages RLS — cross-user insert", () => {
     expect(userB?.id).toBeTruthy();
 
     if (!signB.session) {
-      test.skip(true, "Email confirmation required for user B.");
-      return;
+      const confirmed = await confirmE2eEmail(emailB);
+      if (!confirmed) {
+        test.skip(true, "Email confirmation required for user B and E2E_ADMIN_SECRET is not configured.");
+        return;
+      }
+      const { error: signInErr } = await clientB.auth.signInWithPassword({ email: emailB, password });
+      expect(signInErr, `signIn B after confirm: ${signInErr?.message}`).toBeNull();
     }
 
     // ---- 3a) B tries to insert into A's convo, with user_id = B (own id) ----
