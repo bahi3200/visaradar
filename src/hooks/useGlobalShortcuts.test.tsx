@@ -17,7 +17,13 @@ function LocationProbe({ onLocation }: { onLocation: (path: string) => void }) {
 function setup(initialPath = "/") {
   const visits: string[] = [];
   const utils = render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter
+      initialEntries={[initialPath]}
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <ShortcutsHost />
       <LocationProbe onLocation={(p) => visits.push(p)} />
       <Routes>
