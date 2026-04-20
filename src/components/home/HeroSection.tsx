@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Bell, Briefcase, ArrowLeft, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
+import heroVideo from "@/assets/hero-passport.mp4.asset.json";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface HeroSectionProps {
