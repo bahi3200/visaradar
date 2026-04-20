@@ -125,6 +125,7 @@ export default function ShortcutsPage() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="search"
+              data-global-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ابحث بالاسم أو المفتاح (مثل: تكبير، Esc، R)"
@@ -140,6 +141,11 @@ export default function ShortcutsPage() {
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+            {!query && (
+              <kbd className="hidden sm:inline-flex absolute left-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded-md bg-muted/60 border border-border/60 text-[11px] font-mono text-muted-foreground pointer-events-none">
+                /
+              </kbd>
             )}
           </div>
           {normalizedQuery && (
