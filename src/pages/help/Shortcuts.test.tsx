@@ -73,7 +73,9 @@ describe("ShortcutsPage – search filtering", () => {
 
   it("filters by key chip text (case-insensitive)", () => {
     renderPage();
-    typeQuery("esc");
+    // Use the lightbox-specific label so we don't also match the new
+    // global "Esc → clear search" shortcut in التنقل العام.
+    typeQuery("إغلاق العارض");
 
     expect(screen.getByText("إغلاق العارض")).toBeInTheDocument();
     expect(
@@ -125,5 +127,22 @@ describe("ShortcutsPage – search filtering", () => {
     expect(items.length).toBeGreaterThanOrEqual(6);
 
     expect(screen.getByText(/نتيجة لـ "الذهاب"/)).toBeInTheDocument();
+  });
+
+  it("clears the search query when Esc is pressed inside the input", () => {
+    renderPage();
+    typeQuery("إغلاق العارض");
+
+    // Filtered – touch-gestures category should be hidden
+    expect(
+      screen.queryByRole("heading", { name: "إيماءات اللمس" })
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(getSearchInput(), { key: "Escape" });
+
+    expect(getSearchInput().value).toBe("");
+    expect(screen.getByRole("heading", { name: "التنقل العام" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /عارض الوصل/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "إيماءات اللمس" })).toBeInTheDocument();
   });
 });

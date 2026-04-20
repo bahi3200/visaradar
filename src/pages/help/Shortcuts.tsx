@@ -26,6 +26,7 @@ const categories: ShortcutCategory[] = [
     shortcuts: [
       { keys: ["/"], label: "التركيز على شريط البحث", icon: Search },
       { keys: ["?"], label: "فتح دليل الاختصارات", icon: HelpCircle },
+      { keys: ["Esc"], label: "مسح مربع البحث في صفحة الاختصارات", icon: X },
       { keys: ["G", "H"], label: "الذهاب للصفحة الرئيسية" },
       { keys: ["G", "D"], label: "الذهاب للوحة التحكم" },
       { keys: ["G", "J"], label: "الذهاب لصفحة الوظائف" },
@@ -128,6 +129,13 @@ export default function ShortcutsPage() {
               data-global-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && query) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setQuery("");
+                }
+              }}
               placeholder="ابحث بالاسم أو المفتاح (مثل: تكبير، Esc، R)"
               aria-label="بحث في الاختصارات"
               className="w-full pr-10 pl-10 h-11 rounded-xl bg-muted/40 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:border-accent transition-colors"
