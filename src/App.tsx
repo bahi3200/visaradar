@@ -48,6 +48,7 @@ import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import Install from "./pages/Install";
 import ManagePackages from "./pages/ManagePackages";
 import VisaProfile from "./pages/VisaProfile";
+import ShortcutsHelp from "./pages/help/Shortcuts";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
       <Route path="/visa" element={<VisaCountries />} />
       <Route path="/visa/:slug" element={<CountryVisa />} />
       <Route path="/install" element={<Install />} />
+      <Route path="/help/shortcuts" element={<ShortcutsHelp />} />
 
       {/* Protected routes */}
       <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
