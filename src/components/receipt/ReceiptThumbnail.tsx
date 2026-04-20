@@ -32,7 +32,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         type="button"
         onClick={onDownload}
         disabled={downloading}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
       >
         {downloading ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />

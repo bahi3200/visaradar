@@ -90,7 +90,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                   <button
                     type="button"
                     onClick={() => onOpenChange(false)}
-                    className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
                     aria-label="إغلاق"
                   >
                     <X className="w-4 h-4 text-foreground" />
