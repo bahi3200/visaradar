@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import Index from "./pages/Index";
@@ -52,6 +53,11 @@ import ShortcutsHelp from "./pages/help/Shortcuts";
 
 const queryClient = new QueryClient();
 
+function GlobalShortcuts() {
+  useGlobalShortcuts();
+  return null;
+}
+
 const App = () => (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
@@ -59,6 +65,7 @@ const App = () => (
       <Sonner position="top-center" dir="rtl" />
       <BrowserRouter>
         <AuthProvider>
+          <GlobalShortcuts />
           <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
