@@ -26,6 +26,7 @@ const categories: ShortcutCategory[] = [
     shortcuts: [
       { keys: ["/"], label: "التركيز على شريط البحث", icon: Search },
       { keys: ["?"], label: "فتح دليل الاختصارات", icon: HelpCircle },
+      { keys: ["Esc"], label: "مسح مربع البحث في صفحة الاختصارات", icon: X },
       { keys: ["G", "H"], label: "الذهاب للصفحة الرئيسية" },
       { keys: ["G", "D"], label: "الذهاب للوحة التحكم" },
       { keys: ["G", "J"], label: "الذهاب لصفحة الوظائف" },
