@@ -110,7 +110,7 @@ describe("ShortcutsPage – search filtering", () => {
 
     expect(screen.getByText(hasTextContent("التركيز على شريط البحث"))).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "التنقل العام" })
+      screen.getByRole("heading", { name: /التنقل العام/ })
     ).toBeInTheDocument();
   });
 
@@ -139,12 +139,17 @@ describe("ShortcutsPage – search filtering", () => {
     typeQuery("الذهاب");
 
     const navSection = screen
-      .getByRole("heading", { name: "التنقل العام" })
+      .getByRole("heading", { name: /التنقل العام/ })
       .closest("section") as HTMLElement;
     const items = within(navSection).getAllByRole("listitem");
     expect(items.length).toBeGreaterThanOrEqual(6);
 
     expect(screen.getByText(/نتيجة لـ "الذهاب"/)).toBeInTheDocument();
+
+    // Per-section count chip: "6 نتائج"
+    expect(
+      within(navSection).getByText(/6\s*نتائج/)
+    ).toBeInTheDocument();
   });
 
   it("clears the search query when Esc is pressed inside the input", () => {
