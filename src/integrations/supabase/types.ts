@@ -1045,7 +1045,77 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      subscription_requests_moderator_view: {
+        Row: {
+          countries: string[] | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          moderator_action: string | null
+          moderator_action_at: string | null
+          moderator_id: string | null
+          package_id: string | null
+          phone: string | null
+          receipt_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_type: string | null
+          status: string | null
+          telegram_chat_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          countries?: string[] | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          moderator_action?: string | null
+          moderator_action_at?: string | null
+          moderator_id?: string | null
+          package_id?: string | null
+          phone?: string | null
+          receipt_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type?: string | null
+          status?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          countries?: string[] | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          moderator_action?: string | null
+          moderator_action_at?: string | null
+          moderator_id?: string | null
+          package_id?: string | null
+          phone?: string | null
+          receipt_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type?: string | null
+          status?: string | null
+          telegram_chat_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_requests_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       count_active_devices: { Args: { _user_id: string }; Returns: number }

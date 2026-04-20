@@ -55,10 +55,15 @@ export default function AdminRequestsPage() {
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const { data: requests, isLoading } = useQuery({
-    queryKey: ["admin-requests", statusFilter],
+    queryKey: ["admin-requests", statusFilter, isAdmin],
     queryFn: async () => {
+      // Admins read the full table; moderators read a PII-safe view that excludes
+      // ai_verification_result, ai_fraud_detected, and admin_notes.
+      const sourceTable = isAdmin
+        ? "subscription_requests"
+        : "subscription_requests_moderator_view";
       let query = supabase
-        .from("subscription_requests")
+        .from(sourceTable as "subscription_requests")
         .select("*, packages(name_ar, duration_months, price)")
         .order("created_at", { ascending: false });
 
