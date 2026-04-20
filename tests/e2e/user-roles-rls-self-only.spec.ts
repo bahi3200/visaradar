@@ -10,10 +10,10 @@ import { createClient } from "@supabase/supabase-js";
  *
  * Flow:
  *   1. Sign up a fresh user via the public anon client.
- *   2. Insert a `user` role row for them (allowed by the INSERT policy only
- *      for admins — so we expect this to FAIL silently and the user to have
- *      ZERO rows). That's fine — the assertion is about what they CAN read.
- *   3. Run a SELECT * FROM user_roles and assert:
+ *   2. Confirm the user's email via the `e2e-confirm-user` admin function so
+ *      a real authenticated session can be established.
+ *   3. Sign in with password to obtain that session.
+ *   4. Run a SELECT * FROM user_roles and assert:
  *        - request succeeds (no error)
  *        - every returned row has user_id === auth user id
  *        - they cannot see any other user's row (e.g. the seeded admin)
@@ -34,6 +34,22 @@ function uniqueEmail(prefix: string) {
   return `${prefix}-${stamp}@e2e.test.local`;
 }
 
+async function confirmE2eEmail(email: string): Promise<boolean> {
+  const secret = process.env.E2E_ADMIN_SECRET;
+  if (!secret) return false;
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/e2e-confirm-user`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-e2e-secret": secret,
+      apikey: SUPABASE_ANON_KEY,
+      authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ email, action: "confirm" }),
+  });
+  return res.ok;
+}
+
 test.describe("user_roles RLS — SELECT returns only the caller's own row", () => {
   test("a regular user only sees their own user_roles row (and not other users')", async () => {
     const password = "TestPassw0rd!Strong";
@@ -48,11 +64,19 @@ test.describe("user_roles RLS — SELECT returns only the caller's own row", () 
     const user = signUp.user;
     expect(user?.id).toBeTruthy();
 
-    // If email confirmation is required, no session is returned and we cannot
-    // act as an authenticated user from anon e2e — skip cleanly.
+    // If email confirmation is required, no session is returned. Use the
+    // E2E admin edge function to confirm the address, then sign in.
     if (!signUp.session) {
-      test.skip(true, "Email confirmation required — cannot get an authenticated session in e2e.");
-      return;
+      const confirmed = await confirmE2eEmail(email);
+      if (!confirmed) {
+        test.skip(
+          true,
+          "Email confirmation required and E2E_ADMIN_SECRET is not configured — cannot bootstrap session.",
+        );
+        return;
+      }
+      const { error: signInErr } = await client.auth.signInWithPassword({ email, password });
+      expect(signInErr, `signIn after confirm: ${signInErr?.message}`).toBeNull();
     }
 
     // Sanity: this user is NOT an admin. has_role() should be false.
