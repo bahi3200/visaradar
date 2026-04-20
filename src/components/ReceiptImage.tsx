@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,15 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const thumbnailRef = useRef<HTMLButtonElement | null>(null);
+  const hasFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (signedUrl && !loading && !hasFocusedRef.current) {
+      thumbnailRef.current?.focus({ preventScroll: true });
+      hasFocusedRef.current = true;
+    }
+  }, [signedUrl, loading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +98,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   return (
     <>
       <ReceiptThumbnail
+        ref={thumbnailRef}
         signedUrl={signedUrl}
         downloading={downloading}
         onOpen={() => setLightboxOpen(true)}
