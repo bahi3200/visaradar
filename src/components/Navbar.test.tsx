@@ -61,13 +61,17 @@ describe("Navbar — keyboard shortcuts link", () => {
     });
     expect(shortcutsLinks.length).toBeGreaterThan(0);
 
-    // The menuitem should contain an anchor pointing to /help/shortcuts
-    const anchor = shortcutsLinks[0].querySelector("a");
+    // With asChild, the menuitem IS the anchor (or wraps one). Find the href either way.
+    const item = shortcutsLinks[0];
+    const anchor =
+      item.tagName.toLowerCase() === "a"
+        ? item
+        : (item.querySelector("a") as HTMLElement | null);
     expect(anchor).not.toBeNull();
     expect(anchor).toHaveAttribute("href", "/help/shortcuts");
 
     // And display the "?" hint kbd
-    expect(within(shortcutsLinks[0]).getByText("?")).toBeInTheDocument();
+    expect(within(item).getByText("?")).toBeInTheDocument();
   });
 
   it("exposes /help/shortcuts inside the mobile menu", async () => {
