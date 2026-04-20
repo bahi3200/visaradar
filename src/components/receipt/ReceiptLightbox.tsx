@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle } from "lucide-react";
+import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -17,8 +17,16 @@ interface ReceiptLightboxProps {
 export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, onDownload }: ReceiptLightboxProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [rotation, setRotation] = useState(0);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+
+  // Reset rotation when lightbox closes
+  useEffect(() => {
+    if (!open) setRotation(0);
+  }, [open]);
+
+  const handleRotate = () => setRotation((r) => (r + 90) % 360);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -38,7 +46,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen });
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate });
 
   return (
     <>
@@ -94,7 +102,15 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </button>
                     <button
                       type="button"
-                      onClick={() => resetTransform()}
+                      onClick={handleRotate}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="تدوير 90°"
+                    >
+                      <RotateCw className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { resetTransform(); setRotation(0); }}
                       className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
                       aria-label="إعادة الضبط"
                     >
@@ -133,7 +149,8 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     <img
                       src={signedUrl}
                       alt="Receipt full view"
-                      className={`w-full ${isFullscreen ? "h-screen max-h-screen" : "max-h-[85vh]"} object-contain select-none`}
+                      className={`w-full ${isFullscreen ? "h-screen max-h-screen" : "max-h-[85vh]"} object-contain select-none transition-transform duration-300`}
+                      style={{ transform: `rotate(${rotation}deg)` }}
                       draggable={false}
                     />
                   </TransformComponent>
@@ -151,6 +168,11 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     <span className="flex items-center gap-1">
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">0</kbd>
                       إعادة
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">R</kbd>
+                      تدوير
                     </span>
                     <span className="text-border">•</span>
                     <span className="flex items-center gap-1">
@@ -182,6 +204,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                 { k: "+", label: "تكبير" },
                 { k: "−", label: "تصغير" },
                 { k: "0", label: "إعادة الضبط" },
+                { k: "R", label: "تدوير 90°" },
                 { k: "F", label: "ملء الشاشة" },
                 { k: "Esc", label: "إغلاق" },
               ].map((row) => (
