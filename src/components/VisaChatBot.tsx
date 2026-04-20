@@ -133,12 +133,18 @@ export default function VisaChatBot() {
   const fetchSuggestions = async (history: Msg[]) => {
     setLoadingSuggestions(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setLoadingSuggestions(false);
+        return;
+      }
       const SUG_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/visa-chat-suggestions`;
       const resp = await fetch(SUG_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ messages: history }),
       });
