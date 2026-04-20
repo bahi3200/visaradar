@@ -1,0 +1,41 @@
+ name: E2E Tests
+ 
+ on:
+   pull_request:
+     branches: [main]
+ 
+ jobs:
+   e2e:
+     name: Playwright E2E Tests
+     runs-on: ubuntu-latest
+ 
+     steps:
+       - name: Checkout repository
+         uses: actions/checkout@v4
+ 
+       - name: Setup Node.js
+         uses: actions/setup-node@v4
+         with:
+           node-version: "20"
+           cache: "npm"
+ 
+       - name: Install dependencies
+         run: npm ci
+ 
+       - name: Install Playwright browsers
+         run: npx playwright install --with-deps
+ 
+       - name: Run E2E tests
+         run: npx playwright test
+         env:
+           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key' }}
+           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID || 'placeholder' }}
+ 
+       - name: Upload test results
+         if: failure()
+         uses: actions/upload-artifact@v4
+         with:
+           name: playwright-report
+           path: playwright-report/
+           retention-days: 30
