@@ -216,6 +216,18 @@ export default function MyRequestsPage() {
                                 </p>
                               </div>
                             </div>
+                            <div className="mt-4 flex justify-end">
+                              <Link
+                                to={{
+                                  pathname: "/subscribe",
+                                  search: `?service=${req.service_type}&package=${req.package_id}${req.countries?.length ? `&countries=${req.countries.join(",")}` : ""}`,
+                                }}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30 transition-colors"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                إعادة تقديم الطلب
+                              </Link>
+                            </div>
                           </div>
                         ) : (
                           <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">

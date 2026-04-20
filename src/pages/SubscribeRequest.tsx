@@ -35,7 +35,8 @@ export default function SubscribeRequestPage() {
     (searchParams.get("service") as ServiceType) || "both"
   );
   const [selectedPackageId, setSelectedPackageId] = useState<string>(renewPackageId);
-  const [countries, setCountries] = useState<string[]>([]);
+  const initialCountries = (searchParams.get("countries") || "").split(",").map((c) => c.trim()).filter(Boolean);
+  const [countries, setCountries] = useState<string[]>(initialCountries);
   // Use stored user data directly - no need to ask again
   const fullName = user?.user_metadata?.full_name || "";
   const phone = user?.user_metadata?.phone || "";
