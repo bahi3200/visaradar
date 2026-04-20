@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "visa-chat-history";
+const RATE_LIMIT_MAX = 30; // keep in sync with edge function
 const SUGGESTED_QUESTIONS = [
   "ما هي الوثائق المطلوبة لتأشيرة شنغن؟",
   "كيف أحجز موعداً في VFS؟",
@@ -26,8 +27,35 @@ export default function VisaChatBot() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [usedThisHour, setUsedThisHour] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Count this user's chat requests in the last rolling hour
+  const refreshQuota = async () => {
+    if (!user) {
+      setUsedThisHour(null);
+      return;
+    }
+    const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count, error } = await supabase
+      .from("chat_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", sinceIso);
+    if (error) {
+      console.error("Failed to load quota:", error);
+      return;
+    }
+    setUsedThisHour(count ?? 0);
+  };
+
+  // Refresh quota when user changes or chat opens
+  useEffect(() => {
+    if (user && open) refreshQuota();
+    if (!user) setUsedThisHour(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, open]);
 
   // Load history: DB for logged-in users, localStorage for guests
   useEffect(() => {
@@ -281,6 +309,9 @@ export default function VisaChatBot() {
         await saveMessage(convId, "assistant", assistantContent);
       }
 
+      // Refresh remaining quota after a successful exchange
+      refreshQuota();
+
       // Fetch smart follow-up suggestions based on full context
       if (assistantContent) {
         const finalHistory: Msg[] = [...newHistory, { role: "assistant", content: assistantContent }];
@@ -392,9 +423,25 @@ export default function VisaChatBot() {
                     <h3 className="font-heading font-black text-accent-foreground text-sm">
                       مساعد التأشيرات
                     </h3>
-                    <p className="text-[11px] text-accent-foreground/80 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      {user ? "محفوظ في حسابك" : "متصل الآن"}
+                    <p className="text-[11px] text-accent-foreground/80 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                        {user ? "محفوظ في حسابك" : "متصل الآن"}
+                      </span>
+                      {user && usedThisHour !== null && (
+                        <span
+                          title="عدد الرسائل في الساعة الأخيرة"
+                          className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            usedThisHour >= RATE_LIMIT_MAX
+                              ? "bg-destructive text-destructive-foreground"
+                              : usedThisHour >= RATE_LIMIT_MAX * 0.8
+                                ? "bg-yellow-500/90 text-black"
+                                : "bg-accent-foreground/15 text-accent-foreground"
+                          }`}
+                        >
+                          {usedThisHour}/{RATE_LIMIT_MAX}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
