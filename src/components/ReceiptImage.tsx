@@ -175,6 +175,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
           </VisuallyHidden>
           <div ref={fullscreenRef} className="relative bg-background/95">
             <TransformWrapper
+              ref={transformRef}
               initialScale={1}
               minScale={0.5}
               maxScale={6}
