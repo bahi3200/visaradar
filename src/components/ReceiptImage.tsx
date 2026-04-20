@@ -255,6 +255,33 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
                       draggable={false}
                     />
                   </TransformComponent>
+                  {/* Keyboard shortcuts hint bar */}
+                  <div className="hidden sm:flex absolute bottom-3 left-1/2 -translate-x-1/2 z-10 items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border/50 text-[11px] text-muted-foreground shadow-sm">
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">+</kbd>
+                      تكبير
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">−</kbd>
+                      تصغير
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">0</kbd>
+                      إعادة
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">F</kbd>
+                      ملء الشاشة
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">Esc</kbd>
+                      إغلاق
+                    </span>
+                  </div>
                 </div>
               )}
             </TransformWrapper>
