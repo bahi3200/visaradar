@@ -27,6 +27,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
   }, [open]);
 
   const handleRotate = () => setRotation((r) => (r + 90) % 360);
+  const handleRotateCcw = () => setRotation((r) => (r - 90 + 360) % 360);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -46,7 +47,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate });
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw });
 
   return (
     <>
