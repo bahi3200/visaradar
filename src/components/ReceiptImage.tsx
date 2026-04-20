@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
+import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -24,6 +24,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [downloading, setDownloading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
 
@@ -193,6 +194,14 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
                   >
                     <X className="w-4 h-4 text-foreground" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutsOpen(true)}
+                    className="sm:hidden absolute top-3 right-14 z-10 p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                    aria-label="عرض الاختصارات"
+                  >
+                    <HelpCircle className="w-4 h-4 text-foreground" />
+                  </button>
                   <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
@@ -285,6 +294,37 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
                 </div>
               )}
             </TransformWrapper>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shortcuts help modal (mobile) */}
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent className="max-w-xs p-0 bg-background border-border/50">
+          <div className="p-5">
+            <DialogTitle className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-primary" />
+              اختصارات لوحة المفاتيح
+            </DialogTitle>
+            <ul className="space-y-2 text-sm text-foreground">
+              {[
+                { k: "+", label: "تكبير" },
+                { k: "−", label: "تصغير" },
+                { k: "0", label: "إعادة الضبط" },
+                { k: "F", label: "ملء الشاشة" },
+                { k: "Esc", label: "إغلاق" },
+              ].map((row) => (
+                <li key={row.k} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                  <span className="text-muted-foreground">{row.label}</span>
+                  <kbd className="px-2 py-0.5 rounded bg-background border border-border/50 text-foreground font-mono text-xs">
+                    {row.k}
+                  </kbd>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground mt-3 text-center">
+              يمكنك أيضاً قرص الصورة بإصبعين للتكبير
+            </p>
           </div>
         </DialogContent>
       </Dialog>
