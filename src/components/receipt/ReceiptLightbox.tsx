@@ -230,6 +230,16 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">Esc</kbd>
                       إغلاق
                     </span>
+                    <span className="text-border">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setShortcutsOpen(true)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-accent hover:text-accent-foreground hover:bg-accent/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                      aria-label="عرض دليل الاختصارات الكامل"
+                    >
+                      <HelpCircle className="w-3 h-3" />
+                      <span className="text-[10px] font-medium">دليل كامل</span>
+                    </button>
                   </div>
                 </div>
               )}
