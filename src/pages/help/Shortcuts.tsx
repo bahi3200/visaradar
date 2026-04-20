@@ -226,7 +226,18 @@ export default function ShortcutsPage() {
                       <CatIcon className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-foreground">{cat.title}</h2>
+                      <h2 className="text-lg font-bold text-foreground flex items-center gap-2 flex-wrap">
+                        <span>{cat.title}</span>
+                        {normalizedQuery && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-accent bg-accent/10 border border-accent/30 rounded-full px-2 py-0.5">
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              {cat.shortcuts.length}{" "}
+                              {cat.shortcuts.length === 1 ? "نتيجة" : "نتائج"}
+                            </span>
+                          </span>
+                        )}
+                      </h2>
                       <p className="text-xs text-muted-foreground mt-0.5">{cat.description}</p>
                     </div>
                   </header>
