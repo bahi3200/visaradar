@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Bell, Briefcase, ArrowLeft, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
+import heroVideo from "@/assets/hero-passport.mp4.asset.json";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface HeroSectionProps {
@@ -17,7 +18,20 @@ export default function HeroSection({ user }: HeroSectionProps) {
       className="relative overflow-hidden min-h-[90vh] flex items-center"
       style={{ backgroundImage: `url(${heroBg})`, backgroundSize: "cover", backgroundPosition: "center" }}
     >
-      <div className="absolute inset-0 bg-[hsl(222,47%,6%)]/70" />
+      {/* Background video — autoplays for visitors; falls back to image when reduced-motion */}
+      {!reduced && (
+        <video
+          src={heroVideo.url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+      )}
+      <div className="absolute inset-0 bg-[hsl(222,47%,6%)]/75" />
       
       {/* Floating particles — skip on mobile / reduced-motion */}
       {!reduced && (
