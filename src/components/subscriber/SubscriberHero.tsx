@@ -42,9 +42,10 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
         style={reduced ? {} : { y: videoY, scale: videoScale }}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Multi-layer gradient for depth */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
+      {/* Multi-layer gradient for depth + readability scrim */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-background/20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent" />
+      <div className="absolute inset-0 bg-black/20" />
 
       <motion.div
         className="absolute inset-0 flex items-end"
@@ -67,10 +68,16 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
               <span className="text-accent text-xs font-bold">{badgeLabel}</span>
             </motion.div>
 
-            <h1 className="font-heading text-3xl md:text-5xl font-black text-foreground mb-2 leading-tight">
+            <h1
+              className="font-heading text-3xl md:text-5xl font-black text-foreground mb-2 leading-tight"
+              style={{ textShadow: "0 2px 16px hsl(var(--background) / 0.8), 0 1px 3px hsl(var(--background) / 0.9)" }}
+            >
               مرحباً، {fullName || "عزيزي"} <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">👋</span>
             </h1>
-            <p className="text-sm text-muted-foreground/80 max-w-sm">
+            <p
+              className="text-sm text-foreground/90 max-w-sm"
+              style={{ textShadow: "0 1px 8px hsl(var(--background) / 0.8)" }}
+            >
               {isAdmin
                 ? "مرحباً بك — كل شيء تحت السيطرة"
                 : isSubscribed
