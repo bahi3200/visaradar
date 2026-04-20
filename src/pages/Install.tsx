@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "react-helmet";
 import { Download, Smartphone, Share2, Plus, Check } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
