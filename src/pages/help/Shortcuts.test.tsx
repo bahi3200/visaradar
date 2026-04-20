@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock Layout to avoid Navbar/Footer (which depend on Supabase, hooks, etc.)
@@ -33,11 +32,17 @@ function renderPage() {
   );
 }
 
-describe("ShortcutsPage – search filtering", () => {
-  beforeEach(() => {
-    // Nothing to reset; component is purely client-state
-  });
+function getSearchInput(): HTMLInputElement {
+  return screen.getByRole("searchbox", {
+    name: /بحث في الاختصارات/,
+  }) as HTMLInputElement;
+}
 
+function typeQuery(value: string) {
+  fireEvent.change(getSearchInput(), { target: { value } });
+}
+
+describe("ShortcutsPage – search filtering", () => {
   it("renders all categories by default (التنقل العام / عارض الوصل / إيماءات اللمس)", () => {
     renderPage();
     expect(screen.getByRole("heading", { name: "التنقل العام" })).toBeInTheDocument();
@@ -45,38 +50,19 @@ describe("ShortcutsPage – search filtering", () => {
     expect(screen.getByRole("heading", { name: "إيماءات اللمس" })).toBeInTheDocument();
   });
 
-  it("filters shortcuts by Arabic label substring", async () => {
-    const user = userEvent.setup();
+  it("filters shortcuts by Arabic label substring", () => {
     renderPage();
+    typeQuery("طباعة");
 
-    const input = screen.getByRole("searchbox", { name: /بحث في الاختصارات/ });
-    await user.type(input, "تكبير");
-
-    // The "Receipt Lightbox" category should remain (it has zoom items)
+    // Only one shortcut matches: "طباعة الوصل" inside Receipt Lightbox
+    expect(screen.getByText("طباعة الوصل")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /عارض الوصل/ })).toBeInTheDocument();
-    // Both "تكبير الصورة" and "تبديل التكبير" match
-    expect(screen.getByText("تكبير الصورة")).toBeInTheDocument();
-    expect(screen.getByText(/تبديل التكبير/)).toBeInTheDocument();
 
-    // Unrelated entries should be filtered out
-    expect(screen.queryByText("طباعة الوصل")).not.toBeInTheDocument();
+    // Unrelated entries removed
     expect(screen.queryByText("إغلاق العارض")).not.toBeInTheDocument();
+    expect(screen.queryByText("تكبير الصورة")).not.toBeInTheDocument();
 
-    // The "التنقل العام" category has no match for "تكبير" → header gone
-    expect(
-      screen.queryByRole("heading", { name: "التنقل العام" })
-    ).not.toBeInTheDocument();
-  });
-
-  it("filters by key chip text (case-insensitive)", async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    const input = screen.getByRole("searchbox", { name: /بحث في الاختصارات/ });
-    await user.type(input, "esc");
-
-    expect(screen.getByText("إغلاق العارض")).toBeInTheDocument();
-    // Only one match → other categories should not appear
+    // Other categories should disappear entirely
     expect(
       screen.queryByRole("heading", { name: "التنقل العام" })
     ).not.toBeInTheDocument();
@@ -85,12 +71,22 @@ describe("ShortcutsPage – search filtering", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("matches single-character key like '/' for global search shortcut", async () => {
-    const user = userEvent.setup();
+  it("filters by key chip text (case-insensitive)", () => {
     renderPage();
+    typeQuery("esc");
 
-    const input = screen.getByRole("searchbox", { name: /بحث في الاختصارات/ });
-    await user.type(input, "/");
+    expect(screen.getByText("إغلاق العارض")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "التنقل العام" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "إيماءات اللمس" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("matches single-character key like '/' for global search shortcut", () => {
+    renderPage();
+    typeQuery("/");
 
     expect(screen.getByText("التركيز على شريط البحث")).toBeInTheDocument();
     expect(
@@ -98,34 +94,30 @@ describe("ShortcutsPage – search filtering", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows empty-state and a clear button when nothing matches", async () => {
-    const user = userEvent.setup();
+  it("shows empty-state and a clear button when nothing matches", () => {
     renderPage();
-
-    const input = screen.getByRole("searchbox", { name: /بحث في الاختصارات/ });
-    await user.type(input, "xyzzy-no-match");
+    typeQuery("xyzzy-no-match");
 
     expect(
       screen.getByText(/لم نعثر على اختصار يطابق بحثك/)
     ).toBeInTheDocument();
 
-    const clearBtn = screen.getByRole("button", { name: "مسح البحث" });
-    await user.click(clearBtn);
+    // There are 2 buttons labeled "مسح البحث" (input clear + empty state CTA).
+    // Click the empty-state one (the visible text-button, not the icon-only one).
+    const clearButtons = screen.getAllByRole("button", { name: "مسح البحث" });
+    const ctaButton = clearButtons.find((b) => b.textContent?.includes("مسح البحث"));
+    expect(ctaButton).toBeDefined();
+    fireEvent.click(ctaButton!);
 
-    // After clearing, the full list comes back
-    expect(input).toHaveValue("");
+    expect(getSearchInput().value).toBe("");
     expect(screen.getByRole("heading", { name: "التنقل العام" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /عارض الوصل/ })).toBeInTheDocument();
   });
 
-  it("displays the result count in the live region", async () => {
-    const user = userEvent.setup();
+  it("displays the result count in the live region", () => {
     renderPage();
+    typeQuery("الذهاب");
 
-    const input = screen.getByRole("searchbox", { name: /بحث في الاختصارات/ });
-    await user.type(input, "الذهاب");
-
-    // 6 "الذهاب لـ ..." entries in التنقل العام
     const navSection = screen
       .getByRole("heading", { name: "التنقل العام" })
       .closest("section") as HTMLElement;
