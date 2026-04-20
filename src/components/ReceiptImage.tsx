@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Download, ZoomIn, X, Plus, Minus, RotateCcw, Maxi
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
 const extractStoragePath = (receiptUrl: string): string | null => {
   if (!receiptUrl) return null;
