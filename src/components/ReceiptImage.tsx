@@ -25,6 +25,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
