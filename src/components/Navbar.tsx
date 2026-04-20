@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell, IdCard } from "lucide-react";
+import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell, IdCard, Keyboard } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,14 @@ export default function Navbar() {
                     إعدادات الإشعارات
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/help/shortcuts" className="flex items-center gap-2 cursor-pointer">
+                    <Keyboard className="w-4 h-4" />
+                    اختصارات لوحة المفاتيح
+                    <kbd className="ml-auto px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono text-[10px] border border-border/60">?</kbd>
+                  </Link>
+                </DropdownMenuItem>
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator />
@@ -224,6 +232,10 @@ export default function Navbar() {
                   </Link>
                   <Link to="/notification-settings" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                     🔔 إعدادات الإشعارات
+                  </Link>
+                  <Link to="/help/shortcuts" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
+                    <Keyboard className="w-4 h-4" />
+                    اختصارات لوحة المفاتيح
                   </Link>
                   {isAdmin && (
                     <Link to="/dashboard" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
