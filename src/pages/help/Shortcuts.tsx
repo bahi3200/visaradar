@@ -63,10 +63,10 @@ const categories: ShortcutCategory[] = [
   },
 ];
 
-function KeyChip({ k }: { k: string }) {
+function KeyChip({ k, query = "" }: { k: string; query?: string }) {
   return (
     <kbd className="inline-flex items-center justify-center min-w-[2.25rem] h-9 px-2.5 rounded-lg bg-muted/60 border border-border text-foreground font-mono text-sm shadow-sm">
-      {k}
+      <HighlightedText text={k} query={query} />
     </kbd>
   );
 }
