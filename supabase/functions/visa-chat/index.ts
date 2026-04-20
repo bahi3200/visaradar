@@ -52,6 +52,38 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
+
+    // Per-user rate limit: max 30 messages per rolling hour
+    const RATE_LIMIT = 30;
+    const WINDOW_MS = 60 * 60 * 1000;
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const sinceIso = new Date(Date.now() - WINDOW_MS).toISOString();
+    const { count, error: countError } = await admin
+      .from("chat_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", sinceIso);
+    if (countError) {
+      console.error("rate limit count error:", countError);
+    } else if ((count ?? 0) >= RATE_LIMIT) {
+      return new Response(
+        JSON.stringify({
+          error: `لقد تجاوزت الحد المسموح (${RATE_LIMIT} رسالة في الساعة). يرجى المحاولة لاحقاً.`,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
+          },
+        }
+      );
+    }
 
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -90,6 +122,14 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Record successful invocation against the user's quota
+    admin
+      .from("chat_rate_limits")
+      .insert({ user_id: userId })
+      .then(({ error }) => {
+        if (error) console.error("rate limit insert error:", error);
+      });
 
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
