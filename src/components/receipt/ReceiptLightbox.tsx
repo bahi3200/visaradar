@@ -250,34 +250,62 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
       </Dialog>
 
       <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
-        <DialogContent className="max-w-xs p-0 bg-background border-border/50">
+        <DialogContent className="max-w-md p-0 bg-background border-border/50 max-h-[85vh] overflow-y-auto">
           <div className="p-5">
-            <DialogTitle className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-primary" />
-              اختصارات لوحة المفاتيح
+            <DialogTitle className="text-base font-bold text-foreground mb-1 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-accent" />
+              دليل الاختصارات
             </DialogTitle>
-            <ul className="space-y-2 text-sm text-foreground">
+            <p className="text-xs text-muted-foreground mb-4">
+              استخدم لوحة المفاتيح للتحكم السريع بالعارض
+            </p>
+            <ul className="space-y-1.5 text-sm">
               {[
-                { k: "+", label: "تكبير" },
-                { k: "−", label: "تصغير" },
-                { k: "0", label: "إعادة الضبط" },
-                { k: "R", label: "تدوير 90°" },
-                { k: "⇧R", label: "تدوير عكسي 90°" },
-                { k: "F", label: "ملء الشاشة" },
-                { k: "P", label: "طباعة" },
-                { k: "Esc", label: "إغلاق" },
+                { k: ["+"], label: "تكبير الصورة", Icon: Plus },
+                { k: ["−"], label: "تصغير الصورة", Icon: Minus },
+                { k: ["0"], label: "إعادة الضبط للحجم الأصلي", Icon: RefreshCw },
+                { k: ["R"], label: "تدوير 90° مع عقارب الساعة", Icon: RotateCw },
+                { k: ["⇧", "R"], label: "تدوير عكس عقارب الساعة", Icon: RotateCcw },
+                { k: ["F"], label: "تبديل ملء الشاشة", Icon: Maximize2 },
+                { k: ["P"], label: "طباعة الوصل", Icon: Printer },
+                { k: ["Esc"], label: "إغلاق العارض", Icon: X },
               ].map((row) => (
-                <li key={row.k} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-                  <span className="text-muted-foreground">{row.label}</span>
-                  <kbd className="px-2 py-0.5 rounded bg-background border border-border/50 text-foreground font-mono text-xs">
-                    {row.k}
-                  </kbd>
+                <li
+                  key={row.label}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="shrink-0 w-7 h-7 rounded-md bg-background border border-border/50 flex items-center justify-center">
+                      <row.Icon className="w-3.5 h-3.5 text-accent" />
+                    </div>
+                    <span className="text-foreground truncate">{row.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {row.k.map((key, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        {i > 0 && <span className="text-muted-foreground text-xs">+</span>}
+                        <kbd className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded bg-background border border-border text-foreground font-mono text-xs shadow-sm">
+                          {key}
+                        </kbd>
+                      </span>
+                    ))}
+                  </div>
                 </li>
               ))}
             </ul>
-            <p className="text-[11px] text-muted-foreground mt-3 text-center">
-              يمكنك أيضاً قرص الصورة بإصبعين للتكبير
-            </p>
+            <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-3 py-2.5">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                💡 يمكنك أيضاً <strong className="text-foreground">قرص الصورة بإصبعين</strong> للتكبير على الأجهزة اللوحية، و<strong className="text-foreground">النقر المزدوج</strong> لتبديل التكبير السريع.
+              </p>
+            </div>
+            <Link
+              to="/help/shortcuts"
+              onClick={() => setShortcutsOpen(false)}
+              className="mt-3 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-medium bg-accent/10 text-accent border border-accent/30 hover:bg-accent/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              عرض دليل الاختصارات الكامل
+            </Link>
           </div>
         </DialogContent>
       </Dialog>
