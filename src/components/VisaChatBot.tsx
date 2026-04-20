@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "visa-chat-history";
+const RATE_LIMIT_MAX = 30; // keep in sync with edge function
 const SUGGESTED_QUESTIONS = [
   "ما هي الوثائق المطلوبة لتأشيرة شنغن؟",
   "كيف أحجز موعداً في VFS؟",
