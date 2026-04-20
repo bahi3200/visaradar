@@ -1,16 +1,19 @@
+import { forwardRef } from "react";
 import { Loader2, Download, ZoomIn } from "lucide-react";
 
-interface ReceiptThumbnailProps {
+export interface ReceiptThumbnailProps {
   signedUrl: string;
   downloading: boolean;
   onOpen: () => void;
   onDownload: () => void;
 }
 
-export function ReceiptThumbnail({ signedUrl, downloading, onOpen, onDownload }: ReceiptThumbnailProps) {
+export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
+  ({ signedUrl, downloading, onOpen, onDownload }, ref) => {
   return (
     <div className="flex items-start gap-3 flex-wrap">
       <button
+        ref={ref}
         type="button"
         onClick={onOpen}
         className="relative group rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
@@ -40,4 +43,7 @@ export function ReceiptThumbnail({ signedUrl, downloading, onOpen, onDownload }:
       </button>
     </div>
   );
-}
+  }
+);
+
+ReceiptThumbnail.displayName = "ReceiptThumbnail";
