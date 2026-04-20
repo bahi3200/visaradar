@@ -4,16 +4,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptThumbnail } from "./receipt/ReceiptThumbnail";
 import { ReceiptLightbox } from "./receipt/ReceiptLightbox";
-
-const extractStoragePath = (receiptUrl: string): string | null => {
-  if (!receiptUrl) return null;
-  if (receiptUrl.startsWith("receipts/")) {
-    return receiptUrl.replace(/^receipts\//, "");
-  }
-  const match = receiptUrl.match(/\/object\/(?:public\/|sign\/)?receipts\/(.+?)(?:\?|$)/);
-  if (match) return decodeURIComponent(match[1]);
-  return null;
-};
+import { extractStoragePath } from "@/lib/receiptStorage";
 
 export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
