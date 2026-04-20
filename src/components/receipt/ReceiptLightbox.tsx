@@ -47,7 +47,26 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw });
+  const handlePrint = () => {
+    try {
+      const w = window.open("", "_blank", "width=800,height=900");
+      if (!w) {
+        toast.error("تعذر فتح نافذة الطباعة — تأكد من السماح بالنوافذ المنبثقة");
+        return;
+      }
+      w.document.write(`<!doctype html><html><head><title>طباعة الوصل</title><style>
+        @page { margin: 12mm; }
+        html,body { margin:0; padding:0; background:#fff; }
+        .wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        img { max-width:100%; max-height:100vh; transform: rotate(${rotation}deg); transform-origin: center; }
+      </style></head><body><div class="wrap"><img src="${signedUrl}" alt="receipt" onload="setTimeout(()=>{window.focus();window.print();},150)"/></div></body></html>`);
+      w.document.close();
+    } catch {
+      toast.error("فشل الطباعة");
+    }
+  };
+
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw, onPrint: handlePrint });
 
   return (
     <>
