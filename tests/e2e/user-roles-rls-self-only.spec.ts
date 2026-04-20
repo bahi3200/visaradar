@@ -50,10 +50,39 @@ async function confirmE2eEmail(email: string): Promise<boolean> {
   return res.ok;
 }
 
+async function deleteE2eUser(email: string): Promise<boolean> {
+  const secret = process.env.E2E_ADMIN_SECRET;
+  if (!secret) return false;
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/e2e-confirm-user`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-e2e-secret": secret,
+      apikey: SUPABASE_ANON_KEY,
+      authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ email, action: "delete" }),
+  });
+  return res.ok;
+}
+
 test.describe("user_roles RLS — SELECT returns only the caller's own row", () => {
+  const createdEmails: string[] = [];
+
+  test.afterEach(async () => {
+    // Clean up all created test users from the live backend
+    for (const email of createdEmails) {
+      await deleteE2eUser(email);
+    }
+    createdEmails.length = 0;
+  });
+
   test("a regular user only sees their own user_roles row (and not other users')", async () => {
     const password = "TestPassw0rd!Strong";
     const email = uniqueEmail("urls-self");
+
+    // Track email for cleanup
+    createdEmails.push(email);
 
     const client = newClient();
     const { data: signUp, error: signUpErr } = await client.auth.signUp({
