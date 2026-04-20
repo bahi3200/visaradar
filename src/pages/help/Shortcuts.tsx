@@ -190,11 +190,11 @@ export default function ShortcutsPage() {
                   </header>
 
                   <ul className="divide-y divide-border/40">
-                    {cat.shortcuts.map((s) => {
+                    {cat.shortcuts.map((s, idx) => {
                       const Icon = s.icon;
                       return (
                         <li
-                          key={s.label}
+                          key={`${s.label}-${s.keys.join("+")}-${idx}`}
                           className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
