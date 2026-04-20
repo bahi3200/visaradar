@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw, RefreshCw } from "lucide-react";
+import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw, RefreshCw, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -47,7 +47,26 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw });
+  const handlePrint = () => {
+    try {
+      const w = window.open("", "_blank", "width=800,height=900");
+      if (!w) {
+        toast.error("تعذر فتح نافذة الطباعة — تأكد من السماح بالنوافذ المنبثقة");
+        return;
+      }
+      w.document.write(`<!doctype html><html><head><title>طباعة الوصل</title><style>
+        @page { margin: 12mm; }
+        html,body { margin:0; padding:0; background:#fff; }
+        .wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        img { max-width:100%; max-height:100vh; transform: rotate(${rotation}deg); transform-origin: center; }
+      </style></head><body><div class="wrap"><img src="${signedUrl}" alt="receipt" onload="setTimeout(()=>{window.focus();window.print();},150)"/></div></body></html>`);
+      w.document.close();
+    } catch {
+      toast.error("فشل الطباعة");
+    }
+  };
+
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw, onPrint: handlePrint });
 
   return (
     <>
@@ -139,6 +158,14 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </button>
                     <button
                       type="button"
+                      onClick={handlePrint}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="طباعة"
+                    >
+                      <Printer className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={onDownload}
                       disabled={downloading}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -195,6 +222,11 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </span>
                     <span className="text-border">•</span>
                     <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">P</kbd>
+                      طباعة
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">Esc</kbd>
                       إغلاق
                     </span>
@@ -221,6 +253,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                 { k: "R", label: "تدوير 90°" },
                 { k: "⇧R", label: "تدوير عكسي 90°" },
                 { k: "F", label: "ملء الشاشة" },
+                { k: "P", label: "طباعة" },
                 { k: "Esc", label: "إغلاق" },
               ].map((row) => (
                 <li key={row.k} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
