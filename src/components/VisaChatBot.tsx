@@ -423,9 +423,25 @@ export default function VisaChatBot() {
                     <h3 className="font-heading font-black text-accent-foreground text-sm">
                       مساعد التأشيرات
                     </h3>
-                    <p className="text-[11px] text-accent-foreground/80 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      {user ? "محفوظ في حسابك" : "متصل الآن"}
+                    <p className="text-[11px] text-accent-foreground/80 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                        {user ? "محفوظ في حسابك" : "متصل الآن"}
+                      </span>
+                      {user && usedThisHour !== null && (
+                        <span
+                          title="عدد الرسائل في الساعة الأخيرة"
+                          className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            usedThisHour >= RATE_LIMIT_MAX
+                              ? "bg-destructive text-destructive-foreground"
+                              : usedThisHour >= RATE_LIMIT_MAX * 0.8
+                                ? "bg-yellow-500/90 text-black"
+                                : "bg-accent-foreground/15 text-accent-foreground"
+                          }`}
+                        >
+                          {usedThisHour}/{RATE_LIMIT_MAX}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
