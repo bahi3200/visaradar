@@ -63,11 +63,45 @@ const categories: ShortcutCategory[] = [
   },
 ];
 
-function KeyChip({ k }: { k: string }) {
+function KeyChip({ k, query = "" }: { k: string; query?: string }) {
   return (
     <kbd className="inline-flex items-center justify-center min-w-[2.25rem] h-9 px-2.5 rounded-lg bg-muted/60 border border-border text-foreground font-mono text-sm shadow-sm">
-      {k}
+      <HighlightedText text={k} query={query} />
     </kbd>
+  );
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Renders `text`, wrapping case-insensitive substrings that match `query`
+ * in a <mark> with the accent color so users can spot what matched.
+ */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const trimmed = query.trim();
+  if (!trimmed) return <>{text}</>;
+
+  const splitRegex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
+  const lower = trimmed.toLowerCase();
+  const parts = text.split(splitRegex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === lower ? (
+          <mark
+            key={i}
+            className="rounded-sm bg-accent/25 text-foreground px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
   );
 }
 
@@ -209,7 +243,9 @@ export default function ShortcutsPage() {
                             {Icon && (
                               <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
                             )}
-                            <span className="text-sm text-foreground truncate">{s.label}</span>
+                            <span className="text-sm text-foreground truncate">
+                              <HighlightedText text={s.label} query={normalizedQuery} />
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {s.keys.map((k, i) => (
@@ -217,7 +253,7 @@ export default function ShortcutsPage() {
                                 {i > 0 && (
                                   <span className="text-muted-foreground text-xs">+</span>
                                 )}
-                                <KeyChip k={k} />
+                                <KeyChip k={k} query={normalizedQuery} />
                               </span>
                             ))}
                           </div>
