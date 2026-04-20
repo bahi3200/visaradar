@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw } from "lucide-react";
+import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -103,6 +103,14 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </button>
                     <button
                       type="button"
+                      onClick={handleRotateCcw}
+                      className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
+                      aria-label="تدوير عكسي 90°"
+                    >
+                      <RotateCcw className="w-4 h-4 text-foreground" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleRotate}
                       className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
                       aria-label="تدوير 90°"
@@ -115,7 +123,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                       className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors"
                       aria-label="إعادة الضبط"
                     >
-                      <RotateCcw className="w-4 h-4 text-foreground" />
+                      <RefreshCw className="w-4 h-4 text-foreground" />
                     </button>
                     <button
                       type="button"
