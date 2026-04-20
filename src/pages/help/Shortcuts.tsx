@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Keyboard, Image as ImageIcon, Maximize2, Printer, RotateCw, ZoomIn, ZoomOut, X, RefreshCw, Search, SearchX } from "lucide-react";
+import { ArrowRight, Keyboard, Image as ImageIcon, Maximize2, Printer, RotateCw, ZoomIn, ZoomOut, X, RefreshCw, Search, SearchX, Navigation, HelpCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface Shortcut {
@@ -19,6 +19,22 @@ interface ShortcutCategory {
 }
 
 const categories: ShortcutCategory[] = [
+  {
+    title: "التنقل العام",
+    description: "متاحة من أي صفحة في الموقع",
+    icon: Navigation,
+    shortcuts: [
+      { keys: ["/"], label: "التركيز على شريط البحث", icon: Search },
+      { keys: ["?"], label: "فتح دليل الاختصارات", icon: HelpCircle },
+      { keys: ["G", "H"], label: "الذهاب للصفحة الرئيسية" },
+      { keys: ["G", "D"], label: "الذهاب للوحة التحكم" },
+      { keys: ["G", "J"], label: "الذهاب لصفحة الوظائف" },
+      { keys: ["G", "R"], label: "الذهاب لطلباتي" },
+      { keys: ["G", "P"], label: "الذهاب للملف الشخصي" },
+      { keys: ["G", "V"], label: "الذهاب لدول الفيزا" },
+      { keys: ["G", "S"], label: "فتح دليل الاختصارات" },
+    ],
+  },
   {
     title: "عارض الوصل (Receipt Lightbox)",
     description: "تظهر عند فتح صورة وصل دفع من /my-requests",
