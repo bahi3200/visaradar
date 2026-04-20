@@ -72,12 +72,13 @@ describe("ShortcutsPage – search filtering", () => {
     typeQuery("طباعة");
 
     // Only one shortcut matches: "طباعة الوصل" inside Receipt Lightbox
-    expect(screen.getByText("طباعة الوصل")).toBeInTheDocument();
+    // (text may be split across <mark>/<span> due to highlight)
+    expect(screen.getByText(hasTextContent("طباعة الوصل"))).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /عارض الوصل/ })).toBeInTheDocument();
 
     // Unrelated entries removed
-    expect(screen.queryByText("إغلاق العارض")).not.toBeInTheDocument();
-    expect(screen.queryByText("تكبير الصورة")).not.toBeInTheDocument();
+    expect(screen.queryByText(hasTextContent("إغلاق العارض"))).not.toBeInTheDocument();
+    expect(screen.queryByText(hasTextContent("تكبير الصورة"))).not.toBeInTheDocument();
 
     // Other categories should disappear entirely
     expect(
@@ -94,7 +95,7 @@ describe("ShortcutsPage – search filtering", () => {
     // global "Esc → clear search" shortcut in التنقل العام.
     typeQuery("إغلاق العارض");
 
-    expect(screen.getByText("إغلاق العارض")).toBeInTheDocument();
+    expect(screen.getByText(hasTextContent("إغلاق العارض"))).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "التنقل العام" })
     ).not.toBeInTheDocument();
@@ -107,7 +108,7 @@ describe("ShortcutsPage – search filtering", () => {
     renderPage();
     typeQuery("/");
 
-    expect(screen.getByText("التركيز على شريط البحث")).toBeInTheDocument();
+    expect(screen.getByText(hasTextContent("التركيز على شريط البحث"))).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "التنقل العام" })
     ).toBeInTheDocument();
