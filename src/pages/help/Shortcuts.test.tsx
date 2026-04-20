@@ -42,6 +42,23 @@ function typeQuery(value: string) {
   fireEvent.change(getSearchInput(), { target: { value } });
 }
 
+/**
+ * Matches text content even if highlight wraps part of it in <mark>/<span>.
+ * Test passes if any element's combined textContent equals `expected`.
+ */
+function hasTextContent(expected: string) {
+  return (_content: string, node: Element | null): boolean => {
+    if (!node) return false;
+    const text = node.textContent ?? "";
+    if (text !== expected) return false;
+    // Avoid matching ancestors that also contain the same text via children
+    const childMatches = Array.from(node.children).some(
+      (c) => (c.textContent ?? "") === expected
+    );
+    return !childMatches;
+  };
+}
+
 describe("ShortcutsPage – search filtering", () => {
   it("renders all categories by default (التنقل العام / عارض الوصل / إيماءات اللمس)", () => {
     renderPage();
