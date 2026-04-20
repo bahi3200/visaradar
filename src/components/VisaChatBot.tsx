@@ -27,8 +27,35 @@ export default function VisaChatBot() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [usedThisHour, setUsedThisHour] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Count this user's chat requests in the last rolling hour
+  const refreshQuota = async () => {
+    if (!user) {
+      setUsedThisHour(null);
+      return;
+    }
+    const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count, error } = await supabase
+      .from("chat_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", sinceIso);
+    if (error) {
+      console.error("Failed to load quota:", error);
+      return;
+    }
+    setUsedThisHour(count ?? 0);
+  };
+
+  // Refresh quota when user changes or chat opens
+  useEffect(() => {
+    if (user && open) refreshQuota();
+    if (!user) setUsedThisHour(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, open]);
 
   // Load history: DB for logged-in users, localStorage for guests
   useEffect(() => {
