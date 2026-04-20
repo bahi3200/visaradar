@@ -24,7 +24,12 @@ const baseProps = {
 
 function renderLightbox(props = {}) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <ReceiptLightbox {...baseProps} {...props} />
     </MemoryRouter>
   );

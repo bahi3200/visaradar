@@ -34,7 +34,12 @@ vi.mock("@/components/NotificationsBell", () => ({
 
 function renderNavbar() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Navbar />
     </MemoryRouter>
   );
