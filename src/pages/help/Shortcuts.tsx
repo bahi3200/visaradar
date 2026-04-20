@@ -128,6 +128,13 @@ export default function ShortcutsPage() {
               data-global-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && query) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setQuery("");
+                }
+              }}
               placeholder="ابحث بالاسم أو المفتاح (مثل: تكبير، Esc، R)"
               aria-label="بحث في الاختصارات"
               className="w-full pr-10 pl-10 h-11 rounded-xl bg-muted/40 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:border-accent transition-colors"
