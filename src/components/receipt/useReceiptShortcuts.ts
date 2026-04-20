@@ -5,9 +5,10 @@ interface UseReceiptShortcutsParams {
   enabled: boolean;
   transformRef: React.MutableRefObject<ReactZoomPanPinchRef | null>;
   onToggleFullscreen: () => void;
+  onRotate: () => void;
 }
 
-export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen }: UseReceiptShortcutsParams) {
+export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen, onRotate }: UseReceiptShortcutsParams) {
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
@@ -20,8 +21,9 @@ export function useReceiptShortcuts({ enabled, transformRef, onToggleFullscreen 
       else if ((e.key === "-" || e.key === "_") && t) { e.preventDefault(); t.zoomOut(); }
       else if (e.key === "0" && t) { e.preventDefault(); t.resetTransform(); }
       else if (e.key === "f" || e.key === "F") { e.preventDefault(); onToggleFullscreen(); }
+      else if (e.key === "r" || e.key === "R") { e.preventDefault(); onRotate(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [enabled, transformRef, onToggleFullscreen]);
+  }, [enabled, transformRef, onToggleFullscreen, onRotate]);
 }

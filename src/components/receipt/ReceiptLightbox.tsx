@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle } from "lucide-react";
+import { Loader2, Download, X, Plus, Minus, RotateCcw, Maximize2, Minimize2, HelpCircle, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -17,8 +17,16 @@ interface ReceiptLightboxProps {
 export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, onDownload }: ReceiptLightboxProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [rotation, setRotation] = useState(0);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+
+  // Reset rotation when lightbox closes
+  useEffect(() => {
+    if (!open) setRotation(0);
+  }, [open]);
+
+  const handleRotate = () => setRotation((r) => (r + 90) % 360);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -38,7 +46,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen });
+  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate });
 
   return (
     <>
