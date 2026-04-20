@@ -222,6 +222,11 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     </span>
                     <span className="text-border">•</span>
                     <span className="flex items-center gap-1">
+                      <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">P</kbd>
+                      طباعة
+                    </span>
+                    <span className="text-border">•</span>
+                    <span className="flex items-center gap-1">
                       <kbd className="px-1.5 py-0.5 rounded bg-muted/70 border border-border/50 text-foreground font-mono text-[10px]">Esc</kbd>
                       إغلاق
                     </span>
