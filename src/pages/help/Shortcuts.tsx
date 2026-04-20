@@ -71,6 +71,39 @@ function KeyChip({ k }: { k: string }) {
   );
 }
 
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Renders `text`, wrapping case-insensitive substrings that match `query`
+ * in a <mark> with the accent color so users can spot what matched.
+ */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const trimmed = query.trim();
+  if (!trimmed) return <>{text}</>;
+
+  const regex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark
+            key={i}
+            className="rounded-sm bg-accent/25 text-foreground px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 export default function ShortcutsPage() {
   const [query, setQuery] = useState("");
 
