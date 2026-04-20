@@ -68,10 +68,16 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
               <span className="text-accent text-xs font-bold">{badgeLabel}</span>
             </motion.div>
 
-            <h1 className="font-heading text-3xl md:text-5xl font-black text-foreground mb-2 leading-tight">
+            <h1
+              className="font-heading text-3xl md:text-5xl font-black text-foreground mb-2 leading-tight"
+              style={{ textShadow: "0 2px 16px hsl(var(--background) / 0.8), 0 1px 3px hsl(var(--background) / 0.9)" }}
+            >
               مرحباً، {fullName || "عزيزي"} <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">👋</span>
             </h1>
-            <p className="text-sm text-muted-foreground/80 max-w-sm">
+            <p
+              className="text-sm text-foreground/90 max-w-sm"
+              style={{ textShadow: "0 1px 8px hsl(var(--background) / 0.8)" }}
+            >
               {isAdmin
                 ? "مرحباً بك — كل شيء تحت السيطرة"
                 : isSubscribed
