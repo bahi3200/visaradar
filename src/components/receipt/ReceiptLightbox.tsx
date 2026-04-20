@@ -253,6 +253,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                 { k: "R", label: "تدوير 90°" },
                 { k: "⇧R", label: "تدوير عكسي 90°" },
                 { k: "F", label: "ملء الشاشة" },
+                { k: "P", label: "طباعة" },
                 { k: "Esc", label: "إغلاق" },
               ].map((row) => (
                 <li key={row.k} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
