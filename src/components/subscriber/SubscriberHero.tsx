@@ -42,9 +42,10 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
         style={reduced ? {} : { y: videoY, scale: videoScale }}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Multi-layer gradient for depth */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
+      {/* Multi-layer gradient for depth + readability scrim */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-background/20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent" />
+      <div className="absolute inset-0 bg-black/20" />
 
       <motion.div
         className="absolute inset-0 flex items-end"
