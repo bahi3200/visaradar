@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ const backRoutes: Record<string, { to: string; label: string }> = {
 /** Pages where back button should NOT appear */
 const hiddenOnPaths = ["/", "/auth/login", "/dashboard"];
 
-export default function BackButton() {
+const BackButton = forwardRef<HTMLButtonElement>((_, ref) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -62,6 +63,7 @@ export default function BackButton() {
   return (
     <div className="container pt-4">
       <Button
+        ref={ref}
         variant="ghost"
         size="sm"
         onClick={() => navigate(route.to)}
@@ -72,4 +74,8 @@ export default function BackButton() {
       </Button>
     </div>
   );
-}
+});
+
+BackButton.displayName = "BackButton";
+
+export default BackButton;
