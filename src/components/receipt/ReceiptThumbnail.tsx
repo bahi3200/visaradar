@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
+import { Loader2, Download, ZoomIn, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ReceiptFileKind } from "@/lib/receiptStorage";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,20 +23,29 @@ export interface ReceiptThumbnailProps {
   fullSizeNotice?: boolean;
   /** Optional callback to retry fetching the signed URL / image. */
   onRetry?: () => void;
+  fileKind?: ReceiptFileKind;
+  filename?: string;
 }
 
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
-  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice, onRetry }, ref) => {
+  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice, onRetry, fileKind = "image", filename }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
   const [slow, setSlow] = useState(false);
+  const isImage = fileKind === "image";
 
   // Reset state when src changes (retry, new signed URL)
   useEffect(() => {
+    if (!isImage) {
+      setImgState("loaded");
+      setSlow(false);
+      return;
+    }
     setImgState("loading");
     setSlow(false);
-  }, [signedUrl]);
+  }, [signedUrl, isImage]);
 
   useEffect(() => {
+    if (!isImage) return;
     if (imgState !== "loading") return;
     const slowTimer = window.setTimeout(() => setSlow(true), SLOW_LOAD_THRESHOLD_MS);
     // Hard fallback: if the <img> never fires load/error (transform 400, CDN
@@ -48,7 +58,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
       window.clearTimeout(slowTimer);
       window.clearTimeout(hardTimer);
     };
-  }, [imgState, signedUrl]);
+  }, [imgState, signedUrl, isImage]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -59,9 +69,19 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         type="button"
         onClick={onOpen}
         className="relative group w-full h-full rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent bg-muted/20"
-        aria-label="تكبير صورة الوصل"
-        disabled={imgState === "error"}
+        aria-label={isImage ? "تكبير صورة الوصل" : "فتح ملف الوصل"}
+        disabled={isImage && imgState === "error"}
       >
+        {!isImage ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/20 px-3 text-center">
+            <FileText className="w-10 h-10 text-primary" />
+            <span className="text-sm font-bold text-foreground">وصل PDF</span>
+            <span className="max-w-full truncate text-[11px] text-muted-foreground" title={filename}>
+              {filename || "receipt.pdf"}
+            </span>
+          </div>
+        ) : (
+          <>
         {/* Stable placeholder: same icon always rendered; only background and message swap */}
         <div
           className={`absolute inset-0 transition-opacity duration-200 ${
@@ -118,11 +138,13 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
             imgState === "loaded" ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         />
+          </>
+        )}
         <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ZoomIn className="w-6 h-6 text-foreground" />
+          {isImage ? <ZoomIn className="w-6 h-6 text-foreground" /> : <FileText className="w-6 h-6 text-foreground" />}
         </span>
       </button>
-      {onRetry && (imgState === "error" || (imgState === "loading" && slow)) && (
+      {isImage && onRetry && (imgState === "error" || (imgState === "loading" && slow)) && (
         <button
           type="button"
           onClick={onRetry}
