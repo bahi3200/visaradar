@@ -76,11 +76,25 @@ export type NotifAttemptStatus =
   | "unsupported"  // Notification API not available
   | "error";       // any other failure (server / SW / constructor)
 
+// Structured reason for *why* a permission attempt was blocked. Distinct from the
+// free-text `message` so the UI can render a stable label/icon per cause.
+export type NotifBlockReason =
+  | "insecure_context"  // page served over HTTP (isSecureContext === false)
+  | "iframe"            // running inside a cross-origin iframe (e.g. editor preview)
+  | "no_service_worker" // SW required (Android/PWA) but not registered
+  | "api_missing"       // Notification API not present
+  | "permission_denied" // browser permission state is "denied"
+  | "user_dismissed"    // user closed the prompt without granting
+  | "delivery_failed"   // permission OK but display call failed
+  | "server_error"      // edge function / network failure
+  | "other";
+
 export type NotifAttempt = {
   status: NotifAttemptStatus;
   at: number;            // epoch ms
   source: "local" | "server";
   message?: string;
+  reason?: NotifBlockReason;
 };
 
 const LAST_ATTEMPT_KEY = "notif_last_attempt";
