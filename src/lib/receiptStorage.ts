@@ -13,3 +13,18 @@ export const extractStoragePath = (receiptUrl: string): string | null => {
   if (match) return decodeURIComponent(match[1]);
   return null;
 };
+
+export type ReceiptFileKind = "image" | "pdf" | "file";
+
+export const getReceiptFilename = (receiptUrl: string): string => {
+  const clean = receiptUrl.split("?")[0];
+  const path = extractStoragePath(clean) || clean;
+  return decodeURIComponent(path.split("/").pop() || "receipt");
+};
+
+export const getReceiptFileKind = (receiptUrl: string): ReceiptFileKind => {
+  const filename = getReceiptFilename(receiptUrl).toLowerCase();
+  if (filename.endsWith(".pdf")) return "pdf";
+  if (/\.(avif|gif|jpe?g|png|webp)$/i.test(filename)) return "image";
+  return "file";
+};
