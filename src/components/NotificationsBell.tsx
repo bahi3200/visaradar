@@ -51,6 +51,15 @@ export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const channelInstanceRef = useRef(`notifications-${crypto.randomUUID()}`);
+  const [permState, setPermState] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      setPermState("unsupported");
+    } else {
+      setPermState(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
