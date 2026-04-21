@@ -294,6 +294,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
         at: Date.now(),
         source: "server",
         message: e?.message ?? "server error",
+        reason: "server_error",
       });
     } finally {
       setSending(false);
