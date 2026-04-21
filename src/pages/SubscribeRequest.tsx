@@ -667,15 +667,25 @@ export default function SubscribeRequestPage() {
               <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/40 transition-colors">
                 {receiptPreview ? (
                   <div className="space-y-3">
-                    <img src={receiptPreview} alt="Receipt" className="max-h-48 mx-auto rounded-lg" />
-                    <button onClick={() => { setReceiptFile(null); setReceiptPreview(""); }} className="text-xs text-destructive hover:underline">إزالة</button>
+                    {isReceiptPdf(receiptFile) ? (
+                      <div className="mx-auto flex max-w-xs items-center justify-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-4 py-5 text-right">
+                        <FileText className="h-8 w-8 shrink-0 text-primary" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground">تم اختيار ملف PDF</p>
+                          <p className="truncate text-xs text-muted-foreground">{receiptFile?.name}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <img src={receiptPreview} alt="Receipt" className="max-h-48 mx-auto rounded-lg" />
+                    )}
+                    <button onClick={() => { setReceiptFile(null); if (receiptPreview) URL.revokeObjectURL(receiptPreview); setReceiptPreview(""); }} className="text-xs text-destructive hover:underline">إزالة</button>
                   </div>
                 ) : (
                   <label className="cursor-pointer space-y-2 block">
                     <FileImage className="w-10 h-10 text-muted-foreground mx-auto" />
-                    <p className="text-sm text-muted-foreground">اضغط لتحميل صورة الوصل</p>
-                    <p className="text-xs text-muted-foreground/60">JPG, PNG - حد أقصى 5MB</p>
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                    <p className="text-sm text-muted-foreground">اضغط لتحميل صورة أو PDF للوصل</p>
+                    <p className="text-xs text-muted-foreground/60">JPG, PNG, WEBP, PDF - حد أقصى {MAX_RECEIPT_SIZE_MB}MB</p>
+                    <input type="file" accept="image/*,application/pdf,.pdf" onChange={handleFileChange} className="hidden" />
                   </label>
                 )}
               </div>
