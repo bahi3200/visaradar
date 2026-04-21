@@ -210,10 +210,18 @@ export default function NotificationPermissionBanner() {
   };
 
   const handleDismiss = () => {
-    setDismissed(true);
-    try {
-      localStorage.setItem(DISMISSED_KEY, "true");
-    } catch {}
+    // If the user is just closing the success banner after granting, don't snooze.
+    if (justGranted || permission === "granted") {
+      setJustGranted(false);
+      return;
+    }
+    const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+    setSnoozeUntil(until);
+    writeSnoozeUntil(until);
+    toast.message(`سنذكّرك بعد ${SNOOZE_DAYS} أيام`, {
+      description: "يمكنك دائماً تفعيل الإشعارات من إعدادات حسابك.",
+      duration: 4000,
+    });
   };
 
   // Hide banner entirely on public routes or before auth resolves.
@@ -221,7 +229,8 @@ export default function NotificationPermissionBanner() {
   if (permission === "unsupported") return null;
   // Keep visible after granting so the user can test, otherwise hide when granted.
   if (permission === "granted" && !justGranted) return null;
-  if (dismissed && permission !== "denied" && !justGranted) return null;
+  // "denied" always shows (it's important info); other states respect snooze.
+  if (isSnoozed && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
   const isGranted = permission === "granted";
