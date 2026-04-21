@@ -373,16 +373,58 @@ export default function NotificationPermissionBanner() {
         tag: "test-notification",
       };
 
+      // Pre-flight: ensure a Service Worker is registered when required.
+      // Android Chrome / PWA contexts cannot use `new Notification(...)` and need
+      // an active SW with showNotification(). Detect that case explicitly so the
+      // user gets a clear message instead of a silent failure.
+      const ua = navigator.userAgent;
+      const isAndroid = /Android/i.test(ua);
+      const isStandalone =
+        window.matchMedia?.("(display-mode: standalone)").matches ||
+        (navigator as { standalone?: boolean }).standalone === true;
+      const requiresSW = isAndroid || isStandalone;
+
+      let swReg: ServiceWorkerRegistration | null = null;
+      if ("serviceWorker" in navigator) {
+        try {
+          swReg = (await navigator.serviceWorker.getRegistration()) ?? null;
+          // If we expect SW but none is registered, try registering on the fly.
+          if (!swReg && requiresSW) {
+            try {
+              swReg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+              await navigator.serviceWorker.ready;
+            } catch (regErr) {
+              console.warn("[notif] on-demand SW register failed", regErr);
+            }
+          }
+        } catch (lookupErr) {
+          console.warn("[notif] getRegistration failed", lookupErr);
+        }
+      }
+
+      if (requiresSW && (!swReg || typeof swReg.showNotification !== "function")) {
+        toast.error("تعذّر إرسال الإشعار", {
+          description:
+            "Service Worker غير مسجَّل. هذه الميزة تعمل فقط في النسخة المنشورة (HTTPS). افتح الرابط المنشور أو ثبّت التطبيق من /install ثم أعد المحاولة.",
+          duration: 7000,
+        });
+        recordNotifAttempt({
+          status: "error",
+          at: Date.now(),
+          source: "local",
+          message: "service worker not registered",
+        });
+        setSendingTest(false);
+        return;
+      }
+
       let delivered = false;
       // 1) Prefer the ServiceWorker route — required on Android Chrome and
       //    PWA contexts where `new Notification()` throws "Illegal constructor".
-      if ("serviceWorker" in navigator) {
+      if (swReg && typeof swReg.showNotification === "function") {
         try {
-          const reg = await navigator.serviceWorker.getRegistration();
-          if (reg && typeof reg.showNotification === "function") {
-            await reg.showNotification(title, options);
-            delivered = true;
-          }
+          await swReg.showNotification(title, options);
+          delivered = true;
         } catch (swErr) {
           console.warn("[notif] SW showNotification failed", swErr);
         }
