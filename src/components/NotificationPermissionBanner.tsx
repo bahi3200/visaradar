@@ -209,7 +209,7 @@ export default function NotificationPermissionBanner() {
       // Re-check just before firing — route or auth may have changed during the delay.
       if (!canPrompt) return;
       try {
-        localStorage.setItem(PROMPTED_KEY, "true");
+        localStorage.setItem(promptedKey(userId), "true");
         const result = await Notification.requestPermission();
         setPermission(result as PermissionState);
         if (result === "granted") {
