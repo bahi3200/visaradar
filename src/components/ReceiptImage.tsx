@@ -196,6 +196,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         onDownload={() => handleDownload("full")}
         onDownloadThumb={thumbDownloadAvailable ? () => handleDownload("thumb") : undefined}
         fullSizeNotice={transformBlocked}
+        onRetry={handleRetry}
       />
       <ReceiptLightbox
         open={lightboxOpen}
