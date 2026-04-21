@@ -27,6 +27,7 @@ import {
   setVolume,
   triggerAlert,
   type NotifAttempt,
+  type NotifBlockReason,
   getLastNotifAttempt,
   recordNotifAttempt,
   NOTIF_ATTEMPT_EVENT,
@@ -92,6 +93,19 @@ const STATUS_META: Record<
     icon: XCircle,
     classes: "bg-destructive/15 text-destructive border-destructive/30",
   },
+};
+
+// Human-readable label for the structured block reason.
+const REASON_LABEL: Record<NotifBlockReason, string> = {
+  insecure_context: "اتصال غير آمن (HTTPS مطلوب)",
+  iframe: "معاينة داخل إطار (iframe)",
+  no_service_worker: "Service Worker غير مسجَّل",
+  api_missing: "API الإشعارات غير متاح في هذا المتصفح",
+  permission_denied: "إذن المتصفح مرفوض",
+  user_dismissed: "تم إغلاق نافذة الطلب دون منح الإذن",
+  delivery_failed: "تعذّر عرض الإشعار بعد منح الإذن",
+  server_error: "فشل من جهة الخادم",
+  other: "سبب غير مصنَّف",
 };
 
 function formatRelative(ts: number): string {
