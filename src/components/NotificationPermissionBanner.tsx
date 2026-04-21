@@ -318,6 +318,11 @@ export default function NotificationPermissionBanner() {
       toast.error("سجّل الدخول أولاً لتفعيل الإشعارات");
       return;
     }
+    const ctxIssue = getPermissionContextIssue();
+    if (ctxIssue) {
+      toast.error("تعذّر تفعيل الإشعارات", { description: ctxIssue, duration: 7000 });
+      return;
+    }
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
