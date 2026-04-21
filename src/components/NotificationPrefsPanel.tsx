@@ -10,6 +10,10 @@ import {
   Loader2,
   Bell,
   Lock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +26,10 @@ import {
   setAlertMode,
   setVolume,
   triggerAlert,
+  type NotifAttempt,
+  getLastNotifAttempt,
+  recordNotifAttempt,
+  NOTIF_ATTEMPT_EVENT,
 } from "@/lib/notificationPrefs";
 
 // Keep this in sync with NotificationPermissionBanner — these are the routes
@@ -47,6 +55,111 @@ const OPTIONS: { value: AlertMode; label: string; icon: typeof Volume2 }[] = [
   { value: "silent", label: "بدون", icon: BellOff },
 ];
 
+const STATUS_META: Record<
+  NotifAttempt["status"],
+  { label: string; icon: typeof CheckCircle2; classes: string }
+> = {
+  success: {
+    label: "نجح",
+    icon: CheckCircle2,
+    classes: "bg-primary/15 text-primary border-primary/30",
+  },
+  denied: {
+    label: "مرفوض",
+    icon: XCircle,
+    classes: "bg-destructive/15 text-destructive border-destructive/30",
+  },
+  dismissed: {
+    label: "أُغلق دون منح الإذن",
+    icon: AlertCircle,
+    classes: "bg-muted text-muted-foreground border-border",
+  },
+  unsupported: {
+    label: "غير مدعوم",
+    icon: AlertCircle,
+    classes: "bg-muted text-muted-foreground border-border",
+  },
+  error: {
+    label: "فشل",
+    icon: XCircle,
+    classes: "bg-destructive/15 text-destructive border-destructive/30",
+  },
+};
+
+function formatRelative(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "قبل لحظات";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `قبل ${min} د`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `قبل ${hr} س`;
+  const day = Math.floor(hr / 24);
+  return `قبل ${day} يوم`;
+}
+
+function LastAttemptCard({ attempt }: { attempt: NotifAttempt | null }) {
+  // Re-render the relative time every 30s while panel is open.
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!attempt) return;
+    const id = setInterval(() => force((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [attempt]);
+
+  if (!attempt) {
+    return (
+      <div className="rounded-md border border-border/60 bg-background/60 p-2.5">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground">
+          <Clock className="w-3 h-3 text-muted-foreground" />
+          آخر محاولة إرسال
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          لا توجد محاولات بعد. أرسل إشعاراً تجريبياً لمعرفة الحالة.
+        </p>
+      </div>
+    );
+  }
+
+  const meta = STATUS_META[attempt.status];
+  const Icon = meta.icon;
+  const exact = new Date(attempt.at).toLocaleString("ar", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  });
+
+  return (
+    <div className="rounded-md border border-border/60 bg-background/60 p-2.5 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground">
+        <Clock className="w-3 h-3 text-muted-foreground" />
+        آخر محاولة إرسال
+        <span className="ms-auto text-[9px] text-muted-foreground">
+          {attempt.source === "server" ? "خادم" : "متصفح"}
+        </span>
+      </div>
+      <div
+        className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] ${meta.classes}`}
+      >
+        <Icon className="w-3 h-3 shrink-0" />
+        <span className="font-medium">{meta.label}</span>
+        <span className="ms-auto opacity-80 tabular-nums" title={exact}>
+          {formatRelative(attempt.at)}
+        </span>
+      </div>
+      {attempt.message && (
+        <p
+          className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2"
+          title={attempt.message}
+        >
+          {attempt.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: boolean }) {
   const [mode, setMode] = useState<AlertMode>(() => getAlertMode());
   const [volume, setVolumeState] = useState<number>(() => getVolume());
@@ -56,6 +169,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
   const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
   const [enabling, setEnabling] = useState(false);
+  const [lastAttempt, setLastAttempt] = useState<NotifAttempt | null>(() => getLastNotifAttempt());
 
   const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
   const isAuthenticated = !authLoading && !!user;
@@ -81,6 +195,23 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       window.removeEventListener("focus", sync);
     };
   }, [permission]);
+
+  // Stay in sync with attempts recorded from the banner / other tabs.
+  useEffect(() => {
+    const onLocal = (e: Event) => {
+      const detail = (e as CustomEvent<NotifAttempt>).detail;
+      if (detail) setLastAttempt(detail);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "notif_last_attempt") setLastAttempt(getLastNotifAttempt());
+    };
+    window.addEventListener(NOTIF_ATTEMPT_EVENT, onLocal as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(NOTIF_ATTEMPT_EVENT, onLocal as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const handleEnable = async () => {
     // Hard guards mirror the banner — never call requestPermission outside an authenticated private context.
@@ -117,8 +248,15 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       });
       if (error) throw error;
       toast.success("تم إرسال الإشعار التجريبي ✅");
+      recordNotifAttempt({ status: "success", at: Date.now(), source: "server" });
     } catch (e: any) {
       toast.error("فشل إرسال الإشعار", { description: e?.message });
+      recordNotifAttempt({
+        status: "error",
+        at: Date.now(),
+        source: "server",
+        message: e?.message ?? "server error",
+      });
     } finally {
       setSending(false);
     }
@@ -150,6 +288,9 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       </button>
       {open && (
         <div className="px-4 py-3 space-y-3 bg-secondary/20">
+          {/* Last attempt status — helps users diagnose if a test actually went through */}
+          <LastAttemptCard attempt={lastAttempt} />
+
           {/* Manual enable section — only meaningful when permission isn't already granted */}
           {permission !== "granted" && permission !== "unsupported" && (
             <div className="rounded-md border border-border/60 bg-background/60 p-2.5 space-y-1.5">
