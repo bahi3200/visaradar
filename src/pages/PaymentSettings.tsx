@@ -38,20 +38,32 @@ export default function PaymentSettingsPage() {
   }, [settings]);
 
   const handleSave = async () => {
-    if (!settings?.id) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("payment_settings")
-        .update({
-          ccp_number: ccpNumber.trim(),
-          ccp_key: ccpKey.trim(),
-          rip_number: ripNumber.trim(),
-          account_holder: accountHolder.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", settings.id);
-      if (error) throw error;
+      const payload: any = {
+        ccp_number: ccpNumber.trim(),
+        ccp_key: ccpKey.trim(),
+        rip_number: ripNumber.trim(),
+        account_holder: accountHolder.trim(),
+        updated_at: new Date().toISOString(),
+      };
+      let result;
+      if (settings?.id) {
+        result = await supabase
+          .from("payment_settings")
+          .update(payload)
+          .eq("id", settings.id)
+          .select();
+      } else {
+        result = await supabase
+          .from("payment_settings")
+          .insert(payload)
+          .select();
+      }
+      if (result.error) throw result.error;
+      if (!result.data || result.data.length === 0) {
+        throw new Error("لم يتم حفظ التغييرات. تحقق من صلاحياتك.");
+      }
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       toast.success("تم حفظ معلومات الدفع بنجاح");
     } catch (err: any) {
