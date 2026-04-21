@@ -798,6 +798,11 @@ export default function NotificationPermissionBanner() {
           </div>
         </div>
       )}
+
+      <ContextIssueDialog
+        issue={contextIssue}
+        onClose={() => setContextIssue(null)}
+      />
     </>
   );
 }
