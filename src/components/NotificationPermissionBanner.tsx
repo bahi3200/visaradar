@@ -315,23 +315,63 @@ export default function NotificationPermissionBanner() {
     }
     setSendingTest(true);
     try {
-      const notif = new Notification("🔔 إشعار تجريبي", {
+      const title = "🔔 إشعار تجريبي";
+      const options: NotificationOptions = {
         body: "إذا رأيت هذه الرسالة، فإن إشعارات المتصفح تعمل بشكل صحيح ✅",
-        icon: "/favicon.ico",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
         tag: "test-notification",
-      });
-      notif.onclick = () => {
-        window.focus();
-        notif.close();
       };
-      // Also fire the local sound/vibration alert respecting user preferences
+
+      let delivered = false;
+      // 1) Prefer the ServiceWorker route — required on Android Chrome and
+      //    PWA contexts where `new Notification()` throws "Illegal constructor".
+      if ("serviceWorker" in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg && typeof reg.showNotification === "function") {
+            await reg.showNotification(title, options);
+            delivered = true;
+          }
+        } catch (swErr) {
+          console.warn("[notif] SW showNotification failed", swErr);
+        }
+      }
+
+      // 2) Fallback to the constructor on desktop browsers where it's allowed.
+      if (!delivered) {
+        try {
+          const notif = new Notification(title, options);
+          notif.onclick = () => {
+            window.focus();
+            notif.close();
+          };
+          setTimeout(() => notif.close(), 6000);
+          delivered = true;
+        } catch (ctorErr) {
+          console.warn("[notif] Notification constructor failed", ctorErr);
+        }
+      }
+
+      // 3) Local sound/vibration fallback so the user always gets feedback.
       try {
         triggerAlert(getAlertMode(), getVolume());
       } catch {}
-      toast.success("تم إرسال إشعار تجريبي ✅");
-      setTimeout(() => notif.close(), 6000);
+
+      if (delivered) {
+        toast.success("تم إرسال إشعار تجريبي ✅");
+      } else {
+        toast.error(
+          "تعذّر عرض إشعار المتصفح — تأكد من السماح بالإشعارات من إعدادات المتصفح، أو جرّب من جهاز الكمبيوتر."
+        );
+      }
     } catch (e) {
-      toast.error("فشل إرسال الإشعار التجريبي");
+      console.error("[notif] sendTestNotification error", e);
+      toast.error(
+        e instanceof Error && e.message
+          ? `فشل الإرسال: ${e.message}`
+          : "فشل إرسال الإشعار التجريبي"
+      );
     } finally {
       setSendingTest(false);
     }
