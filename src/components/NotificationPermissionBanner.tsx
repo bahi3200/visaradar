@@ -64,7 +64,8 @@ const BROWSER_LABEL: Record<BrowserKey, string> = {
 };
 
 export default function NotificationPermissionBanner() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
@@ -77,6 +78,12 @@ export default function NotificationPermissionBanner() {
   const detected = useMemo(detectBrowser, []);
   const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
   const [copied, setCopied] = useState(false);
+
+  // Block any prompting on public/auth routes — even if a stale session exists.
+  const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
+  // Authenticated only after auth has finished loading AND user is present.
+  const isAuthenticated = !authLoading && !!user;
+  const canPrompt = isAuthenticated && !isPublicRoute;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
