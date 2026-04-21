@@ -52,6 +52,15 @@ export default function PaymentSettingsPage() {
   });
 
   // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
+  // دالة موحدة لتحديث الحقول من بيانات payment_settings
+  const applyPaymentSettings = (data: typeof settings) => {
+    if (!data) return;
+    setCcpNumber(data.ccp_number || "");
+    setCcpKey(data.ccp_key || "");
+    setRipNumber(data.rip_number || "");
+    setAccountHolder(data.account_holder || "");
+  };
+
   useEffect(() => {
     if (!isFetching && syncing) {
       setSyncing(false);
@@ -59,12 +68,7 @@ export default function PaymentSettingsPage() {
   }, [isFetching]);
 
   useEffect(() => {
-    if (settings) {
-      setCcpNumber(settings.ccp_number || "");
-      setCcpKey(settings.ccp_key || "");
-      setRipNumber(settings.rip_number || "");
-      setAccountHolder(settings.account_holder || "");
-    }
+    applyPaymentSettings(settings);
   }, [settings]);
 
   const handleSave = async () => {
