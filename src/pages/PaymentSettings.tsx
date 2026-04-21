@@ -21,6 +21,41 @@ type PaymentSettingsRow = {
   updated_at?: string;
 } | null;
 
+/**
+ * 🧰 Helper موحّد: يحوّل أي رد من Supabase
+ * (مصفوفة من upsert.select، أو كائن مفرد من maybeSingle، أو null/undefined)
+ * إلى نفس شكل PaymentSettingsRow قبل كتابته في الـ cache.
+ * يضمن عدم تباين بين useQuery و setQueryData.
+ */
+const normalizePaymentSettingsRow = (raw: unknown): PaymentSettingsRow => {
+  if (raw === null || raw === undefined) return null;
+
+  // إذا كانت مصفوفة (مثل رد upsert.select) — نأخذ أول عنصر
+  const candidate = Array.isArray(raw) ? raw[0] : raw;
+
+  if (!candidate || typeof candidate !== "object") return null;
+
+  const c = candidate as Record<string, unknown>;
+  const str = (v: unknown): string =>
+    v === null || v === undefined ? "" : String(v);
+
+  // التأكد من وجود id كحد أدنى لاعتبار الصف صالحاً
+  if (!c.id) return null;
+
+  return {
+    id: String(c.id),
+    ccp_number: str(c.ccp_number),
+    ccp_key: str(c.ccp_key),
+    rip_number: str(c.rip_number),
+    account_holder: str(c.account_holder),
+    referrer_bonus_days:
+      typeof c.referrer_bonus_days === "number" ? c.referrer_bonus_days : undefined,
+    referred_bonus_days:
+      typeof c.referred_bonus_days === "number" ? c.referred_bonus_days : undefined,
+    updated_at: typeof c.updated_at === "string" ? c.updated_at : undefined,
+  };
+};
+
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
