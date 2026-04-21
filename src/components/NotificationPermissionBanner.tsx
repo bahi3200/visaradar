@@ -484,13 +484,15 @@ export default function NotificationPermissionBanner() {
                   تفعيل الآن
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isGranted ? "إغلاق" : "لاحقاً"}
-              </button>
+              {!isDenied && (
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {isGranted ? "إغلاق" : "لاحقاً"}
+                </button>
+              )}
             </div>
           </div>
           <button
