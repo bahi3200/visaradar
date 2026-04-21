@@ -135,21 +135,28 @@ export default function PaymentSettingsPage() {
       }
       if (!data || data.length === 0) {
         console.warn("step 4 — upsert returned 0 rows (silent RLS reject)");
-        const msg = "لم يتم حفظ التغييرات. تحقق من صلاحياتك (RLS).";
-        setErrorDetails({ message: msg, hint: "تأكد أن المستخدم لديه دور admin." });
-        throw new Error(msg);
+        const msg = "⚠️ لم يتم حفظ التغييرات في قاعدة البيانات";
+        const hint = "السبب المحتمل: صلاحيات RLS تمنع الكتابة. تحقق أن المستخدم لديه دور 'admin' في جدول user_roles.";
+        setErrorDetails({ message: msg, code: "RLS_REJECT", details: "UPSERT returned 0 rows", hint });
+        toast.error(msg, { id: toastId, description: hint });
+        setSaving(false);
+        console.groupEnd();
+        return; // ⛔ منع تحديث الواجهة
       }
-      console.log("step 5 — saved row:", data[0]);
+
       const savedRow = data[0];
-      // Optimistic UI: seed the cache and the local form state immediately
+      console.log("step 5 — saved row:", savedRow);
+
+      // ✅ تحديث الواجهة فقط بعد التأكد من وجود بيانات
       queryClient.setQueryData(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
       setCcpNumber(savedRow.ccp_number || "");
       setCcpKey(savedRow.ccp_key || "");
       setRipNumber(savedRow.rip_number || "");
       setAccountHolder(savedRow.account_holder || "");
-      // Then revalidate in the background to stay in sync with DB
+
+      // إعادة التحقق في الخلفية
       queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
-      toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
+      toast.success("✅ تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
       console.error("[PaymentSettings] SAVE failed:", err);
       toast.error(err.message || "حدث خطأ أثناء الحفظ", { id: toastId });
