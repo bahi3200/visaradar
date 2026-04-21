@@ -266,7 +266,7 @@ export default function PaymentSettingsPage() {
           description: SAVE_FAILURE_COPY.hint,
         });
         setSaving(false);
-        console.groupEnd();
+        dgroupEnd();
         return; // ⛔ منع تحديث الواجهة
       }
 
@@ -275,11 +275,11 @@ export default function PaymentSettingsPage() {
       // 🌀 إظهار spinner قصير أثناء التحقق من شكل savedRow قبل الكتابة في cache
       setSyncing(true);
       const savedRow: PaymentSettingsRow = normalizePaymentSettingsRow(data);
-      console.log("step 5 — saved row (normalized):", savedRow);
+      dlog("step 5 — saved row (normalized):", savedRow);
 
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
       if (!savedRow) {
-        console.warn("step 5 — savedRow is null/undefined despite non-empty data array");
+        dwarn("step 5 — savedRow is null/undefined despite non-empty data array");
         setErrorDetails({
           message: SAVE_FAILURE_COPY.message,
           code: "EMPTY_SAVED_ROW",
