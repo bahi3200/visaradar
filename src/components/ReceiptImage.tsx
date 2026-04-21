@@ -4,11 +4,12 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptThumbnail } from "./receipt/ReceiptThumbnail";
 import { ReceiptLightbox } from "./receipt/ReceiptLightbox";
-import { extractStoragePath } from "@/lib/receiptStorage";
+import { extractStoragePath, getReceiptFileKind, getReceiptFilename } from "@/lib/receiptStorage";
 
 const MAX_SIGN_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 800;
 const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
+const FULL_SIGN_TIMEOUT_MS = 10000;
 const THUMB_TIMEOUT_MS = 6000; // Don't let a hanging transform request block the full URL
 
 // Session-level kill switch: if Storage transform fails (e.g., plan limits,
@@ -29,6 +30,8 @@ const isTransformError = (err: unknown): boolean => {
 };
 
 export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
+  const fileKind = getReceiptFileKind(receiptUrl);
+  const filename = getReceiptFilename(receiptUrl);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,9 +75,16 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         setAttempt(i + 1);
         // Request the full signed URL on its own — never let the optional
         // thumbnail transform request block or fail the primary URL.
-        const fullRes = await supabase.storage
+        const fullReq = supabase.storage
           .from("receipts")
           .createSignedUrl(path, 3600);
+        const fullTimeout = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+          setTimeout(
+            () => resolve({ data: null, error: { message: "انتهت مهلة تحميل الوصل" } }),
+            FULL_SIGN_TIMEOUT_MS,
+          ),
+        );
+        const fullRes = await Promise.race([fullReq, fullTimeout]);
         if (cancelled) return;
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
@@ -82,7 +92,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
           setLoading(false);
           // Fire-and-forget thumbnail request with a hard timeout so a
           // hanging transform endpoint never re-blocks the UI.
-          if (!transformDisabled) {
+          if (fileKind === "image" && !transformDisabled) {
             const thumbReq = supabase.storage
               .from("receipts")
               .createSignedUrl(path, 3600, {
@@ -130,7 +140,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     return () => {
       cancelled = true;
     };
-  }, [receiptUrl, retryNonce]);
+  }, [receiptUrl, retryNonce, fileKind]);
 
   const handleRetry = () => {
     hasFocusedRef.current = false;
@@ -156,15 +166,15 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       if (!res.ok) throw new Error("Network error");
       const blob = await res.blob();
       const path = extractStoragePath(receiptUrl);
-      const baseName = path ? path.split("/").pop() || "receipt.jpg" : "receipt.jpg";
-      const filename =
+      const baseName = path ? path.split("/").pop() || filename : filename;
+      const downloadName =
         variant === "thumb"
           ? baseName.replace(/(\.[^.]+)?$/, (ext) => `_thumb${ext || ".jpg"}`)
           : baseName;
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objUrl;
-      a.download = filename;
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -179,7 +189,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     }
   };
 
-  const thumbDownloadAvailable = Boolean(thumbUrl && thumbUrl !== signedUrl);
+  const thumbDownloadAvailable = Boolean(fileKind === "image" && thumbUrl && thumbUrl !== signedUrl);
 
   if (loading) {
     return (
@@ -221,8 +231,10 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         onOpen={() => setLightboxOpen(true)}
         onDownload={() => handleDownload("full")}
         onDownloadThumb={thumbDownloadAvailable ? () => handleDownload("thumb") : undefined}
-        fullSizeNotice={transformBlocked}
+        fullSizeNotice={fileKind === "image" && transformBlocked}
         onRetry={handleRetry}
+        fileKind={fileKind}
+        filename={filename}
       />
       <ReceiptLightbox
         open={lightboxOpen}
@@ -231,6 +243,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         thumbUrl={thumbUrl || undefined}
         downloading={downloading}
         onDownload={() => handleDownload("full")}
+        fileKind={fileKind}
       />
     </>
   );

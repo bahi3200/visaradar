@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { useReceiptShortcuts } from "./useReceiptShortcuts";
+import type { ReceiptFileKind } from "@/lib/receiptStorage";
 
 interface ReceiptLightboxProps {
   open: boolean;
@@ -14,15 +15,17 @@ interface ReceiptLightboxProps {
   thumbUrl?: string;
   downloading: boolean;
   onDownload: () => void;
+  fileKind?: ReceiptFileKind;
 }
 
-export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downloading, onDownload }: ReceiptLightboxProps) {
+export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downloading, onDownload, fileKind = "image" }: ReceiptLightboxProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [fullLoaded, setFullLoaded] = useState(false);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const isImage = fileKind === "image";
 
   // Reset rotation when lightbox closes
   useEffect(() => {
@@ -31,7 +34,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downl
 
   // Preload full-resolution image; swap from thumb once ready
   useEffect(() => {
-    if (!open || !signedUrl) return;
+    if (!open || !signedUrl || !isImage) return;
     setFullLoaded(false);
     const img = new Image();
     img.decoding = "async";
@@ -42,7 +45,7 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downl
       img.onload = null;
       img.onerror = null;
     };
-  }, [open, signedUrl]);
+  }, [open, signedUrl, isImage]);
 
   const displayUrl = fullLoaded || !thumbUrl ? signedUrl : thumbUrl;
   const showUpgradeHint = !fullLoaded && Boolean(thumbUrl) && thumbUrl !== signedUrl;
@@ -70,6 +73,10 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downl
 
   const handlePrint = () => {
     try {
+      if (!isImage) {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       const w = window.open("", "_blank", "width=800,height=900");
       if (!w) {
         toast.error("تعذر فتح نافذة الطباعة — تأكد من السماح بالنوافذ المنبثقة");
@@ -87,7 +94,38 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downl
     }
   };
 
-  useReceiptShortcuts({ enabled: open, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw, onPrint: handlePrint });
+  useReceiptShortcuts({ enabled: open && isImage, transformRef, onToggleFullscreen: toggleFullscreen, onRotate: handleRotate, onRotateCcw: handleRotateCcw, onPrint: handlePrint });
+
+  if (!isImage) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-5xl p-0 bg-background/95 border-border/50 [&>button]:hidden">
+          <VisuallyHidden>
+            <DialogTitle>ملف الوصل</DialogTitle>
+            <DialogDescription>عارض ملف PDF للوصول مع خيارات الفتح والتنزيل</DialogDescription>
+          </VisuallyHidden>
+          <div className="relative bg-background/95">
+            <div className="absolute top-3 right-3 left-3 z-10 flex items-center justify-between gap-2">
+              <button type="button" onClick={() => onOpenChange(false)} className="p-2 rounded-full bg-background/80 hover:bg-background border border-border/50 transition-colors" aria-label="إغلاق">
+                <X className="w-4 h-4 text-foreground" />
+              </button>
+              <div className="flex items-center gap-2">
+                <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-background/80 hover:bg-background border border-border/50 transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  فتح
+                </a>
+                <button type="button" onClick={onDownload} disabled={downloading} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+                  {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  تنزيل
+                </button>
+              </div>
+            </div>
+            <iframe title="وصل الدفع PDF" src={signedUrl} className="h-[85vh] w-full rounded-lg bg-muted/20 pt-16" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractStoragePath } from "@/lib/receiptStorage";
+import { extractStoragePath, getReceiptFileKind, getReceiptFilename } from "@/lib/receiptStorage";
 
 describe("extractStoragePath", () => {
   it("returns null for empty string", () => {
@@ -40,5 +40,12 @@ describe("extractStoragePath", () => {
     const url =
       "https://xyz.supabase.co/storage/v1/object/sign/receipts/nested/path/file.jpg?token=abc&download=true";
     expect(extractStoragePath(url)).toBe("nested/path/file.jpg");
+  });
+
+  it("detects receipt filename and kind", () => {
+    expect(getReceiptFilename("receipts/user-123/payment.pdf")).toBe("payment.pdf");
+    expect(getReceiptFileKind("receipts/user-123/payment.pdf")).toBe("pdf");
+    expect(getReceiptFileKind("receipts/user-123/payment.jpeg")).toBe("image");
+    expect(getReceiptFileKind("receipts/user-123/payment.bin")).toBe("file");
   });
 });
