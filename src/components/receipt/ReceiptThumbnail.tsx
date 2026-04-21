@@ -111,11 +111,12 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         <img
           src={signedUrl}
           alt="Receipt"
-          loading="lazy"
           decoding="async"
           onLoad={() => setImgState("loaded")}
           onError={() => setImgState("error")}
-          className={`absolute inset-0 w-full h-full object-contain group-hover:opacity-80 transition-opacity ${imgState === "loaded" ? "" : "hidden"}`}
+          className={`absolute inset-0 w-full h-full object-contain group-hover:opacity-80 transition-opacity ${
+            imgState === "loaded" ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
         />
         <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity">
           <ZoomIn className="w-6 h-6 text-foreground" />
