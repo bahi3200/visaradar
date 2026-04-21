@@ -144,6 +144,74 @@ const BROWSER_LABEL: Record<BrowserKey, string> = {
   other: "🌍 متصفح آخر",
 };
 
+// Fast-path deep links to the right settings page per browser.
+// `null` means the browser blocks programmatic navigation to settings (Safari, in-app webviews) —
+// we fall back to opening the longer help modal in that case.
+function getBrowserSettingsUrl(browser: BrowserKey): string | null {
+  switch (browser) {
+    case "chrome":
+    case "brave":
+      return "chrome://settings/content/notifications";
+    case "edge":
+      return "edge://settings/content/notifications";
+    case "opera":
+      return "opera://settings/content/notifications";
+    case "firefox":
+      return "about:preferences#privacy";
+    case "samsung":
+      return "internet://settings/site_permissions";
+    // Safari (iOS & macOS) and unknown browsers can't be deep-linked.
+    default:
+      return null;
+  }
+}
+
+// Three short steps shown inline in the denied banner — keeps users in flow
+// instead of forcing them through the full troubleshooting modal.
+function getQuickDeniedSteps(browser: BrowserKey): string[] {
+  switch (browser) {
+    case "chrome":
+    case "brave":
+    case "edge":
+    case "opera":
+      return [
+        "اضغط على أيقونة 🔒 بجانب رابط الموقع",
+        "اختر «الإشعارات» ← «السماح»",
+        "أعد تحميل الصفحة",
+      ];
+    case "firefox":
+      return [
+        "اضغط على 🔒 بجانب الرابط",
+        "أزل الحظر بجانب «إرسال الإشعارات»",
+        "أعد تحميل الصفحة",
+      ];
+    case "safari-mac":
+      return [
+        "Safari ← الإعدادات ← مواقع الويب",
+        "اختر «الإشعارات» وفعّل هذا الموقع",
+        "أعد تحميل الصفحة",
+      ];
+    case "safari-ios":
+      return [
+        "أضِف الموقع إلى الشاشة الرئيسية أولاً",
+        "الإعدادات ← الإشعارات ← اسم التطبيق",
+        "فعّل «السماح بالإشعارات»",
+      ];
+    case "samsung":
+      return [
+        "اضغط ⋮ ← الإعدادات ← المواقع والتنزيلات",
+        "اختر «أذونات الموقع» ← الإشعارات",
+        "اسمح لهذا الموقع",
+      ];
+    default:
+      return [
+        "افتح إعدادات أذونات المتصفح",
+        "ابحث عن أذونات الموقع ← الإشعارات",
+        "اسمح بالإشعارات لهذا الموقع",
+      ];
+  }
+}
+
 export default function NotificationPermissionBanner() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
