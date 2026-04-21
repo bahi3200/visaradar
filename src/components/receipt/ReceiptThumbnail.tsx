@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const SLOW_LOAD_THRESHOLD_MS = 4000;
-const HARD_LOAD_TIMEOUT_MS = 15000;
+const HARD_LOAD_TIMEOUT_MS = 12000;
 
 export interface ReceiptThumbnailProps {
   signedUrl: string;
@@ -25,12 +25,20 @@ export interface ReceiptThumbnailProps {
   onRetry?: () => void;
   fileKind?: ReceiptFileKind;
   filename?: string;
+  /**
+   * Optional fallback URL to swap in if the primary signedUrl (often the
+   * transformed thumbnail) fails to load. Lets us recover from transient
+   * CDN/transform errors without forcing a full retry round-trip.
+   */
+  fallbackUrl?: string;
 }
 
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
-  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice, onRetry, fileKind = "image", filename }, ref) => {
+  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice, onRetry, fileKind = "image", filename, fallbackUrl }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
   const [slow, setSlow] = useState(false);
+  const [activeSrc, setActiveSrc] = useState(signedUrl);
+  const [fallbackTried, setFallbackTried] = useState(false);
   const isImage = fileKind === "image";
 
   // Reset state when src changes (retry, new signed URL)
@@ -42,6 +50,8 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
     }
     setImgState("loading");
     setSlow(false);
+    setActiveSrc(signedUrl);
+    setFallbackTried(false);
   }, [signedUrl, isImage]);
 
   useEffect(() => {
@@ -52,13 +62,23 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
     // hangs, stale cached signed URL after re-upload), surface an error state
     // so the user gets a retry button instead of an infinite skeleton.
     const hardTimer = window.setTimeout(() => {
-      setImgState((s) => (s === "loading" ? "error" : s));
+      setImgState((s) => {
+        if (s !== "loading") return s;
+        // Last-ditch: try the fallback (full-size) URL before showing error.
+        if (fallbackUrl && fallbackUrl !== activeSrc && !fallbackTried) {
+          setActiveSrc(fallbackUrl);
+          setFallbackTried(true);
+          setSlow(false);
+          return "loading";
+        }
+        return "error";
+      });
     }, HARD_LOAD_TIMEOUT_MS);
     return () => {
       window.clearTimeout(slowTimer);
       window.clearTimeout(hardTimer);
     };
-  }, [imgState, signedUrl, isImage]);
+  }, [imgState, signedUrl, isImage, fallbackUrl, activeSrc, fallbackTried]);
 
   return (
     <div className="flex flex-col gap-2">
