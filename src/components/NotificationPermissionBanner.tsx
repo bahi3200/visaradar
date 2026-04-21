@@ -253,7 +253,7 @@ export default function NotificationPermissionBanner() {
                   type="button"
                   onClick={sendTestNotification}
                   disabled={sendingTest}
-                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
                 >
                   <Send className="w-3 h-3" />
                   {sendingTest ? "جارٍ الإرسال..." : "إرسال إشعار تجريبي"}
