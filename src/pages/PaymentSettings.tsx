@@ -24,12 +24,26 @@ export default function PaymentSettingsPage() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ["payment-settings"],
     queryFn: async () => {
+      console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
+      const t0 = performance.now();
       const { data, error } = await supabase
         .from("payment_settings")
         .select("*")
         .limit(1)
         .maybeSingle();
-      if (error) throw error;
+      console.log("duration_ms:", (performance.now() - t0).toFixed(1));
+      console.log("data:", data);
+      if (error) {
+        console.error("fetch error:", {
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
+        console.groupEnd();
+        throw error;
+      }
+      console.groupEnd();
       return data;
     },
   });
@@ -47,11 +61,12 @@ export default function PaymentSettingsPage() {
     setSaving(true);
     setErrorDetails(null);
     const toastId = toast.loading("جاري حفظ معلومات الدفع...");
+    console.group("[PaymentSettings] SAVE flow");
     try {
       // 🔍 Debug: verify session + admin role before write
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-      console.log("[PaymentSettings] auth.uid():", userId);
+      console.log("step 1 — auth.uid():", userId, "email:", sessionData?.session?.user?.email);
 
       if (!userId) {
         throw new Error("لا توجد جلسة مصادقة. يرجى تسجيل الدخول.");
@@ -59,7 +74,7 @@ export default function PaymentSettingsPage() {
 
       const { data: roleCheck, error: roleErr } = await supabase
         .rpc("has_role", { _user_id: userId, _role: "admin" });
-      console.log("[PaymentSettings] has_role(admin):", roleCheck, "err:", roleErr);
+      console.log("step 2 — has_role(admin):", roleCheck, "err:", roleErr);
 
       if (roleErr) {
         setErrorDetails({
@@ -89,11 +104,25 @@ export default function PaymentSettingsPage() {
       if (settings?.id) {
         payload.id = settings.id;
       }
+      console.log("step 3 — upsert payload:", payload);
+      const writeStart = performance.now();
       const { data, error } = await supabase
         .from("payment_settings")
         .upsert(payload, { onConflict: "id" })
         .select();
+      console.log(
+        "step 4 — upsert response: duration_ms=",
+        (performance.now() - writeStart).toFixed(1),
+        "rows=",
+        data?.length ?? 0
+      );
       if (error) {
+        console.error("step 4 — upsert ERROR:", {
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
         setErrorDetails({
           message: error.message,
           code: (error as any).code,
@@ -103,15 +132,19 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       if (!data || data.length === 0) {
+        console.warn("step 4 — upsert returned 0 rows (silent RLS reject)");
         const msg = "لم يتم حفظ التغييرات. تحقق من صلاحياتك (RLS).";
         setErrorDetails({ message: msg, hint: "تأكد أن المستخدم لديه دور admin." });
         throw new Error(msg);
       }
+      console.log("step 5 — saved row:", data[0]);
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
+      console.error("[PaymentSettings] SAVE failed:", err);
       toast.error(err.message || "حدث خطأ أثناء الحفظ", { id: toastId });
     } finally {
+      console.groupEnd();
       setSaving(false);
     }
   };
