@@ -353,4 +353,69 @@ describe("PaymentSettings — تطابق شكل cache بين useQuery و setQuer
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText(/EMPTY_SAVED_ROW/i)).toBeInTheDocument();
   });
+
+  it("🔑 QUERY_KEY متطابق حرفياً بين useQuery و setQueryData (لا اختلاف array/object key order)", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    const updatedRow = {
+      id: "row-1",
+      ccp_number: "999",
+      ccp_key: "99",
+      rip_number: "rip-999",
+      account_holder: "محمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+    mockUpsert.mockResolvedValue({ data: [updatedRow], error: null });
+
+    const { qc } = renderPage();
+
+    // 1) التقاط مفتاح useQuery من cache بعد الجلب الأولي
+    await waitFor(() => {
+      expect(qc.getQueryData(["payment-settings"])).toBeTruthy();
+    });
+    const queryCacheKeys = qc
+      .getQueryCache()
+      .getAll()
+      .map((q) => q.queryKey);
+    const queryUseKey = queryCacheKeys.find(
+      (k) => Array.isArray(k) && k[0] === "payment-settings"
+    );
+    expect(queryUseKey).toBeDefined();
+
+    // 2) مراقبة setQueryData لالتقاط المفتاح الذي يستخدمه handleSave
+    const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
+
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+    await waitFor(() => expect(setQueryDataSpy).toHaveBeenCalled());
+
+    const setKey = setQueryDataSpy.mock.calls[0]?.[0];
+
+    // ✅ 3) المفتاحان مصفوفتان بنفس الطول والترتيب (لا object key order issues)
+    expect(Array.isArray(setKey)).toBe(true);
+    expect(Array.isArray(queryUseKey)).toBe(true);
+    expect((setKey as unknown[]).length).toBe(
+      (queryUseKey as unknown[]).length
+    );
+
+    // ✅ 4) تطابق حرفي عنصراً عنصراً (نفس النص "payment-settings" بنفس الموقع)
+    (queryUseKey as unknown[]).forEach((segment, idx) => {
+      expect((setKey as unknown[])[idx]).toBe(segment);
+    });
+
+    // ✅ 5) تطابق عميق (يضمن عدم وجود أي اختلاف هيكلي مخفي)
+    expect(setKey).toEqual(queryUseKey);
+
+    // ✅ 6) JSON serialization متطابقة — الحارس النهائي ضد أي ترتيب مفاتيح مختلف
+    expect(JSON.stringify(setKey)).toBe(JSON.stringify(queryUseKey));
+
+    // ✅ 7) قراءة cache بنفس المفتاح الحرفي تُرجع الصف المُحدَّث
+    const cachedAfter = qc.getQueryData(setKey as readonly unknown[]);
+    expect(cachedAfter).toMatchObject({ id: "row-1", ccp_number: "999" });
+  });
 });
