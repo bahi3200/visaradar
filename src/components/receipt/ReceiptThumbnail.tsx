@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const SLOW_LOAD_THRESHOLD_MS = 4000;
+const HARD_LOAD_TIMEOUT_MS = 15000;
 
 export interface ReceiptThumbnailProps {
   signedUrl: string;
@@ -36,9 +37,18 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
 
   useEffect(() => {
     if (imgState !== "loading") return;
-    const t = window.setTimeout(() => setSlow(true), SLOW_LOAD_THRESHOLD_MS);
-    return () => window.clearTimeout(t);
-  }, [imgState]);
+    const slowTimer = window.setTimeout(() => setSlow(true), SLOW_LOAD_THRESHOLD_MS);
+    // Hard fallback: if the <img> never fires load/error (transform 400, CDN
+    // hangs, stale cached signed URL after re-upload), surface an error state
+    // so the user gets a retry button instead of an infinite skeleton.
+    const hardTimer = window.setTimeout(() => {
+      setImgState((s) => (s === "loading" ? "error" : s));
+    }, HARD_LOAD_TIMEOUT_MS);
+    return () => {
+      window.clearTimeout(slowTimer);
+      window.clearTimeout(hardTimer);
+    };
+  }, [imgState, signedUrl]);
 
   return (
     <div className="flex flex-col gap-2">

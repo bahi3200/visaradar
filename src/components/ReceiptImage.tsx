@@ -113,6 +113,11 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
 
   const handleRetry = () => {
     hasFocusedRef.current = false;
+    // Re-enable Storage transform attempt on explicit user retry — the
+    // previous failure may have been a transient transform glitch (e.g.
+    // right after a fresh upload) rather than a permanent plan limit.
+    transformDisabled = false;
+    setTransformBlocked(false);
     setSignedUrl(null);
     setThumbUrl(null);
     setRetryNonce((n) => n + 1);
