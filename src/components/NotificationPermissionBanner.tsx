@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Bell, BellOff, X, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -7,11 +7,49 @@ const DISMISSED_KEY = "notif_perm_banner_dismissed";
 const PROMPTED_KEY = "notif_perm_prompted";
 
 type PermissionState = "default" | "granted" | "denied" | "unsupported";
+type BrowserKey =
+  | "chrome"
+  | "edge"
+  | "brave"
+  | "firefox"
+  | "safari-ios"
+  | "safari-mac"
+  | "samsung"
+  | "opera"
+  | "other";
 
 function getPermission(): PermissionState {
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return Notification.permission as PermissionState;
 }
+
+function detectBrowser(): BrowserKey {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && (navigator as { maxTouchPoints?: number }).maxTouchPoints! > 1);
+  if (isIOS) return "safari-ios";
+  if (/Edg\//.test(ua)) return "edge";
+  if (/SamsungBrowser/.test(ua)) return "samsung";
+  if (/OPR\/|Opera/.test(ua)) return "opera";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Chrome\//.test(ua)) return "chrome";
+  if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return "safari-mac";
+  return "other";
+}
+
+const BROWSER_LABEL: Record<BrowserKey, string> = {
+  chrome: "🌐 Google Chrome",
+  edge: "🔷 Microsoft Edge",
+  brave: "🦁 Brave",
+  firefox: "🦊 Firefox",
+  "safari-ios": "📱 Safari (iOS / iPadOS)",
+  "safari-mac": "🧭 Safari (macOS)",
+  samsung: "📱 Samsung Internet",
+  opera: "🎭 Opera",
+  other: "🌍 متصفح آخر",
+};
 
 export default function NotificationPermissionBanner() {
   const { user } = useAuth();
@@ -24,6 +62,22 @@ export default function NotificationPermissionBanner() {
     }
   });
   const [showHelp, setShowHelp] = useState(false);
+  const detected = useMemo(detectBrowser, []);
+  const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
+  const [copied, setCopied] = useState(false);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  const copyOrigin = async () => {
+    try {
+      await navigator.clipboard.writeText(origin);
+      setCopied(true);
+      toast.success("تم نسخ رابط الموقع");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("تعذّر النسخ");
+    }
+  };
 
   // Auto-prompt once per browser when user is logged in and status is "default"
   useEffect(() => {
@@ -165,36 +219,46 @@ export default function NotificationPermissionBanner() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              تم رفض إذن الإشعارات سابقاً. لإعادة تفعيلها، اتبع الخطوات التالية حسب متصفحك:
+            <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+              تم رفض إذن الإشعارات سابقاً. اختر متصفحك لرؤية الخطوات الدقيقة:
             </p>
-            <div className="space-y-3">
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🌐 Chrome / Edge / Brave</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>اضغط على أيقونة القفل 🔒 بجانب رابط الموقع</li>
-                  <li>اختر "إعدادات الموقع" (Site settings)</li>
-                  <li>غيّر "الإشعارات" إلى "السماح" (Allow)</li>
-                  <li>أعد تحميل الصفحة</li>
-                </ol>
-              </div>
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🦊 Firefox</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>اضغط على القفل 🔒 ثم على السهم بجانب الموقع</li>
-                  <li>اختر "مزيد من المعلومات" → "أذونات"</li>
-                  <li>أزل الإعداد بجانب "إرسال إشعارات"</li>
-                  <li>أعد تحميل الصفحة وامنح الإذن</li>
-                </ol>
-              </div>
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🧭 Safari (iOS / Mac)</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>افتح الإعدادات → Safari → الإشعارات</li>
-                  <li>ابحث عن هذا الموقع وفعّل "السماح"</li>
-                </ol>
-              </div>
+
+            {/* Browser tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-3 border-b border-border pb-2">
+              {(Object.keys(BROWSER_LABEL) as BrowserKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
+                    activeTab === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {BROWSER_LABEL[key].split(" ").slice(1).join(" ") || BROWSER_LABEL[key]}
+                  {key === detected && <span className="mr-1">•</span>}
+                </button>
+              ))}
             </div>
+
+            {/* Origin copy helper */}
+            <div className="flex items-center gap-2 mb-3 bg-secondary/40 rounded-lg p-2">
+              <code className="flex-1 text-[11px] text-foreground truncate" dir="ltr">
+                {origin}
+              </code>
+              <button
+                type="button"
+                onClick={copyOrigin}
+                className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-background border border-border hover:bg-secondary transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? "تم" : "نسخ الرابط"}
+              </button>
+            </div>
+
+            <BrowserInstructions browser={activeTab} origin={origin} />
+
             <button
               type="button"
               onClick={() => setShowHelp(false)}
@@ -207,4 +271,190 @@ export default function NotificationPermissionBanner() {
       )}
     </>
   );
+}
+
+type StepLink = { label: string; url: string; note?: string };
+
+function Step({ children }: { children: React.ReactNode }) {
+  return <li className="text-xs text-muted-foreground leading-relaxed">{children}</li>;
+}
+
+function LinkRow({ links }: { links: StepLink[] }) {
+  if (!links.length) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      {links.map((l) => (
+        <div key={l.url} className="flex items-center gap-2">
+          <code className="flex-1 text-[10px] text-foreground bg-background rounded px-2 py-1 truncate" dir="ltr">
+            {l.url}
+          </code>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(l.url).then(() => toast.success("تم نسخ الرابط"));
+            }}
+            className="shrink-0 inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/70 transition-colors"
+          >
+            <Copy className="w-3 h-3" />
+            نسخ
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BrowserInstructions({ browser, origin }: { browser: BrowserKey; origin: string }) {
+  const encoded = encodeURIComponent(origin);
+
+  switch (browser) {
+    case "chrome":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Google Chrome</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح الرابط التالي في تبويب جديد للوصول مباشرة لإعدادات الإشعارات للموقع:</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات الموقع", url: `chrome://settings/content/siteDetails?site=${encoded}` },
+            { label: "كل أذونات الإشعارات", url: "chrome://settings/content/notifications" },
+          ]} />
+          <ol className="space-y-1 list-decimal pr-4 mt-2" start={2}>
+            <Step>غيّر "Notifications" إلى <b>Allow</b>.</Step>
+            <Step>أعد تحميل الصفحة (Ctrl+R أو Cmd+R).</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70 mt-1">
+            ملاحظة: روابط <code>chrome://</code> لا تفتح بالنقر — انسخها والصقها في شريط العنوان.
+          </p>
+        </div>
+      );
+
+    case "edge":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Microsoft Edge</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح أحد الروابط التالية في تبويب جديد (انسخه إلى شريط العنوان):</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات الموقع مباشرة", url: `edge://settings/content/siteDetails?site=${encoded}` },
+            { label: "كل أذونات الإشعارات", url: "edge://settings/content/notifications" },
+          ]} />
+          <ol className="space-y-1 list-decimal pr-4 mt-2" start={2}>
+            <Step>ابحث عن هذا الموقع في قائمة "Block" واضغط على القائمة (⋯) → <b>Allow</b>.</Step>
+            <Step>أو اضغط على أيقونة القفل 🔒 بجانب الرابط → "Permissions for this site" → فعّل <b>Notifications</b>.</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70">
+            في Edge على Windows تأكد أيضاً من تفعيل الإشعارات على مستوى النظام:
+            <br />
+            Settings → System → Notifications → Microsoft Edge → On.
+          </p>
+        </div>
+      );
+
+    case "brave":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Brave</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">brave://settings/content/notifications</code></Step>
+            <Step>أزل الموقع من قائمة "Block" أو أضفه إلى "Allow".</Step>
+            <Step>تأكد أن Brave Shields لا يحجب الإشعارات (الأيقونة 🦁 بجانب الرابط → Off).</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات Brave", url: "brave://settings/content/notifications" },
+          ]} />
+        </div>
+      );
+
+    case "firefox":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Firefox</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">about:preferences#privacy</code> ثم انزل إلى "Permissions" → "Notifications" → "Settings…".</Step>
+            <Step>ابحث عن الموقع وغيّر الحالة من "Block" إلى <b>Allow</b>، ثم احفظ.</Step>
+            <Step>أو اضغط القفل 🔒 → السهم بجانب الموقع → Clear permission ثم أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات الخصوصية", url: "about:preferences#privacy" },
+          ]} />
+        </div>
+      );
+
+    case "safari-ios":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Safari على iOS / iPadOS</p>
+          <p className="text-[11px] text-muted-foreground bg-background/60 rounded p-2">
+            ⚠️ لاستقبال إشعارات حقيقية على iPhone/iPad يجب أولاً <b>تثبيت الموقع كتطبيق على الشاشة الرئيسية</b> (Add to Home Screen)، لأن Safari لا يدعم Web Push من المتصفح مباشرة.
+          </p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح الموقع في Safari ثم اضغط زر المشاركة <b>⎙</b> أسفل الشاشة.</Step>
+            <Step>اختر <b>"Add to Home Screen" / "إضافة إلى الشاشة الرئيسية"</b>.</Step>
+            <Step>افتح التطبيق من الشاشة الرئيسية، وعند ظهور طلب الإشعارات اختر <b>السماح</b>.</Step>
+            <Step>إذا رفضتها سابقاً: اذهب إلى <b>الإعدادات → الإشعارات</b> ثم ابحث عن هذا التطبيق وفعّل "السماح بالإشعارات".</Step>
+            <Step>تأكد من تعطيل "وضع التركيز / Focus" و"عدم الإزعاج".</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70">
+            مطلوب iOS 16.4 أو أحدث لدعم إشعارات Web Push.
+          </p>
+        </div>
+      );
+
+    case "safari-mac":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Safari على macOS</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>من شريط القوائم: <b>Safari → Settings (⌘,) → Websites → Notifications</b>.</Step>
+            <Step>ابحث عن هذا الموقع وغيّر الحالة من "Deny" إلى <b>Allow</b>.</Step>
+            <Step>تأكد من تعطيل "Do Not Disturb" من Control Center.</Step>
+            <Step>افتح <b>System Settings → Notifications → Safari</b> وفعّل "Allow Notifications".</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+        </div>
+      );
+
+    case "samsung":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Samsung Internet</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>اضغط على القائمة (☰) → <b>Settings</b> → <b>Sites and downloads</b> → <b>Site permissions</b> → <b>Notifications</b>.</Step>
+            <Step>ابحث عن الموقع في قائمة "Blocked" واحذفه.</Step>
+            <Step>أعد تحميل الصفحة وامنح الإذن عند الطلب.</Step>
+          </ol>
+        </div>
+      );
+
+    case "opera":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Opera</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">opera://settings/content/notifications</code></Step>
+            <Step>أزل الموقع من "Block" وأضفه إلى "Allow".</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات Opera", url: "opera://settings/content/notifications" },
+          ]} />
+        </div>
+      );
+
+    default:
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات عامة</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>اضغط على أيقونة القفل 🔒 بجانب رابط الموقع.</Step>
+            <Step>ابحث عن "Notifications" وغيّر الحالة إلى Allow.</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+        </div>
+      );
+  }
 }
