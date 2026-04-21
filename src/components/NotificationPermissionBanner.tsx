@@ -549,8 +549,13 @@ export default function NotificationPermissionBanner() {
       if (requiresSW && (!swReg || typeof swReg.showNotification !== "function")) {
         toast.error("تعذّر إرسال الإشعار", {
           description:
-            "Service Worker غير مسجَّل. هذه الميزة تعمل فقط في النسخة المنشورة (HTTPS). افتح الرابط المنشور أو ثبّت التطبيق من /install ثم أعد المحاولة.",
-          duration: 7000,
+            "السبب: Service Worker غير مسجَّل — يعمل فقط في النسخة المنشورة (HTTPS). افتح الرابط المنشور أو ثبّت التطبيق من /install ثم أعد المحاولة.",
+          duration: 8000,
+          action: {
+            label: "افتح النسخة المنشورة",
+            onClick: () =>
+              window.open(PUBLISHED_APP_URL, "_blank", "noopener,noreferrer"),
+          },
         });
         recordNotifAttempt({
           status: "error",
