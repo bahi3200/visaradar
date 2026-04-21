@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -20,6 +20,11 @@ const countryOptions = [
 ];
 
 type ServiceType = "visa" | "jobs" | "both";
+const MAX_RECEIPT_SIZE_MB = 10;
+const isReceiptPdf = (file: File | null) =>
+  Boolean(file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")));
+const isReceiptImage = (file: File | null) =>
+  Boolean(file && (file.type.startsWith("image/") || /\.(avif|gif|jpe?g|png|webp)$/i.test(file.name)));
 
 export default function SubscribeRequestPage() {
   const navigate = useNavigate();
@@ -142,10 +147,17 @@ export default function SubscribeRequestPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("حجم الملف يجب أن لا يتجاوز 5 ميغابايت");
+    if (!isReceiptImage(file) && !isReceiptPdf(file)) {
+      toast.error("يرجى رفع صورة أو ملف PDF فقط");
+      e.target.value = "";
       return;
     }
+    if (file.size > MAX_RECEIPT_SIZE_MB * 1024 * 1024) {
+      toast.error(`حجم الملف يجب أن لا يتجاوز ${MAX_RECEIPT_SIZE_MB} ميغابايت`);
+      e.target.value = "";
+      return;
+    }
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
     setReceiptFile(file);
     setReceiptPreview(URL.createObjectURL(file));
   };
@@ -177,10 +189,10 @@ export default function SubscribeRequestPage() {
         return;
       }
 
-      const fileExt = receiptFile.name.split(".").pop();
+      const fileExt = isReceiptPdf(receiptFile) ? "pdf" : receiptFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
       const receiptStoragePath = `receipts/${filePath}`;
-      const { error: uploadError } = await supabase.storage.from("receipts").upload(filePath, receiptFile);
+      const { error: uploadError } = await supabase.storage.from("receipts").upload(filePath, receiptFile, { contentType: receiptFile.type || (isReceiptPdf(receiptFile) ? "application/pdf" : undefined) });
       if (uploadError) throw uploadError;
 
       const { data: request, error: insertError } = await supabase
@@ -206,15 +218,18 @@ export default function SubscribeRequestPage() {
         throw insertError;
       }
 
-      supabase.functions.invoke("verify-receipt", {
-        body: { requestId: (request as any).id, receiptUrl: receiptStoragePath },
-      }).catch((err) => console.error("AI verification error:", err));
+      if (isReceiptImage(receiptFile)) {
+        supabase.functions.invoke("verify-receipt", {
+          body: { requestId: (request as any).id, receiptUrl: receiptStoragePath },
+        }).catch((err) => console.error("AI verification error:", err));
+      }
 
       toast.success(isRenewal ? "تم إرسال طلب التجديد بنجاح!" : isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       setSelectedPackageId("");
       setCountries([]);
       setReceiptFile(null);
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
       setReceiptPreview("");
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء الإرسال");
