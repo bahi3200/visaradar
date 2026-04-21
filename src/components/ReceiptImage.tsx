@@ -8,9 +8,11 @@ import { extractStoragePath } from "@/lib/receiptStorage";
 
 const MAX_SIGN_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 800;
+const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
 
 export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -39,6 +41,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       if (!path) {
         if (!cancelled) {
           setSignedUrl(receiptUrl);
+          setThumbUrl(receiptUrl);
           setLoading(false);
         }
         return;
@@ -48,16 +51,21 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       for (let i = 0; i < MAX_SIGN_RETRIES; i++) {
         if (cancelled) return;
         setAttempt(i + 1);
-        const { data, error: signErr } = await supabase.storage
-          .from("receipts")
-          .createSignedUrl(path, 3600);
+        const [fullRes, thumbRes] = await Promise.all([
+          supabase.storage.from("receipts").createSignedUrl(path, 3600),
+          supabase.storage.from("receipts").createSignedUrl(path, 3600, {
+            transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
+          }),
+        ]);
         if (cancelled) return;
-        if (!signErr && data?.signedUrl) {
-          setSignedUrl(data.signedUrl);
+        if (!fullRes.error && fullRes.data?.signedUrl) {
+          setSignedUrl(fullRes.data.signedUrl);
+          // Fallback to full URL if transform fails (e.g. non-image or unsupported format)
+          setThumbUrl(thumbRes.data?.signedUrl || fullRes.data.signedUrl);
           setLoading(false);
           return;
         }
-        lastErr = signErr?.message || "تعذر تحميل الصورة";
+        lastErr = fullRes.error?.message || "تعذر تحميل الصورة";
         if (i < MAX_SIGN_RETRIES - 1) {
           await sleep(RETRY_BASE_DELAY_MS * Math.pow(2, i));
         }
@@ -76,6 +84,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const handleRetry = () => {
     hasFocusedRef.current = false;
     setSignedUrl(null);
+    setThumbUrl(null);
     setRetryNonce((n) => n + 1);
   };
 
@@ -139,7 +148,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     <>
       <ReceiptThumbnail
         ref={thumbnailRef}
-        signedUrl={signedUrl}
+        signedUrl={thumbUrl || signedUrl}
         downloading={downloading}
         onOpen={() => setLightboxOpen(true)}
         onDownload={handleDownload}
