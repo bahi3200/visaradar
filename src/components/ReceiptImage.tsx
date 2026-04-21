@@ -167,14 +167,14 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       const blob = await res.blob();
       const path = extractStoragePath(receiptUrl);
       const baseName = path ? path.split("/").pop() || filename : filename;
-      const filename =
+      const downloadName =
         variant === "thumb"
           ? baseName.replace(/(\.[^.]+)?$/, (ext) => `_thumb${ext || ".jpg"}`)
           : baseName;
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objUrl;
-      a.download = filename;
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
