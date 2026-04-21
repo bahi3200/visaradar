@@ -71,10 +71,9 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         const fullPromise = supabase.storage
           .from("receipts")
           .createSignedUrl(path, 3600);
-        const thumbPromise = transformDisabled
-          ? Promise.resolve({ data: null, error: null } as Awaited<
-              ReturnType<typeof fullPromise>
-            >)
+        type SignResult = Awaited<typeof fullPromise>;
+        const thumbPromise: Promise<SignResult> = transformDisabled
+          ? (Promise.resolve({ data: null, error: null }) as Promise<SignResult>)
           : supabase.storage.from("receipts").createSignedUrl(path, 3600, {
               transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
             });
