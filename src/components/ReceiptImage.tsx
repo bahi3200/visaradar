@@ -227,6 +227,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       <ReceiptThumbnail
         ref={thumbnailRef}
         signedUrl={thumbUrl || signedUrl}
+        fallbackUrl={signedUrl}
         downloading={downloading}
         onOpen={() => setLightboxOpen(true)}
         onDownload={() => handleDownload("full")}
