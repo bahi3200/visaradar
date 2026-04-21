@@ -168,11 +168,13 @@ export default function PaymentSettingsPage() {
         return; // ⛔ منع تحديث الواجهة
       }
 
-      const savedRow = data[0];
+      // upsert يُرجع مصفوفة — نأخذ أول صف ككائن مفرد
+      // ليطابق شكل ما يعيده useQuery (.maybeSingle => كائن واحد أو null)
+      const savedRow: PaymentSettingsRow = (data[0] as PaymentSettingsRow) ?? null;
       console.log("step 5 — saved row:", savedRow);
 
-      // ✅ تحديث الواجهة فقط بعد التأكد من وجود بيانات
-      queryClient.setQueryData(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
+      // ✅ نفس الشكل تماماً (كائن واحد، ليس مصفوفة) لتجنب أي تباين
+      queryClient.setQueryData<PaymentSettingsRow>(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
       applyPaymentSettings(savedRow);
 
       // إعادة التحقق في الخلفية
