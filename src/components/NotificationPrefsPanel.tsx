@@ -170,6 +170,16 @@ function LastAttemptCard({ attempt }: { attempt: NotifAttempt | null }) {
           {formatRelative(attempt.at)}
         </span>
       </div>
+      {attempt.reason && (
+        <div className="flex items-start gap-1.5 rounded-md bg-secondary/40 border border-border/40 px-2 py-1">
+          <span className="text-[9px] font-semibold text-foreground shrink-0 mt-0.5">
+            السبب:
+          </span>
+          <span className="text-[10px] text-muted-foreground leading-relaxed">
+            {REASON_LABEL[attempt.reason] ?? attempt.reason}
+          </span>
+        </div>
+      )}
       {attempt.message && (
         <p
           className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2"
