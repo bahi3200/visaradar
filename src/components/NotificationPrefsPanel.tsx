@@ -27,6 +27,7 @@ import {
   setVolume,
   triggerAlert,
   type NotifAttempt,
+  type NotifBlockReason,
   getLastNotifAttempt,
   recordNotifAttempt,
   NOTIF_ATTEMPT_EVENT,
@@ -94,6 +95,19 @@ const STATUS_META: Record<
   },
 };
 
+// Human-readable label for the structured block reason.
+const REASON_LABEL: Record<NotifBlockReason, string> = {
+  insecure_context: "اتصال غير آمن (HTTPS مطلوب)",
+  iframe: "معاينة داخل إطار (iframe)",
+  no_service_worker: "Service Worker غير مسجَّل",
+  api_missing: "API الإشعارات غير متاح في هذا المتصفح",
+  permission_denied: "إذن المتصفح مرفوض",
+  user_dismissed: "تم إغلاق نافذة الطلب دون منح الإذن",
+  delivery_failed: "تعذّر عرض الإشعار بعد منح الإذن",
+  server_error: "فشل من جهة الخادم",
+  other: "سبب غير مصنَّف",
+};
+
 function formatRelative(ts: number): string {
   const diff = Math.max(0, Date.now() - ts);
   const sec = Math.floor(diff / 1000);
@@ -156,6 +170,16 @@ function LastAttemptCard({ attempt }: { attempt: NotifAttempt | null }) {
           {formatRelative(attempt.at)}
         </span>
       </div>
+      {attempt.reason && (
+        <div className="flex items-start gap-1.5 rounded-md bg-secondary/40 border border-border/40 px-2 py-1">
+          <span className="text-[9px] font-semibold text-foreground shrink-0 mt-0.5">
+            السبب:
+          </span>
+          <span className="text-[10px] text-muted-foreground leading-relaxed">
+            {REASON_LABEL[attempt.reason] ?? attempt.reason}
+          </span>
+        </div>
+      )}
       {attempt.message && (
         <p
           className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2"
@@ -294,6 +318,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
         at: Date.now(),
         source: "server",
         message: e?.message ?? "server error",
+        reason: "server_error",
       });
     } finally {
       setSending(false);

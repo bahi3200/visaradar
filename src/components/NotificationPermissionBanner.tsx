@@ -10,7 +10,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { triggerAlert, getAlertMode, getVolume, recordNotifAttempt } from "@/lib/notificationPrefs";
+import {
+  triggerAlert,
+  getAlertMode,
+  getVolume,
+  recordNotifAttempt,
+  type NotifBlockReason,
+} from "@/lib/notificationPrefs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -180,6 +186,13 @@ export function shortContextReason(issue: string): string {
   if (issue.includes("HTTPS")) return "السبب: اتصال غير آمن (HTTP)";
   if (issue.includes("معاينة") || issue.includes("iframe")) return "السبب: معاينة داخل إطار";
   return "السبب: السياق الحالي غير مدعوم";
+}
+
+// Map a context-issue sentence to the structured reason code stored on attempts.
+export function contextIssueToReason(issue: string): NotifBlockReason {
+  if (issue.includes("HTTPS")) return "insecure_context";
+  if (issue.includes("معاينة") || issue.includes("iframe")) return "iframe";
+  return "other";
 }
 
 // Centralised toast for context-blocked permission attempts. Adds an action button
@@ -442,7 +455,13 @@ export default function NotificationPermissionBanner() {
     // Pre-flight: confirm the API exists at all (older browsers / some in-app webviews).
     if (typeof window === "undefined" || !("Notification" in window)) {
       toast.error("متصفحك لا يدعم إشعارات الويب. جرّب Chrome / Edge / Firefox أو أضِف التطبيق إلى الشاشة الرئيسية.");
-      recordNotifAttempt({ status: "unsupported", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "unsupported",
+        at: Date.now(),
+        source: "local",
+        reason: "api_missing",
+        message: "Notification API not available",
+      });
       return;
     }
 
@@ -456,6 +475,7 @@ export default function NotificationPermissionBanner() {
         at: Date.now(),
         source: "local",
         message: ctxIssue,
+        reason: contextIssueToReason(ctxIssue),
       });
       return;
     }
@@ -485,6 +505,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: reqErr instanceof Error ? reqErr.message : "requestPermission failed",
+          reason: "other",
         });
         return;
       }
@@ -494,7 +515,12 @@ export default function NotificationPermissionBanner() {
       setPermission("denied");
       setShowHelp(true);
       toast.error("الإشعارات محظورة. اتبع الخطوات لتفعيلها من إعدادات المتصفح.");
-      recordNotifAttempt({ status: "denied", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "denied",
+        at: Date.now(),
+        source: "local",
+        reason: "permission_denied",
+      });
       return;
     }
 
@@ -503,7 +529,12 @@ export default function NotificationPermissionBanner() {
       toast.message("لم يتم منح الإذن بعد", {
         description: "اضغط الزر مرة أخرى واختر «السماح» في نافذة المتصفح.",
       });
-      recordNotifAttempt({ status: "dismissed", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "dismissed",
+        at: Date.now(),
+        source: "local",
+        reason: "user_dismissed",
+      });
       return;
     }
 
@@ -562,6 +593,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: "service worker not registered",
+          reason: "no_service_worker",
         });
         setSendingTest(false);
         return;
@@ -611,6 +643,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: "delivery failed",
+          reason: "delivery_failed",
         });
       }
     } catch (e) {
@@ -625,6 +658,7 @@ export default function NotificationPermissionBanner() {
         at: Date.now(),
         source: "local",
         message: e instanceof Error ? e.message : "unknown error",
+        reason: "delivery_failed",
       });
     } finally {
       setSendingTest(false);
