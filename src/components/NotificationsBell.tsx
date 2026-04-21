@@ -81,13 +81,6 @@ export default function NotificationsBell() {
     },
   });
 
-  // Request browser notification permission
-  useEffect(() => {
-    if (user && "Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, [user]);
-
   // Realtime subscriptions
   useEffect(() => {
     if (!user) return;
