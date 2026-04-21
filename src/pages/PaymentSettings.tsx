@@ -316,11 +316,18 @@ export default function PaymentSettingsPage() {
             </div>
           )}
 
-          {/* Syncing Indicator */}
+          {/* Syncing Indicator — يظهر بعد الحفظ ويختفي عند انتهاء التحقق في الخلفية */}
           {syncing && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
-              <RefreshCw className="w-3 h-3 animate-spin" />
-              <span>جاري التحقق من التزامن مع الخادم...</span>
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs animate-in fade-in slide-in-from-bottom-1 duration-300"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />
+              <span className="font-medium text-primary">جاري التحقق...</span>
+              <span className="text-muted-foreground">
+                نتأكد من تزامن البيانات مع الخادم — سيختفي تلقائياً عند الاكتمال
+              </span>
             </div>
           )}
 
