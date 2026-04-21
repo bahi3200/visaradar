@@ -31,6 +31,7 @@ import {
   recordNotifAttempt,
   NOTIF_ATTEMPT_EVENT,
 } from "@/lib/notificationPrefs";
+import { getPermissionContextIssue } from "@/components/NotificationPermissionBanner";
 
 // Keep this in sync with NotificationPermissionBanner — these are the routes
 // where we never request browser permission (public/auth/legal flows).
@@ -227,6 +228,11 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       return;
     }
     if (permission === "unsupported") return;
+    const ctxIssue = getPermissionContextIssue();
+    if (ctxIssue) {
+      toast.error("تعذّر تفعيل الإشعارات", { description: ctxIssue, duration: 7000 });
+      return;
+    }
     setEnabling(true);
     try {
       const result = (await Notification.requestPermission()) as PermissionState;
