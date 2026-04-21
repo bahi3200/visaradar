@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,12 @@ import { ar } from "date-fns/locale";
 import { toast } from "sonner";
 import NotificationPrefsPanel from "./NotificationPrefsPanel";
 import { getAlertMode, getVolume, triggerAlert } from "@/lib/notificationPrefs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   IT: "🇮🇹 إيطاليا",
