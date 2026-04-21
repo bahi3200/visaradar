@@ -343,7 +343,7 @@ export default function NotificationPermissionBanner() {
                 onClick={copyOrigin}
                 className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-background border border-border hover:bg-secondary transition-colors"
               >
-                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
                 {copied ? "تم" : "نسخ الرابط"}
               </button>
             </div>
