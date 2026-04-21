@@ -18,13 +18,13 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         ref={ref}
         type="button"
         onClick={onOpen}
-        className="relative group rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
+        className="relative group w-40 h-40 sm:w-48 sm:h-48 aspect-square shrink-0 rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent bg-muted/20"
         aria-label="تكبير صورة الوصل"
         disabled={imgState === "error"}
       >
         {imgState === "loading" && (
           <div
-            className="relative w-40 h-40"
+            className="absolute inset-0"
             role="status"
             aria-live="polite"
             aria-label="جارٍ تحميل صورة الوصل"
@@ -34,7 +34,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           </div>
         )}
         {imgState === "error" && (
-          <div className="flex flex-col items-center justify-center w-40 h-40 gap-1 bg-destructive/5 text-destructive text-xs px-2 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-destructive/5 text-destructive text-xs px-2 text-center">
             <AlertCircle className="w-4 h-4" />
             <span>تعذر تحميل الصورة</span>
           </div>
@@ -46,7 +46,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           decoding="async"
           onLoad={() => setImgState("loaded")}
           onError={() => setImgState("error")}
-          className={`max-w-[160px] sm:max-w-[200px] max-h-56 w-auto h-auto object-contain group-hover:opacity-80 transition-opacity ${imgState === "loaded" ? "" : "hidden"}`}
+          className={`absolute inset-0 w-full h-full object-contain group-hover:opacity-80 transition-opacity ${imgState === "loaded" ? "" : "hidden"}`}
         />
         <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity">
           <ZoomIn className="w-6 h-6 text-foreground" />
