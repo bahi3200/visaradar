@@ -10,6 +10,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 import { toast } from "sonner";
+import NotificationPrefsPanel from "./NotificationPrefsPanel";
+import { getAlertMode, getVolume, triggerAlert } from "@/lib/notificationPrefs";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   IT: "🇮🇹 إيطاليا",
