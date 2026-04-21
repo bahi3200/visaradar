@@ -254,7 +254,7 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       if (!data || data.length === 0) {
-        console.warn("step 4 — upsert returned 0 rows (silent RLS reject)");
+        dwarn("step 4 — upsert returned 0 rows (silent RLS reject)");
         setErrorDetails({
           message: SAVE_FAILURE_COPY.message,
           code: "RLS_REJECT",
