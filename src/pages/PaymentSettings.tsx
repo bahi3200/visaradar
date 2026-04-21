@@ -221,7 +221,7 @@ export default function PaymentSettingsPage() {
       if (settings?.id) {
         payload.id = settings.id;
       }
-      console.log("step 3 — upsert payload:", payload);
+      dlog("step 3 — upsert payload:", payload);
       const writeStart = performance.now();
       // 🎯 نوع صريح لرد upsert: مصفوفة من PaymentSettingsRowFilled أو null
       // هذا يضمن أن TypeScript يعرف أن data[0] (إن وُجد) هو PaymentSettingsRowFilled وليس any
@@ -232,7 +232,7 @@ export default function PaymentSettingsPage() {
         data: PaymentSettingsRowFilled[] | null;
         error: typeof Error.prototype | null | any;
       };
-      console.log(
+      dlog(
         "step 4 — upsert response: duration_ms=",
         (performance.now() - writeStart).toFixed(1),
         "rows=",
