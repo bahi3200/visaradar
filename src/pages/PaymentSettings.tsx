@@ -46,6 +46,7 @@ export default function PaymentSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     setErrorDetails(null);
+    const toastId = toast.loading("جاري حفظ معلومات الدفع...");
     try {
       // 🔍 Debug: verify session + admin role before write
       const { data: sessionData } = await supabase.auth.getSession();
@@ -107,9 +108,9 @@ export default function PaymentSettingsPage() {
         throw new Error(msg);
       }
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
-      toast.success("تم حفظ معلومات الدفع بنجاح");
+      toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الحفظ");
+      toast.error(err.message || "حدث خطأ أثناء الحفظ", { id: toastId });
     } finally {
       setSaving(false);
     }

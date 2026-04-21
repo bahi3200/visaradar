@@ -108,7 +108,7 @@ describe("payment_settings admin write — no silent failures", () => {
       ccp_number: "x",
     });
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.reason).toBe("no_session");
+    expect((res as { ok: false; reason: string }).reason).toBe("no_session");
   });
 
   it("REJECTS write from a non-admin user (RLS denied)", () => {
@@ -117,7 +117,9 @@ describe("payment_settings admin write — no silent failures", () => {
       ccp_number: "tampered",
     });
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(["rls_denied", "silent_no_rows"]).toContain(res.reason);
+    expect(["rls_denied", "silent_no_rows"]).toContain(
+      (res as { ok: false; reason: string }).reason
+    );
   });
 
   it("preserves untouched fields on partial UPDATE", () => {
