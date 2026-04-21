@@ -2,7 +2,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, CreditCard, AlertCircle, X } from "lucide-react";
+import { Save, CreditCard, AlertCircle, X, RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
@@ -12,6 +12,7 @@ const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [ccpNumber, setCcpNumber] = useState("");
   const [ccpKey, setCcpKey] = useState("");
   const [ripNumber, setRipNumber] = useState("");
@@ -23,7 +24,7 @@ export default function PaymentSettingsPage() {
     hint?: string;
   } | null>(null);
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isFetching } = useQuery({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
       console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
@@ -49,6 +50,13 @@ export default function PaymentSettingsPage() {
       return data;
     },
   });
+
+  // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
+  useEffect(() => {
+    if (!isFetching && syncing) {
+      setSyncing(false);
+    }
+  }, [isFetching]);
 
   useEffect(() => {
     if (settings) {
@@ -155,6 +163,7 @@ export default function PaymentSettingsPage() {
       setAccountHolder(savedRow.account_holder || "");
 
       // إعادة التحقق في الخلفية
+      setSyncing(true);
       queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("✅ تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
@@ -287,6 +296,14 @@ export default function PaymentSettingsPage() {
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          )}
+
+          {/* Syncing Indicator */}
+          {syncing && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              <span>جاري التحقق من التزامن مع الخادم...</span>
             </div>
           )}
 
