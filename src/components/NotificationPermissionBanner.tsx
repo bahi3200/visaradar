@@ -171,6 +171,30 @@ export function setDevContextMode(mode: DevContextMode) {
   } catch {}
 }
 
+// Public URL where notifications actually work (HTTPS, top-level window).
+// Kept here so all toasts/dialogs link to the same place.
+export const PUBLISHED_APP_URL = "https://dev-fix-pro.lovable.app";
+
+// Compress a long context-issue sentence into a short label for the toast title.
+export function shortContextReason(issue: string): string {
+  if (issue.includes("HTTPS")) return "السبب: اتصال غير آمن (HTTP)";
+  if (issue.includes("معاينة") || issue.includes("iframe")) return "السبب: معاينة داخل إطار";
+  return "السبب: السياق الحالي غير مدعوم";
+}
+
+// Centralised toast for context-blocked permission attempts. Adds an action button
+// that opens the published app in a new tab so users have a one-click recovery path.
+export function showContextBlockedToast(issue: string, opts?: { title?: string }) {
+  toast.error(opts?.title ?? "تعذّر تفعيل الإشعارات", {
+    description: `${shortContextReason(issue)} — ${issue}`,
+    duration: 8000,
+    action: {
+      label: "افتح النسخة المنشورة",
+      onClick: () => window.open(PUBLISHED_APP_URL, "_blank", "noopener,noreferrer"),
+    },
+  });
+}
+
 // Notification API only works in a "secure context": HTTPS, localhost, or 127.0.0.1.
 // Also, calling it inside a cross-origin iframe (Lovable preview) is unreliable —
 // even when permission is granted on the parent, the iframe origin may be denied.
@@ -525,8 +549,13 @@ export default function NotificationPermissionBanner() {
       if (requiresSW && (!swReg || typeof swReg.showNotification !== "function")) {
         toast.error("تعذّر إرسال الإشعار", {
           description:
-            "Service Worker غير مسجَّل. هذه الميزة تعمل فقط في النسخة المنشورة (HTTPS). افتح الرابط المنشور أو ثبّت التطبيق من /install ثم أعد المحاولة.",
-          duration: 7000,
+            "السبب: Service Worker غير مسجَّل — يعمل فقط في النسخة المنشورة (HTTPS). افتح الرابط المنشور أو ثبّت التطبيق من /install ثم أعد المحاولة.",
+          duration: 8000,
+          action: {
+            label: "افتح النسخة المنشورة",
+            onClick: () =>
+              window.open(PUBLISHED_APP_URL, "_blank", "noopener,noreferrer"),
+          },
         });
         recordNotifAttempt({
           status: "error",
@@ -876,8 +905,6 @@ function Step({ children }: { children: React.ReactNode }) {
   return <li className="text-xs text-muted-foreground leading-relaxed">{children}</li>;
 }
 
-const PUBLISHED_URL = "https://dev-fix-pro.lovable.app";
-
 function ContextIssueDialog({
   issue,
   onClose,
@@ -952,7 +979,7 @@ function ContextIssueDialog({
             className="w-full"
             onClick={() => onClose()}
           >
-            <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer">
+            <a href={PUBLISHED_APP_URL} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 ml-1.5" />
               فتح النسخة المنشورة
             </a>

@@ -36,6 +36,7 @@ import {
   getDevContextMode,
   setDevContextMode,
   type DevContextMode,
+  showContextBlockedToast,
 } from "@/components/NotificationPermissionBanner";
 import { FlaskConical, ShieldAlert } from "lucide-react";
 
@@ -261,7 +262,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
     if (permission === "unsupported") return;
     const ctxIssue = getPermissionContextIssue();
     if (ctxIssue) {
-      toast.error("تعذّر تفعيل الإشعارات", { description: ctxIssue, duration: 7000 });
+      showContextBlockedToast(ctxIssue);
       return;
     }
     setEnabling(true);
