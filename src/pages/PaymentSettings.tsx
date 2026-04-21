@@ -12,6 +12,7 @@ const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [ccpNumber, setCcpNumber] = useState("");
   const [ccpKey, setCcpKey] = useState("");
   const [ripNumber, setRipNumber] = useState("");
