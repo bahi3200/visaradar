@@ -178,12 +178,12 @@ export default function PaymentSettingsPage() {
     setSaving(true);
     setErrorDetails(null);
     const toastId = toast.loading("جاري حفظ معلومات الدفع...");
-    console.group("[PaymentSettings] SAVE flow");
+    dgroup("[PaymentSettings] SAVE flow");
     try {
       // 🔍 Debug: verify session + admin role before write
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-      console.log("step 1 — auth.uid():", userId, "email:", sessionData?.session?.user?.email);
+      dlog("step 1 — auth.uid():", userId, "email:", sessionData?.session?.user?.email);
 
       if (!userId) {
         throw new Error("لا توجد جلسة مصادقة. يرجى تسجيل الدخول.");
@@ -191,7 +191,7 @@ export default function PaymentSettingsPage() {
 
       const { data: roleCheck, error: roleErr } = await supabase
         .rpc("has_role", { _user_id: userId, _role: "admin" });
-      console.log("step 2 — has_role(admin):", roleCheck, "err:", roleErr);
+      dlog("step 2 — has_role(admin):", roleCheck, "err:", roleErr);
 
       if (roleErr) {
         setErrorDetails({
