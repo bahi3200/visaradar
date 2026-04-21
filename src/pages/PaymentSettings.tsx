@@ -47,6 +47,37 @@ export default function PaymentSettingsPage() {
     setSaving(true);
     setErrorDetails(null);
     try {
+      // 🔍 Debug: verify session + admin role before write
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      console.log("[PaymentSettings] auth.uid():", userId);
+
+      if (!userId) {
+        throw new Error("لا توجد جلسة مصادقة. يرجى تسجيل الدخول.");
+      }
+
+      const { data: roleCheck, error: roleErr } = await supabase
+        .rpc("has_role", { _user_id: userId, _role: "admin" });
+      console.log("[PaymentSettings] has_role(admin):", roleCheck, "err:", roleErr);
+
+      if (roleErr) {
+        setErrorDetails({
+          message: "فشل التحقق من الدور: " + roleErr.message,
+          code: (roleErr as any).code,
+          details: (roleErr as any).details,
+          hint: (roleErr as any).hint,
+        });
+        throw roleErr;
+      }
+      if (!roleCheck) {
+        const msg = "المستخدم الحالي ليس لديه دور admin — RLS سيرفض العملية.";
+        setErrorDetails({
+          message: msg,
+          hint: `user_id: ${userId}. أضف صفاً في user_roles بدور admin لهذا المستخدم.`,
+        });
+        throw new Error(msg);
+      }
+
       const payload: any = {
         ccp_number: ccpNumber.trim(),
         ccp_key: ccpKey.trim(),
