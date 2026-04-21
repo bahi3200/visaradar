@@ -149,11 +149,25 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           </div>
         </div>
         <img
-          src={signedUrl}
+          src={activeSrc}
           alt="Receipt"
           decoding="async"
+          referrerPolicy="no-referrer"
           onLoad={() => setImgState("loaded")}
-          onError={() => setImgState("error")}
+          onError={() => {
+            // If the transformed/thumb URL fails (e.g. transform endpoint
+            // returned 400 or the CDN dropped it), try the original full
+            // signed URL once before surfacing an error.
+            if (fallbackUrl && fallbackUrl !== activeSrc && !fallbackTried) {
+              setFallbackTried(true);
+              setSlow(false);
+              setActiveSrc(fallbackUrl);
+              setImgState("loading");
+              return;
+            }
+            console.warn("[ReceiptThumbnail] Image failed to load:", activeSrc);
+            setImgState("error");
+          }}
           className={`absolute inset-0 w-full h-full object-contain group-hover:opacity-80 transition-opacity ${
             imgState === "loaded" ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
