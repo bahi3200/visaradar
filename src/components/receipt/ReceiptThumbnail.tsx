@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown, Info } from "lucide-react";
+import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -19,10 +19,12 @@ export interface ReceiptThumbnailProps {
   onDownloadThumb?: () => void;
   /** Show notice that image transform is disabled and full size will be used. */
   fullSizeNotice?: boolean;
+  /** Optional callback to retry fetching the signed URL / image. */
+  onRetry?: () => void;
 }
 
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
-  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice }, ref) => {
+  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice, onRetry }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
   const [slow, setSlow] = useState(false);
 
@@ -41,11 +43,12 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
   return (
     <div className="flex flex-col gap-2">
     <div className="flex items-start gap-3 flex-wrap">
+      <div className="relative w-40 h-40 sm:w-48 sm:h-48 aspect-square shrink-0">
       <button
         ref={ref}
         type="button"
         onClick={onOpen}
-        className="relative group w-40 h-40 sm:w-48 sm:h-48 aspect-square shrink-0 rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent bg-muted/20"
+        className="relative group w-full h-full rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent bg-muted/20"
         aria-label="تكبير صورة الوصل"
         disabled={imgState === "error"}
       >
@@ -68,7 +71,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           </div>
         )}
         {imgState === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-destructive/5 text-destructive text-xs px-2 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-destructive/5 text-destructive text-xs px-2 text-center">
             <AlertCircle className="w-4 h-4" />
             <span>تعذر تحميل الصورة</span>
           </div>
@@ -86,6 +89,22 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           <ZoomIn className="w-6 h-6 text-foreground" />
         </span>
       </button>
+      {onRetry && (imgState === "error" || (imgState === "loading" && slow)) && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className={`absolute z-10 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
+            imgState === "error"
+              ? "bottom-2 left-1/2 -translate-x-1/2 bg-destructive/10 hover:bg-destructive/20 border-destructive/40 text-destructive"
+              : "bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur hover:bg-background border-border/60 text-foreground"
+          }`}
+          aria-label="إعادة محاولة تحميل الصورة"
+        >
+          <RefreshCw className="w-3 h-3" />
+          <span>إعادة المحاولة</span>
+        </button>
+      )}
+      </div>
       {onDownloadThumb ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
