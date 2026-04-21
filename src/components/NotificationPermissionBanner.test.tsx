@@ -56,8 +56,7 @@ describe("NotificationPermissionBanner — requestPermission gating", () => {
   afterEach(() => {
     vi.useRealTimers();
     cleanup();
-    // @ts-expect-error – cleanup stub
-    delete globalThis.Notification;
+    delete (globalThis as { Notification?: typeof Notification }).Notification;
   });
 
   it("does NOT call requestPermission while auth is still loading", async () => {
