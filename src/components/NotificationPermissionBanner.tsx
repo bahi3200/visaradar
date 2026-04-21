@@ -16,8 +16,36 @@ const PUBLIC_BLOCKED_PREFIXES = [
   "/help",
 ];
 
-const DISMISSED_KEY = "notif_perm_banner_dismissed";
+const DISMISSED_KEY = "notif_perm_banner_dismissed"; // legacy boolean — migrated below
+const SNOOZE_UNTIL_KEY = "notif_perm_snooze_until"; // ISO timestamp until which the banner stays hidden
+const SNOOZE_DAYS = 7;
 const PROMPTED_KEY = "notif_perm_prompted";
+
+function readSnoozeUntil(): number {
+  try {
+    // Migrate legacy boolean dismissed flag → 7-day snooze on first read
+    const legacy = localStorage.getItem(DISMISSED_KEY);
+    if (legacy === "true") {
+      const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+      localStorage.setItem(SNOOZE_UNTIL_KEY, String(until));
+      localStorage.removeItem(DISMISSED_KEY);
+      return until;
+    }
+    const raw = localStorage.getItem(SNOOZE_UNTIL_KEY);
+    if (!raw) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeSnoozeUntil(ts: number) {
+  try {
+    if (ts > 0) localStorage.setItem(SNOOZE_UNTIL_KEY, String(ts));
+    else localStorage.removeItem(SNOOZE_UNTIL_KEY);
+  } catch {}
+}
 
 type PermissionState = "default" | "granted" | "denied" | "unsupported";
 type BrowserKey =
@@ -68,13 +96,19 @@ export default function NotificationPermissionBanner() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
-  const [dismissed, setDismissed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(DISMISSED_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil());
+
+  // Re-evaluate snooze expiry every minute so the banner reappears automatically.
+  useEffect(() => {
+    if (snoozeUntil <= 0) return;
+    const tick = () => {
+      if (Date.now() >= snoozeUntil) setSnoozeUntil(0);
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [snoozeUntil]);
+
+  const isSnoozed = snoozeUntil > Date.now();
   const [showHelp, setShowHelp] = useState(false);
   const [justGranted, setJustGranted] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
@@ -176,10 +210,18 @@ export default function NotificationPermissionBanner() {
   };
 
   const handleDismiss = () => {
-    setDismissed(true);
-    try {
-      localStorage.setItem(DISMISSED_KEY, "true");
-    } catch {}
+    // If the user is just closing the success banner after granting, don't snooze.
+    if (justGranted || permission === "granted") {
+      setJustGranted(false);
+      return;
+    }
+    const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+    setSnoozeUntil(until);
+    writeSnoozeUntil(until);
+    toast.message(`سنذكّرك بعد ${SNOOZE_DAYS} أيام`, {
+      description: "يمكنك دائماً تفعيل الإشعارات من إعدادات حسابك.",
+      duration: 4000,
+    });
   };
 
   // Hide banner entirely on public routes or before auth resolves.
@@ -187,7 +229,8 @@ export default function NotificationPermissionBanner() {
   if (permission === "unsupported") return null;
   // Keep visible after granting so the user can test, otherwise hide when granted.
   if (permission === "granted" && !justGranted) return null;
-  if (dismissed && permission !== "denied" && !justGranted) return null;
+  // "denied" always shows (it's important info); other states respect snooze.
+  if (isSnoozed && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
   const isGranted = permission === "granted";
