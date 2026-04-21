@@ -172,7 +172,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
                   سجّل الدخول لتفعيل الإشعارات.
                 </p>
               ) : isPublicRoute ? (
-                <p className="flex items-start gap-1 text-[10px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                <p className="flex items-start gap-1 text-[10px] text-destructive/80 leading-relaxed">
                   <Lock className="w-3 h-3 mt-0.5 shrink-0" />
                   لا يمكن تفعيل الإشعارات من هذه الصفحة. انتقل إلى لوحة التحكم.
                 </p>
