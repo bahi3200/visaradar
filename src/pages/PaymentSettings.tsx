@@ -47,21 +47,15 @@ export default function PaymentSettingsPage() {
         account_holder: accountHolder.trim(),
         updated_at: new Date().toISOString(),
       };
-      let result;
       if (settings?.id) {
-        result = await supabase
-          .from("payment_settings")
-          .update(payload)
-          .eq("id", settings.id)
-          .select();
-      } else {
-        result = await supabase
-          .from("payment_settings")
-          .insert(payload)
-          .select();
+        payload.id = settings.id;
       }
-      if (result.error) throw result.error;
-      if (!result.data || result.data.length === 0) {
+      const { data, error } = await supabase
+        .from("payment_settings")
+        .upsert(payload, { onConflict: "id" })
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) {
         throw new Error("لم يتم حفظ التغييرات. تحقق من صلاحياتك.");
       }
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
