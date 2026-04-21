@@ -147,8 +147,16 @@ const BROWSER_LABEL: Record<BrowserKey, string> = {
 export default function NotificationPermissionBanner() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
+  const userId = user?.id ?? null;
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
-  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil());
+  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil(userId));
+  const [sessionHidden, setSessionHidden] = useState<boolean>(() => readSessionHidden());
+
+  // When the user identity changes (login/logout), reload the per-user snooze state
+  // so the previous user's "لاحقاً" decision doesn't bleed into the next session.
+  useEffect(() => {
+    setSnoozeUntil(readSnoozeUntil(userId));
+  }, [userId]);
 
   // Re-evaluate snooze expiry every minute so the banner reappears automatically.
   useEffect(() => {
