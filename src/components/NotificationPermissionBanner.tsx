@@ -16,22 +16,59 @@ const PUBLIC_BLOCKED_PREFIXES = [
   "/help",
 ];
 
-const DISMISSED_KEY = "notif_perm_banner_dismissed"; // legacy boolean — migrated below
-const SNOOZE_UNTIL_KEY = "notif_perm_snooze_until"; // ISO timestamp until which the banner stays hidden
-const SNOOZE_DAYS = 7;
-const PROMPTED_KEY = "notif_perm_prompted";
+// Storage key conventions:
+// - Per-user keys are namespaced: `${BASE}::${userId}` so different accounts on the same browser
+//   keep separate snooze/prompt history.
+// - A legacy global key is migrated into the current user's namespace on first read.
+const LEGACY_DISMISSED_KEY = "notif_perm_banner_dismissed";
+const LEGACY_SNOOZE_KEY = "notif_perm_snooze_until";
+const LEGACY_PROMPTED_KEY = "notif_perm_prompted";
 
-function readSnoozeUntil(): number {
+const SNOOZE_BASE = "notif_perm_snooze_until";
+const PROMPTED_BASE = "notif_perm_prompted";
+// Anonymous (logged-out) users get their own bucket so a guest dismiss doesn't follow them after login.
+const ANON_BUCKET = "anon";
+const SNOOZE_DAYS = 7;
+
+// Session-scoped flag to suppress re-showing during the current tab session
+// (e.g. user navigates between public ↔ private pages and we already hid this once).
+const SESSION_HIDE_KEY = "notif_perm_session_hidden";
+
+function snoozeKey(userId: string | null) {
+  return `${SNOOZE_BASE}::${userId ?? ANON_BUCKET}`;
+}
+function promptedKey(userId: string | null) {
+  return `${PROMPTED_BASE}::${userId ?? ANON_BUCKET}`;
+}
+
+function readSnoozeUntil(userId: string | null): number {
   try {
-    // Migrate legacy boolean dismissed flag → 7-day snooze on first read
-    const legacy = localStorage.getItem(DISMISSED_KEY);
-    if (legacy === "true") {
-      const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
-      localStorage.setItem(SNOOZE_UNTIL_KEY, String(until));
-      localStorage.removeItem(DISMISSED_KEY);
-      return until;
+    const key = snoozeKey(userId);
+
+    // Migrate legacy global keys → current user's namespaced key (one-time).
+    const legacyDismissed = localStorage.getItem(LEGACY_DISMISSED_KEY);
+    const legacySnooze = localStorage.getItem(LEGACY_SNOOZE_KEY);
+    if (legacyDismissed === "true" || legacySnooze) {
+      const fromLegacy =
+        legacySnooze && Number.isFinite(Number(legacySnooze))
+          ? Number(legacySnooze)
+          : Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+      // Only seed the user's key if it doesn't already exist — never overwrite a fresher decision.
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, String(fromLegacy));
+      }
+      localStorage.removeItem(LEGACY_DISMISSED_KEY);
+      localStorage.removeItem(LEGACY_SNOOZE_KEY);
     }
-    const raw = localStorage.getItem(SNOOZE_UNTIL_KEY);
+    // Same migration for the prompted flag, so we don't re-auto-prompt a returning user.
+    const legacyPrompted = localStorage.getItem(LEGACY_PROMPTED_KEY);
+    if (legacyPrompted === "true") {
+      const pKey = promptedKey(userId);
+      if (!localStorage.getItem(pKey)) localStorage.setItem(pKey, "true");
+      localStorage.removeItem(LEGACY_PROMPTED_KEY);
+    }
+
+    const raw = localStorage.getItem(key);
     if (!raw) return 0;
     const n = Number(raw);
     return Number.isFinite(n) ? n : 0;
@@ -40,10 +77,25 @@ function readSnoozeUntil(): number {
   }
 }
 
-function writeSnoozeUntil(ts: number) {
+function writeSnoozeUntil(userId: string | null, ts: number) {
   try {
-    if (ts > 0) localStorage.setItem(SNOOZE_UNTIL_KEY, String(ts));
-    else localStorage.removeItem(SNOOZE_UNTIL_KEY);
+    const key = snoozeKey(userId);
+    if (ts > 0) localStorage.setItem(key, String(ts));
+    else localStorage.removeItem(key);
+  } catch {}
+}
+
+function readSessionHidden(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_HIDE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+function writeSessionHidden(v: boolean) {
+  try {
+    if (v) sessionStorage.setItem(SESSION_HIDE_KEY, "true");
+    else sessionStorage.removeItem(SESSION_HIDE_KEY);
   } catch {}
 }
 
@@ -95,8 +147,16 @@ const BROWSER_LABEL: Record<BrowserKey, string> = {
 export default function NotificationPermissionBanner() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
+  const userId = user?.id ?? null;
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
-  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil());
+  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil(userId));
+  const [sessionHidden, setSessionHidden] = useState<boolean>(() => readSessionHidden());
+
+  // When the user identity changes (login/logout), reload the per-user snooze state
+  // so the previous user's "لاحقاً" decision doesn't bleed into the next session.
+  useEffect(() => {
+    setSnoozeUntil(readSnoozeUntil(userId));
+  }, [userId]);
 
   // Re-evaluate snooze expiry every minute so the banner reappears automatically.
   useEffect(() => {
@@ -141,7 +201,7 @@ export default function NotificationPermissionBanner() {
     if (permission !== "default") return;
     let prompted = false;
     try {
-      prompted = localStorage.getItem(PROMPTED_KEY) === "true";
+      prompted = localStorage.getItem(promptedKey(userId)) === "true";
     } catch {}
     if (prompted) return;
 
@@ -149,7 +209,7 @@ export default function NotificationPermissionBanner() {
       // Re-check just before firing — route or auth may have changed during the delay.
       if (!canPrompt) return;
       try {
-        localStorage.setItem(PROMPTED_KEY, "true");
+        localStorage.setItem(promptedKey(userId), "true");
         const result = await Notification.requestPermission();
         setPermission(result as PermissionState);
         if (result === "granted") {
@@ -213,11 +273,18 @@ export default function NotificationPermissionBanner() {
     // If the user is just closing the success banner after granting, don't snooze.
     if (justGranted || permission === "granted") {
       setJustGranted(false);
+      // Mark this tab session as hidden so we don't pop it again on the next route change.
+      writeSessionHidden(true);
+      setSessionHidden(true);
       return;
     }
     const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
     setSnoozeUntil(until);
-    writeSnoozeUntil(until);
+    writeSnoozeUntil(userId, until);
+    // Also flag this tab session so the banner doesn't briefly reappear during cross-route navigation
+    // before the localStorage read settles on slower devices.
+    writeSessionHidden(true);
+    setSessionHidden(true);
     toast.message(`سنذكّرك بعد ${SNOOZE_DAYS} أيام`, {
       description: "يمكنك دائماً تفعيل الإشعارات من إعدادات حسابك.",
       duration: 4000,
@@ -229,8 +296,8 @@ export default function NotificationPermissionBanner() {
   if (permission === "unsupported") return null;
   // Keep visible after granting so the user can test, otherwise hide when granted.
   if (permission === "granted" && !justGranted) return null;
-  // "denied" always shows (it's important info); other states respect snooze.
-  if (isSnoozed && permission !== "denied" && !justGranted) return null;
+  // "denied" always shows (it's important info); other states respect snooze + session-hide.
+  if ((isSnoozed || sessionHidden) && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
   const isGranted = permission === "granted";
