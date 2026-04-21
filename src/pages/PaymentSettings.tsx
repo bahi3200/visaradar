@@ -161,10 +161,7 @@ export default function PaymentSettingsPage() {
 
       // ✅ تحديث الواجهة فقط بعد التأكد من وجود بيانات
       queryClient.setQueryData(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
-      setCcpNumber(savedRow.ccp_number || "");
-      setCcpKey(savedRow.ccp_key || "");
-      setRipNumber(savedRow.rip_number || "");
-      setAccountHolder(savedRow.account_holder || "");
+      applyPaymentSettings(savedRow);
 
       // إعادة التحقق في الخلفية
       setSyncing(true);
