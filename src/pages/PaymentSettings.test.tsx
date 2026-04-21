@@ -184,3 +184,119 @@ describe("PaymentSettings — تحديث فوري بعد upsert", () => {
     expect(screen.getByText(/فشل الحفظ/i)).toBeInTheDocument();
   });
 });
+
+// ============================================================
+// 🎯 سيناريوهات التحقق من تطابق شكل البيانات بين useQuery و setQueryData
+// ============================================================
+describe("PaymentSettings — تطابق شكل cache بين useQuery و setQueryData", () => {
+  const QUERY_KEY = ["payment-settings"];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "admin-uid", email: "admin@test.com" } } },
+    });
+    mockRpc.mockResolvedValue({ data: true, error: null });
+  });
+
+  it("✅ النجاح: useQuery يكتب كائناً واحداً، وsetQueryData بعد upsert يكتب نفس الشكل", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+
+    const updatedRow = {
+      id: "row-1",
+      ccp_number: "222",
+      ccp_key: "22",
+      rip_number: "rip-222",
+      account_holder: "محمد",
+    };
+    mockUpsert.mockResolvedValue({ data: [updatedRow], error: null });
+
+    const { qc } = renderPage();
+
+    // 1) شكل cache بعد useQuery (الجلب الأولي) = كائن واحد
+    await waitFor(() => {
+      const cached = qc.getQueryData(QUERY_KEY);
+      expect(cached).toBeTruthy();
+      expect(Array.isArray(cached)).toBe(false);
+      expect(typeof cached).toBe("object");
+      expect(cached).toMatchObject({ id: "row-1", ccp_number: "111" });
+    });
+
+    const cachedAfterFetch = qc.getQueryData(QUERY_KEY);
+    const fetchKeys = Object.keys(cachedAfterFetch as object).sort();
+
+    // 2) ضغط حفظ
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+
+    // 3) شكل cache بعد setQueryData = كائن واحد بنفس الشكل
+    await waitFor(() => {
+      const cached = qc.getQueryData(QUERY_KEY);
+      expect(cached).toBeTruthy();
+      expect(Array.isArray(cached)).toBe(false);
+      expect(cached).toMatchObject({ id: "row-1", ccp_number: "222" });
+    });
+
+    // 4) ✨ التحقق الحاسم: نفس الحقول الأساسية في كلتا الحالتين
+    const cachedAfterSave = qc.getQueryData(QUERY_KEY);
+    const saveKeys = Object.keys(cachedAfterSave as object).sort();
+    const coreFields = ["id", "ccp_number", "ccp_key", "rip_number", "account_holder"];
+    coreFields.forEach((f) => {
+      expect(fetchKeys).toContain(f);
+      expect(saveKeys).toContain(f);
+    });
+  });
+
+  it("⛔ رفض RLS (data.length===0): cache لا يتغير بعد فشل upsert", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+    mockUpsert.mockResolvedValue({ data: [], error: null });
+
+    const { qc } = renderPage();
+
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ id: "row-1" });
+    });
+
+    const cacheBefore = qc.getQueryData(QUERY_KEY);
+
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    // ✅ cache بقي بنفس المرجع (لم يُكتب فوقه)
+    const cacheAfter = qc.getQueryData(QUERY_KEY);
+    expect(cacheAfter).toBe(cacheBefore);
+    expect(cacheAfter).toMatchObject({ id: "row-1", ccp_number: "111" });
+  });
+
+  it("📭 لا يوجد صف (maybeSingle => null): useQuery يكتب null في cache", async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const { qc } = renderPage();
+
+    // عند data=null، useQuery يخزّن null (وليس undefined/{}/[])
+    await waitFor(() => {
+      const cached = qc.getQueryData(QUERY_KEY);
+      expect(cached).toBeNull();
+    });
+
+    const cached = qc.getQueryData(QUERY_KEY);
+    expect(Array.isArray(cached)).toBe(false);
+    expect(cached).not.toEqual({});
+    expect(cached).not.toEqual([]);
+  });
+});
