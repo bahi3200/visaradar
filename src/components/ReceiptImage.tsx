@@ -9,6 +9,7 @@ import { extractStoragePath } from "@/lib/receiptStorage";
 const MAX_SIGN_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 800;
 const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
+const THUMB_TIMEOUT_MS = 6000; // Don't let a hanging transform request block the full URL
 
 // Session-level kill switch: if Storage transform fails (e.g., plan limits,
 // unsupported format, server config), skip thumbnail requests for the rest
@@ -69,30 +70,50 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       for (let i = 0; i < MAX_SIGN_RETRIES; i++) {
         if (cancelled) return;
         setAttempt(i + 1);
-        const fullPromise = supabase.storage
+        // Request the full signed URL on its own — never let the optional
+        // thumbnail transform request block or fail the primary URL.
+        const fullRes = await supabase.storage
           .from("receipts")
           .createSignedUrl(path, 3600);
-        const thumbPromise = transformDisabled
-          ? Promise.resolve({ data: null, error: null } as unknown as Awaited<typeof fullPromise>)
-          : supabase.storage.from("receipts").createSignedUrl(path, 3600, {
-              transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
-            });
-        const [fullRes, thumbRes] = await Promise.all([fullPromise, thumbPromise]);
         if (cancelled) return;
-        // Detect transform-specific failure once and disable for the session
-        if (!transformDisabled && thumbRes.error && isTransformError(thumbRes.error)) {
-          transformDisabled = true;
-          console.warn(
-            "[ReceiptImage] Storage image transform disabled for session:",
-            thumbRes.error.message,
-          );
-          setTransformBlocked(true);
-        }
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
-          // Fallback to full URL if transform fails (e.g. non-image or unsupported format)
-          setThumbUrl(thumbRes.data?.signedUrl || fullRes.data.signedUrl);
+          setThumbUrl(fullRes.data.signedUrl); // optimistic fallback
           setLoading(false);
+          // Fire-and-forget thumbnail request with a hard timeout so a
+          // hanging transform endpoint never re-blocks the UI.
+          if (!transformDisabled) {
+            const thumbReq = supabase.storage
+              .from("receipts")
+              .createSignedUrl(path, 3600, {
+                transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
+              });
+            const timeout = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+              setTimeout(
+                () => resolve({ data: null, error: { message: "thumb timeout" } }),
+                THUMB_TIMEOUT_MS,
+              ),
+            );
+            Promise.race([thumbReq, timeout])
+              .then((thumbRes) => {
+                if (cancelled) return;
+                if (thumbRes.error) {
+                  if (isTransformError(thumbRes.error)) {
+                    transformDisabled = true;
+                    setTransformBlocked(true);
+                    console.warn(
+                      "[ReceiptImage] Storage image transform disabled for session:",
+                      thumbRes.error.message,
+                    );
+                  }
+                  return;
+                }
+                if (thumbRes.data?.signedUrl) setThumbUrl(thumbRes.data.signedUrl);
+              })
+              .catch(() => {
+                /* swallow — thumb is optional */
+              });
+          }
           return;
         }
         lastErr = fullRes.error?.message || "تعذر تحميل الصورة";
