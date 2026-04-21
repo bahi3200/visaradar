@@ -645,3 +645,151 @@ describe("PaymentSettings — ضغط حفظ مرتين متتاليتين", () =
     expect(toast.error).not.toHaveBeenCalled();
   });
 });
+
+// ============================================================
+// 🧪 سيناريو تطبيع الأنواع المختلطة (number/undefined/string رقمي)
+// ============================================================
+describe("PaymentSettings — تطبيع شكل الصف بعد upsert بأنواع مختلطة", () => {
+  const QUERY_KEY = ["payment-settings"];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "admin-uid", email: "admin@test.com" } } },
+    });
+    mockRpc.mockResolvedValue({ data: true, error: null });
+  });
+
+  it("🧬 upsert يُرجع حقولاً بأنواع مختلطة → cache يحتفظ بشكل PaymentSettingsRow المُطبَّع", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+
+    // ⚠️ صف "خام" يُحاكي ردّاً غير-معياري من Supabase:
+    //  - ccp_number كرقم (number) بدلاً من string
+    //  - ccp_key undefined
+    //  - rip_number كـ string رقمي طويل
+    //  - account_holder string عادي
+    //  - referrer_bonus_days كرقم صحيح (مسموح)
+    //  - referred_bonus_days كـ string رقمي (يجب تجاهله → undefined)
+    //  - updated_at كرقم (timestamp) بدلاً من ISO string (يجب تجاهله → undefined)
+    const rawMixedRow = {
+      id: 12345, // number → سيُحوَّل إلى "12345"
+      ccp_number: 9876543210, // number → "9876543210"
+      ccp_key: undefined, // undefined → ""
+      rip_number: "00799999000123456789", // string رقمي → كما هو
+      account_holder: "محمد المختلط",
+      referrer_bonus_days: 7, // number صحيح → يُحفظ
+      referred_bonus_days: "14", // string → ❌ يجب أن يصبح undefined
+      updated_at: 1700000000000, // number → ❌ يجب أن يصبح undefined
+      extra_unknown_field: "should-be-stripped", // حقل غريب → لا يجب أن يظهر
+    };
+    mockUpsert.mockResolvedValue({ data: [rawMixedRow], error: null });
+
+    const { qc } = renderPage();
+
+    await screen.findByDisplayValue("111");
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+
+    // ✅ 1) cache يحتوي صفاً مُطبَّعاً (object واحد، ليس array)
+    const cached = await waitFor(() => {
+      const v = qc.getQueryData(QUERY_KEY) as Record<string, unknown> | null;
+      expect(v).toBeTruthy();
+      return v!;
+    });
+    expect(Array.isArray(cached)).toBe(false);
+    expect(typeof cached).toBe("object");
+
+    // ✅ 2) جميع الحقول النصّية الإلزامية أصبحت string فعلاً (لا number)
+    expect(typeof cached.id).toBe("string");
+    expect(cached.id).toBe("12345");
+
+    expect(typeof cached.ccp_number).toBe("string");
+    expect(cached.ccp_number).toBe("9876543210");
+
+    expect(typeof cached.ccp_key).toBe("string");
+    expect(cached.ccp_key).toBe(""); // undefined → ""
+
+    expect(typeof cached.rip_number).toBe("string");
+    expect(cached.rip_number).toBe("00799999000123456789");
+
+    expect(typeof cached.account_holder).toBe("string");
+    expect(cached.account_holder).toBe("محمد المختلط");
+
+    // ✅ 3) referrer_bonus_days كرقم صحيح يُحفظ كما هو
+    expect(cached.referrer_bonus_days).toBe(7);
+    expect(typeof cached.referrer_bonus_days).toBe("number");
+
+    // ✅ 4) string رقمي في referred_bonus_days → undefined (لم يمرّ التحقق typeof === "number")
+    expect(cached.referred_bonus_days).toBeUndefined();
+
+    // ✅ 5) updated_at كرقم → undefined (لم يمرّ التحقق typeof === "string")
+    expect(cached.updated_at).toBeUndefined();
+
+    // ✅ 6) الحقل الغريب extra_unknown_field محذوف بالكامل (التطبيع لا ينقله)
+    expect(cached).not.toHaveProperty("extra_unknown_field");
+
+    // ✅ 7) المفاتيح الفعلية في cache مطابقة تماماً لشكل PaymentSettingsRow
+    const expectedKeys = [
+      "id",
+      "ccp_number",
+      "ccp_key",
+      "rip_number",
+      "account_holder",
+      "referrer_bonus_days",
+      "referred_bonus_days",
+      "updated_at",
+    ].sort();
+    expect(Object.keys(cached).sort()).toEqual(expectedKeys);
+
+    // ✅ 8) الحقول المرئية في الواجهة تعرض القيم المُطبَّعة (string)
+    expect(screen.getByDisplayValue("9876543210")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("00799999000123456789")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("محمد المختلط")).toBeInTheDocument();
+
+    // ✅ 9) toast نجاح استُدعي وtoast خطأ لم يُستدعَ
+    expect(toast.success).toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("🧬 upsert يُرجع كائناً بدون id (نوع صحيح لكن بيانات ناقصة) → التطبيع يرفضه ولا يُكتب cache", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+
+    // ⚠️ صف بدون id → التطبيع يُرجع null → الحارس يلتقطه (EMPTY_SAVED_ROW)
+    mockUpsert.mockResolvedValue({
+      data: [{ ccp_number: 999, ccp_key: undefined, account_holder: "بدون id" }],
+      error: null,
+    });
+
+    const { qc } = renderPage();
+    await screen.findByDisplayValue("111");
+
+    const cacheBefore = qc.getQueryData(QUERY_KEY);
+    const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
+
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    // ✅ cache لم يُمَس + setQueryData لم يُستدعَ
+    expect(setQueryDataSpy).not.toHaveBeenCalled();
+    expect(qc.getQueryData(QUERY_KEY)).toBe(cacheBefore);
+    expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ id: "row-1", ccp_number: "111" });
+
+    // ✅ toast.success لم يُستدعَ
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});
