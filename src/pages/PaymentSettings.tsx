@@ -170,6 +170,44 @@ export default function PaymentSettingsPage() {
             />
           </div>
 
+          {/* Error Banner */}
+          {errorDetails && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <p className="font-bold text-destructive">فشل الحفظ</p>
+                <p className="text-sm text-foreground break-words">
+                  {errorDetails.message}
+                </p>
+                {errorDetails.code && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    code: {errorDetails.code}
+                  </p>
+                )}
+                {errorDetails.details && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    {errorDetails.details}
+                  </p>
+                )}
+                {errorDetails.hint && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    💡 {errorDetails.hint}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setErrorDetails(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                aria-label="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Save Button */}
           <button
             onClick={handleSave}
