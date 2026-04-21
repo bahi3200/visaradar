@@ -7,6 +7,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 
+const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
+
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -22,7 +24,7 @@ export default function PaymentSettingsPage() {
   } | null>(null);
 
   const { data: settings, isLoading } = useQuery({
-    queryKey: ["payment-settings"],
+    queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
       console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
       const t0 = performance.now();
@@ -138,7 +140,7 @@ export default function PaymentSettingsPage() {
         throw new Error(msg);
       }
       console.log("step 5 — saved row:", data[0]);
-      queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
+      queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
       console.error("[PaymentSettings] SAVE failed:", err);
