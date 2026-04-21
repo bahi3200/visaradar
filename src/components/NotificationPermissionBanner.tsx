@@ -291,6 +291,8 @@ export default function NotificationPermissionBanner() {
   useEffect(() => {
     if (!canPrompt) return;
     if (permission !== "default") return;
+    // Don't auto-prompt in unsupported contexts (insecure / iframe) — it would just fail silently.
+    if (getPermissionContextIssue()) return;
     let prompted = false;
     try {
       prompted = localStorage.getItem(promptedKey(userId)) === "true";
