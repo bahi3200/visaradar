@@ -116,6 +116,30 @@ function getPermission(): PermissionState {
   return Notification.permission as PermissionState;
 }
 
+// Notification API only works in a "secure context": HTTPS, localhost, or 127.0.0.1.
+// Also, calling it inside a cross-origin iframe (Lovable preview) is unreliable —
+// even when permission is granted on the parent, the iframe origin may be denied.
+// This helper returns null if the context is fine, or a user-facing reason string otherwise.
+export function getPermissionContextIssue(): string | null {
+  if (typeof window === "undefined") return "البيئة الحالية لا تدعم الإشعارات.";
+  // Secure context check (covers HTTPS + localhost). Browsers expose `isSecureContext`.
+  if (typeof window.isSecureContext === "boolean" && !window.isSecureContext) {
+    return "إشعارات المتصفح تتطلب اتصالاً آمناً (HTTPS). افتح النسخة المنشورة من التطبيق.";
+  }
+  // Cross-origin iframe (typical Lovable preview) — Notification.requestPermission
+  // is allowed only in top-level browsing contexts on most browsers.
+  let inIframe = false;
+  try {
+    inIframe = window.self !== window.top;
+  } catch {
+    inIframe = true;
+  }
+  if (inIframe) {
+    return "لا يمكن تفعيل الإشعارات داخل معاينة المحرر. افتح الرابط المنشور في تبويب جديد.";
+  }
+  return null;
+}
+
 function detectBrowser(): BrowserKey {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
