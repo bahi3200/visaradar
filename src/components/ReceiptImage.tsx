@@ -116,15 +116,23 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     setRetryNonce((n) => n + 1);
   };
 
-  const handleDownload = async () => {
-    if (!signedUrl) return;
+  const handleDownload = async (variant: "full" | "thumb" = "full") => {
+    const url =
+      variant === "thumb" && thumbUrl && thumbUrl !== signedUrl
+        ? thumbUrl
+        : signedUrl;
+    if (!url) return;
     setDownloading(true);
     try {
-      const res = await fetch(signedUrl);
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Network error");
       const blob = await res.blob();
       const path = extractStoragePath(receiptUrl);
-      const filename = path ? path.split("/").pop() || "receipt.jpg" : "receipt.jpg";
+      const baseName = path ? path.split("/").pop() || "receipt.jpg" : "receipt.jpg";
+      const filename =
+        variant === "thumb"
+          ? baseName.replace(/(\.[^.]+)?$/, (ext) => `_thumb${ext || ".jpg"}`)
+          : baseName;
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objUrl;
@@ -133,13 +141,17 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(objUrl);
-      toast.success("تم تنزيل الوصل");
+      toast.success(
+        variant === "thumb" ? "تم تنزيل النسخة المصغّرة" : "تم تنزيل الوصل",
+      );
     } catch (e) {
       toast.error("فشل تنزيل الوصل");
     } finally {
       setDownloading(false);
     }
   };
+
+  const thumbDownloadAvailable = Boolean(thumbUrl && thumbUrl !== signedUrl);
 
   if (loading) {
     return (
@@ -179,7 +191,8 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         signedUrl={thumbUrl || signedUrl}
         downloading={downloading}
         onOpen={() => setLightboxOpen(true)}
-        onDownload={handleDownload}
+        onDownload={() => handleDownload("full")}
+        onDownloadThumb={thumbDownloadAvailable ? () => handleDownload("thumb") : undefined}
       />
       <ReceiptLightbox
         open={lightboxOpen}
@@ -187,7 +200,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         signedUrl={signedUrl}
         thumbUrl={thumbUrl || undefined}
         downloading={downloading}
-        onDownload={handleDownload}
+        onDownload={() => handleDownload("full")}
       />
     </>
   );

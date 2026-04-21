@@ -1,6 +1,12 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon } from "lucide-react";
+import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SLOW_LOAD_THRESHOLD_MS = 4000;
 
@@ -9,10 +15,12 @@ export interface ReceiptThumbnailProps {
   downloading: boolean;
   onOpen: () => void;
   onDownload: () => void;
+  /** Optional callback for downloading the smaller thumbnail variant. */
+  onDownloadThumb?: () => void;
 }
 
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
-  ({ signedUrl, downloading, onOpen, onDownload }, ref) => {
+  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
   const [slow, setSlow] = useState(false);
 
@@ -75,19 +83,60 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           <ZoomIn className="w-6 h-6 text-foreground" />
         </span>
       </button>
-      <button
-        type="button"
-        onClick={onDownload}
-        disabled={downloading}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
-      >
-        {downloading ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Download className="w-3.5 h-3.5" />
-        )}
-        <span>تنزيل الوصل</span>
-      </button>
+      {onDownloadThumb ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
+              aria-label="خيارات تنزيل الوصل"
+            >
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>تنزيل الوصل</span>
+              <ChevronDown className="w-3 h-3 opacity-70" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[14rem]">
+            <DropdownMenuItem onClick={onDownload} className="gap-2 cursor-pointer">
+              <FileImage className="w-4 h-4 text-primary" />
+              <div className="flex flex-col">
+                <span className="text-xs font-medium">النسخة الكاملة</span>
+                <span className="text-[10px] text-muted-foreground">
+                  أعلى جودة — حجم أكبر
+                </span>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onDownloadThumb} className="gap-2 cursor-pointer">
+              <FileDown className="w-4 h-4 text-accent" />
+              <div className="flex flex-col">
+                <span className="text-xs font-medium">نسخة مصغّرة</span>
+                <span className="text-[10px] text-muted-foreground">
+                  حجم أصغر — مناسب للمشاركة السريعة
+                </span>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={downloading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-accent"
+        >
+          {downloading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          <span>تنزيل الوصل</span>
+        </button>
+      )}
     </div>
   );
   }
