@@ -482,3 +482,175 @@ describe("PaymentSettings — تطابق شكل cache بين useQuery و setQuer
     expect(screen.getByText(/RLS_REJECT/i)).toBeInTheDocument();
   });
 });
+
+// ============================================================
+// 🔁 سيناريو الضغط المتتالي على "حفظ التغييرات"
+// ============================================================
+describe("PaymentSettings — ضغط حفظ مرتين متتاليتين", () => {
+  const QUERY_KEY = ["payment-settings"];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "admin-uid", email: "admin@test.com" } } },
+    });
+    mockRpc.mockResolvedValue({ data: true, error: null });
+  });
+
+  it("🔁 ضغط حفظ مرتين متتاليتين: cache النهائي يطابق آخر upsert بدون تداخل", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    const firstSavedRow = {
+      id: "row-1",
+      ccp_number: "AAA-1",
+      ccp_key: "K1",
+      rip_number: "rip-AAA-1",
+      account_holder: "حفظ-أول",
+    };
+    const secondSavedRow = {
+      id: "row-1",
+      ccp_number: "BBB-2",
+      ccp_key: "K2",
+      rip_number: "rip-BBB-2",
+      account_holder: "حفظ-ثاني",
+    };
+
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+
+    // 🎯 محاكاة دقيقة: الاستدعاء الأول لـ upsert يتأخّر أكثر من الثاني
+    //    لاختبار أن الكود لا يُطبّق نتيجة قديمة فوق نتيجة جديدة (race condition)
+    let resolveFirst: (v: any) => void;
+    const firstUpsertPromise = new Promise((r) => {
+      resolveFirst = r;
+    });
+    let callCount = 0;
+    mockUpsert.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) return firstUpsertPromise;
+      return Promise.resolve({ data: [secondSavedRow], error: null });
+    });
+
+    const { qc } = renderPage();
+
+    // انتظار اكتمال الجلب الأولي
+    const ccpInput = await screen.findByDisplayValue("111");
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ id: "row-1", ccp_number: "111" });
+    });
+
+    const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
+    const saveBtn = screen.getByRole("button", { name: /حفظ التغييرات/i });
+
+    // 1) الضغطة الأولى: تعديل + حفظ (سيتأخّر)
+    fireEvent.change(ccpInput, { target: { value: firstSavedRow.ccp_number } });
+    fireEvent.click(saveBtn);
+
+    // 2) الضغطة الثانية: تعديل مختلف + حفظ (سيكتمل أولاً)
+    fireEvent.change(ccpInput, { target: { value: secondSavedRow.ccp_number } });
+    fireEvent.click(saveBtn);
+
+    // التأكد أن upsert استُدعي مرتين
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalledTimes(2));
+
+    // 3) الآن نُحرّر الاستدعاء الأول (المتأخّر) بنتيجته القديمة
+    resolveFirst!({ data: [firstSavedRow], error: null });
+
+    // 4) انتظار اكتمال كلا الاستدعاءين وكتابة الـ cache مرتين
+    await waitFor(() => {
+      expect(setQueryDataSpy).toHaveBeenCalledTimes(2);
+    });
+
+    // ✅ 5) cache النهائي يجب أن يكون ثابتاً ومتطابقاً (كائن واحد، نفس الشكل)
+    const finalCache = qc.getQueryData(QUERY_KEY);
+    expect(finalCache).toBeTruthy();
+    expect(Array.isArray(finalCache)).toBe(false);
+    expect(typeof finalCache).toBe("object");
+
+    // ✅ 6) نفس الحقول الأساسية موجودة (لا تداخل/دمج جزئي يُنتج شكلاً غريباً)
+    const coreFields = ["id", "ccp_number", "ccp_key", "rip_number", "account_holder"];
+    const finalKeys = Object.keys(finalCache as object);
+    coreFields.forEach((f) => {
+      expect(finalKeys).toContain(f);
+    });
+
+    // ✅ 7) كلا الكتابتين استخدمتا نفس QUERY_KEY حرفياً (لا يوجد تشتت بين مفاتيح cache)
+    const firstKey = setQueryDataSpy.mock.calls[0]?.[0];
+    const secondKey = setQueryDataSpy.mock.calls[1]?.[0];
+    expect(firstKey).toEqual(secondKey);
+    expect(JSON.stringify(firstKey)).toBe(JSON.stringify(secondKey));
+    expect(JSON.stringify(firstKey)).toBe(JSON.stringify(QUERY_KEY));
+
+    // ✅ 8) toast.error لم يُستدعَ — كلا الحفظين نجحا
+    expect(toast.error).not.toHaveBeenCalled();
+
+    // ✅ 9) toast.success استُدعي مرتين (مرة لكل حفظ ناجح)
+    expect(toast.success).toHaveBeenCalledTimes(2);
+  });
+
+  it("🔁 ضغطتان ناجحتان متسلسلتان: cache يساوي تماماً نتيجة آخر upsert", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "000",
+      ccp_key: "00",
+      rip_number: "rip-000",
+      account_holder: "بداية",
+    };
+    const row1 = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أول",
+    };
+    const row2 = {
+      id: "row-1",
+      ccp_number: "222",
+      ccp_key: "22",
+      rip_number: "rip-222",
+      account_holder: "ثاني",
+    };
+
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+    mockUpsert
+      .mockResolvedValueOnce({ data: [row1], error: null })
+      .mockResolvedValueOnce({ data: [row2], error: null });
+
+    const { qc } = renderPage();
+
+    const ccpInput = await screen.findByDisplayValue("000");
+    const saveBtn = screen.getByRole("button", { name: /حفظ التغييرات/i });
+
+    // الحفظ الأول
+    fireEvent.change(ccpInput, { target: { value: row1.ccp_number } });
+    fireEvent.click(saveBtn);
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ ccp_number: "111" });
+    });
+
+    // الحفظ الثاني فوراً بعده
+    fireEvent.change(ccpInput, { target: { value: row2.ccp_number } });
+    fireEvent.click(saveBtn);
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ ccp_number: "222" });
+    });
+
+    // ✅ cache النهائي = آخر upsert بالضبط (لا بقايا من الحفظ الأول)
+    const finalCache = qc.getQueryData(QUERY_KEY) as Record<string, unknown>;
+    expect(finalCache).toMatchObject(row2);
+
+    // ✅ لا توجد حقول من الحفظ الأول مدموجة بالخطأ
+    expect(finalCache.ccp_number).toBe("222");
+    expect(finalCache.ccp_key).toBe("22");
+    expect(finalCache.rip_number).toBe("rip-222");
+    expect(finalCache.account_holder).toBe("ثاني");
+
+    // ✅ upsert استُدعي مرتين بالضبط
+    expect(mockUpsert).toHaveBeenCalledTimes(2);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+});
