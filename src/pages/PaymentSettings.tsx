@@ -2,7 +2,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, CreditCard } from "lucide-react";
+import { Save, CreditCard, AlertCircle, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
@@ -14,6 +14,12 @@ export default function PaymentSettingsPage() {
   const [ccpKey, setCcpKey] = useState("");
   const [ripNumber, setRipNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [errorDetails, setErrorDetails] = useState<{
+    message: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  } | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["payment-settings"],
@@ -39,6 +45,7 @@ export default function PaymentSettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setErrorDetails(null);
     try {
       const payload: any = {
         ccp_number: ccpNumber.trim(),
@@ -54,9 +61,19 @@ export default function PaymentSettingsPage() {
         .from("payment_settings")
         .upsert(payload, { onConflict: "id" })
         .select();
-      if (error) throw error;
+      if (error) {
+        setErrorDetails({
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
+        throw error;
+      }
       if (!data || data.length === 0) {
-        throw new Error("لم يتم حفظ التغييرات. تحقق من صلاحياتك.");
+        const msg = "لم يتم حفظ التغييرات. تحقق من صلاحياتك (RLS).";
+        setErrorDetails({ message: msg, hint: "تأكد أن المستخدم لديه دور admin." });
+        throw new Error(msg);
       }
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       toast.success("تم حفظ معلومات الدفع بنجاح");
