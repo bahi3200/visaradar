@@ -31,7 +31,13 @@ import {
   recordNotifAttempt,
   NOTIF_ATTEMPT_EVENT,
 } from "@/lib/notificationPrefs";
-import { getPermissionContextIssue } from "@/components/NotificationPermissionBanner";
+import {
+  getPermissionContextIssue,
+  getDevContextMode,
+  setDevContextMode,
+  type DevContextMode,
+} from "@/components/NotificationPermissionBanner";
+import { FlaskConical, ShieldAlert } from "lucide-react";
 
 // Keep this in sync with NotificationPermissionBanner — these are the routes
 // where we never request browser permission (public/auth/legal flows).
