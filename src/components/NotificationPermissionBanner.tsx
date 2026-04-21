@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
+import { Bell, BellOff, BellRing, X, ExternalLink, Copy, Check, Send } from "lucide-react";
+import { triggerAlert, getAlertMode, getVolume } from "@/lib/notificationPrefs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
