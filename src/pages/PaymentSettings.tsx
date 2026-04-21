@@ -163,6 +163,7 @@ export default function PaymentSettingsPage() {
       setAccountHolder(savedRow.account_holder || "");
 
       // إعادة التحقق في الخلفية
+      setSyncing(true);
       queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("✅ تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
