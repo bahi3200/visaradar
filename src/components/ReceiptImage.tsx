@@ -80,9 +80,11 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         setAttempt(i + 1);
         // Request the full signed URL on its own — never let the optional
         // thumbnail transform request block or fail the primary URL.
+        // Pass an explicit empty options object because some Storage client
+        // builds read `options.transform` without guarding undefined.
         const fullReq = supabase.storage
           .from("receipts")
-          .createSignedUrl(path, 3600);
+          .createSignedUrl(path, 3600, {});
         const fullTimeout = new Promise<{ data: null; error: { message: string } }>((resolve) =>
           setTimeout(
             () => resolve({ data: null, error: { message: "انتهت مهلة تحميل الوصل" } }),
