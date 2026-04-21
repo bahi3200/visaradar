@@ -16,8 +16,36 @@ const PUBLIC_BLOCKED_PREFIXES = [
   "/help",
 ];
 
-const DISMISSED_KEY = "notif_perm_banner_dismissed";
+const DISMISSED_KEY = "notif_perm_banner_dismissed"; // legacy boolean — migrated below
+const SNOOZE_UNTIL_KEY = "notif_perm_snooze_until"; // ISO timestamp until which the banner stays hidden
+const SNOOZE_DAYS = 7;
 const PROMPTED_KEY = "notif_perm_prompted";
+
+function readSnoozeUntil(): number {
+  try {
+    // Migrate legacy boolean dismissed flag → 7-day snooze on first read
+    const legacy = localStorage.getItem(DISMISSED_KEY);
+    if (legacy === "true") {
+      const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+      localStorage.setItem(SNOOZE_UNTIL_KEY, String(until));
+      localStorage.removeItem(DISMISSED_KEY);
+      return until;
+    }
+    const raw = localStorage.getItem(SNOOZE_UNTIL_KEY);
+    if (!raw) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeSnoozeUntil(ts: number) {
+  try {
+    if (ts > 0) localStorage.setItem(SNOOZE_UNTIL_KEY, String(ts));
+    else localStorage.removeItem(SNOOZE_UNTIL_KEY);
+  } catch {}
+}
 
 type PermissionState = "default" | "granted" | "denied" | "unsupported";
 type BrowserKey =
