@@ -157,6 +157,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
         signedUrl={signedUrl}
+        thumbUrl={thumbUrl || undefined}
         downloading={downloading}
         onDownload={handleDownload}
       />
