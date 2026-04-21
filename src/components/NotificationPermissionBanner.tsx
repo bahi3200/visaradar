@@ -813,6 +813,96 @@ function Step({ children }: { children: React.ReactNode }) {
   return <li className="text-xs text-muted-foreground leading-relaxed">{children}</li>;
 }
 
+const PUBLISHED_URL = "https://dev-fix-pro.lovable.app";
+
+function ContextIssueDialog({
+  issue,
+  onClose,
+}: {
+  issue: string | null;
+  onClose: () => void;
+}) {
+  const isInsecure = !!issue && issue.includes("HTTPS");
+  const isIframe = !!issue && issue.includes("معاينة");
+
+  return (
+    <Dialog open={!!issue} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/15 text-destructive flex items-center justify-center mb-2">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <DialogTitle className="text-center">
+            تعذّر تفعيل الإشعارات في هذا السياق
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {issue}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border bg-secondary/30 p-3">
+            <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              {isIframe ? <Globe className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              لماذا حدث هذا؟
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {isInsecure
+                ? "متصفحات الويب تمنع طلب إذن الإشعارات إلا في الاتصالات الآمنة (HTTPS)."
+                : isIframe
+                ? "أنت تتصفح الموقع داخل إطار معاينة المحرر، والمتصفحات لا تسمح بطلب إذن الإشعارات داخل الإطارات."
+                : "السياق الحالي للصفحة لا يسمح بطلب إذن الإشعارات."}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <p className="text-xs font-semibold text-foreground mb-2">خطوات التفعيل</p>
+            <ol className="space-y-2 list-decimal pr-4">
+              <Step>
+                افتح <strong>النسخة المنشورة</strong> من التطبيق في تبويب جديد عبر الزر بالأسفل.
+              </Step>
+              <Step>سجّل الدخول بنفس حسابك إذا طُلب منك ذلك.</Step>
+              <Step>
+                اضغط على <strong>«تفعيل إشعارات المتصفح»</strong> في الشريط السفلي.
+              </Step>
+              <Step>
+                اختر <strong>«السماح / Allow»</strong> في نافذة المتصفح.
+              </Step>
+              <Step>
+                ارجع إلى صفحة الإعدادات وجرّب <strong>«إرسال إشعار تجريبي»</strong> للتأكد.
+              </Step>
+            </ol>
+          </div>
+
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="text-[11px] font-semibold text-foreground mb-1">💡 نصيحة للهاتف</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              على Android، ثبّت التطبيق من صفحة <code className="bg-secondary px-1 rounded">/install</code> ليعمل
+              عرض الإشعارات بشكل موثوق عبر Service Worker.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-col gap-2">
+          <Button
+            asChild
+            className="w-full"
+            onClick={() => onClose()}
+          >
+            <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-4 h-4 ml-1.5" />
+              فتح النسخة المنشورة
+            </a>
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={onClose}>
+            إغلاق
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function LinkRow({ links }: { links: StepLink[] }) {
   if (!links.length) return null;
   return (
