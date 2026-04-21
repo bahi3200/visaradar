@@ -1,4 +1,4 @@
-import { Bell, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, HelpCircle, AlertCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -56,9 +56,38 @@ export default function NotificationsBell() {
   useEffect(() => {
     if (!("Notification" in window)) {
       setPermState("unsupported");
-    } else {
-      setPermState(Notification.permission);
+      return;
     }
+
+    const sync = () => setPermState(Notification.permission);
+    sync();
+
+    // Live updates via Permissions API
+    let permStatus: PermissionStatus | null = null;
+    if ("permissions" in navigator) {
+      navigator.permissions
+        .query({ name: "notifications" as PermissionName })
+        .then((status) => {
+          permStatus = status;
+          status.onchange = sync;
+        })
+        .catch(() => {
+          /* ignore unsupported browsers */
+        });
+    }
+
+    // Re-sync when user returns to tab (covers browsers without onchange)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", sync);
+
+    return () => {
+      if (permStatus) permStatus.onchange = null;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", sync);
+    };
   }, []);
 
   useEffect(() => {
@@ -262,6 +291,8 @@ export default function NotificationsBell() {
       <CheckCircle2 className="w-3 h-3 text-emerald-500" />
     ) : permState === "denied" ? (
       <XCircle className="w-3 h-3 text-rose-500" />
+    ) : permState === "default" ? (
+      <AlertCircle className="w-3 h-3 text-amber-500" />
     ) : permState === "unsupported" ? (
       <HelpCircle className="w-3 h-3 text-muted-foreground" />
     ) : null;
@@ -271,9 +302,11 @@ export default function NotificationsBell() {
       ? "مسموح"
       : permState === "denied"
       ? "مرفوض"
+      : permState === "default"
+      ? "مطلوب تفعيل"
       : permState === "unsupported"
       ? "غير مدعوم"
-      : "غير محدد";
+      : "مطلوب تفعيل";
 
   return (
     <TooltipProvider delayDuration={300}>
