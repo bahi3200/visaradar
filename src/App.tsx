@@ -50,6 +50,7 @@ import Install from "./pages/Install";
 import ManagePackages from "./pages/ManagePackages";
 import VisaProfile from "./pages/VisaProfile";
 import ShortcutsHelp from "./pages/help/Shortcuts";
+import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
       >
         <AuthProvider>
           <GlobalShortcuts />
+          <NotificationPermissionBanner />
           <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
