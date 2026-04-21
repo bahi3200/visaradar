@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Bell, BellOff, X, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -7,11 +7,49 @@ const DISMISSED_KEY = "notif_perm_banner_dismissed";
 const PROMPTED_KEY = "notif_perm_prompted";
 
 type PermissionState = "default" | "granted" | "denied" | "unsupported";
+type BrowserKey =
+  | "chrome"
+  | "edge"
+  | "brave"
+  | "firefox"
+  | "safari-ios"
+  | "safari-mac"
+  | "samsung"
+  | "opera"
+  | "other";
 
 function getPermission(): PermissionState {
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return Notification.permission as PermissionState;
 }
+
+function detectBrowser(): BrowserKey {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && (navigator as { maxTouchPoints?: number }).maxTouchPoints! > 1);
+  if (isIOS) return "safari-ios";
+  if (/Edg\//.test(ua)) return "edge";
+  if (/SamsungBrowser/.test(ua)) return "samsung";
+  if (/OPR\/|Opera/.test(ua)) return "opera";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Chrome\//.test(ua)) return "chrome";
+  if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return "safari-mac";
+  return "other";
+}
+
+const BROWSER_LABEL: Record<BrowserKey, string> = {
+  chrome: "🌐 Google Chrome",
+  edge: "🔷 Microsoft Edge",
+  brave: "🦁 Brave",
+  firefox: "🦊 Firefox",
+  "safari-ios": "📱 Safari (iOS / iPadOS)",
+  "safari-mac": "🧭 Safari (macOS)",
+  samsung: "📱 Samsung Internet",
+  opera: "🎭 Opera",
+  other: "🌍 متصفح آخر",
+};
 
 export default function NotificationPermissionBanner() {
   const { user } = useAuth();
