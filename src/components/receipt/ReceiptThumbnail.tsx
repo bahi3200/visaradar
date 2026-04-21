@@ -1,5 +1,6 @@
 import { forwardRef, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle } from "lucide-react";
+import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ReceiptThumbnailProps {
   signedUrl: string;
@@ -22,8 +23,14 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         disabled={imgState === "error"}
       >
         {imgState === "loading" && (
-          <div className="flex items-center justify-center w-40 h-40 bg-muted/30">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <div
+            className="relative w-40 h-40"
+            role="status"
+            aria-live="polite"
+            aria-label="جارٍ تحميل صورة الوصل"
+          >
+            <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+            <ImageIcon className="absolute inset-0 m-auto w-8 h-8 text-muted-foreground/40" />
           </div>
         )}
         {imgState === "error" && (
