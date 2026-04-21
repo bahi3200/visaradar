@@ -324,8 +324,17 @@ export default function NotificationPermissionBanner() {
   useEffect(() => {
     if (!canPrompt) return;
     if (permission !== "default") return;
-    // Don't auto-prompt in unsupported contexts (insecure / iframe) — it would just fail silently.
-    if (getPermissionContextIssue()) return;
+    // Hard stop: if a context check has failed before, block auto-prompts for 24h.
+    if (readCtxCooldownUntil() > Date.now()) return;
+    // If the current context can't support a prompt (insecure / iframe), record a 24h
+    // cooldown the first time we see it and bail — never re-prompt during the window.
+    const ctxIssue = getPermissionContextIssue();
+    if (ctxIssue) {
+      if (readCtxCooldownUntil() <= Date.now()) {
+        writeCtxCooldownUntil(Date.now() + CTX_COOLDOWN_MS);
+      }
+      return;
+    }
     let prompted = false;
     try {
       prompted = localStorage.getItem(promptedKey(userId)) === "true";
