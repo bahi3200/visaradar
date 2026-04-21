@@ -10,7 +10,8 @@ import ccpLogo from "@/assets/ccp-logo.png";
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
 // نوع موحد لصف payment_settings — يطابق ما يعيده .maybeSingle()
-type PaymentSettingsRow = {
+// نعرّف الشكل الصلب أولاً (غير-nullable) لاستخدامه في data[0] بأمان
+type PaymentSettingsRowFilled = {
   id: string;
   ccp_number: string;
   ccp_key: string;
@@ -19,7 +20,10 @@ type PaymentSettingsRow = {
   referrer_bonus_days?: number;
   referred_bonus_days?: number;
   updated_at?: string;
-} | null;
+};
+
+// نوع رد useQuery (يسمح بـ null عند عدم وجود صف)
+type PaymentSettingsRow = PaymentSettingsRowFilled | null;
 
 /**
  * 🧰 Helper موحّد: يحوّل أي رد من Supabase
