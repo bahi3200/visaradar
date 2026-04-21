@@ -136,21 +136,50 @@ describe("PaymentSettings — تحديث فوري بعد upsert", () => {
     resolveInvalidate!();
   });
 
-  it("لا يحدّث الحقول إذا أعاد upsert صفاً فارغاً (data.length === 0)", async () => {
+  it("عند data.length===0: لا تُحدَّث الواجهة، يظهر toast خطأ واضح، ولا تُستدعى invalidateQueries", async () => {
     mockUpsert.mockResolvedValue({ data: [], error: null });
 
     renderPage();
 
+    // الانتظار حتى تُحمَّل القيم الأصلية في الحقول
     const ccpInput = await screen.findByDisplayValue("old-ccp");
+    const ccpKeyInput = screen.getByDisplayValue("old-key");
+    const ripInput = screen.getByDisplayValue("old-rip");
+    const holderInput = screen.getByDisplayValue("old-holder");
+
+    // المستخدم يُعدّل قيمة في الحقل (لكن الحفظ سيفشل بصمت)
     fireEvent.change(ccpInput, { target: { value: "محاولة-جديدة" } });
 
     const saveBtn = screen.getByRole("button", { name: /حفظ التغييرات/i });
     fireEvent.click(saveBtn);
 
+    // انتظار اكتمال محاولة الحفظ
     await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
 
-    // ✅ القيمة المعروضة تبقى كما أدخلها المستخدم (لم تُستبدل بـ savedRow لأنه غير موجود)
-    // والأهم: invalidateQueries لم يُستدعَ لأن الكود يعود مبكراً
+    // ✅ 1) toast.error استُدعي برسالة واضحة + description
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("لم يتم حفظ التغييرات"),
+        expect.objectContaining({
+          id: "toast-id",
+          description: expect.stringContaining("RLS"),
+        })
+      );
+    });
+
+    // ✅ 2) toast.success لم يُستدعَ على الإطلاق
+    expect(toast.success).not.toHaveBeenCalled();
+
+    // ✅ 3) الحقول الأخرى لم تتغيّر (لم يُطبَّق أي savedRow وهمي)
+    expect(ccpKeyInput).toHaveValue("old-key");
+    expect(ripInput).toHaveValue("old-rip");
+    expect(holderInput).toHaveValue("old-holder");
+
+    // ✅ 4) invalidateQueries لم يُستدعَ — الكود رجع مبكراً
     expect(invalidateSpy).not.toHaveBeenCalled();
+
+    // ✅ 5) رسالة خطأ تظهر داخل الواجهة (banner)
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/فشل الحفظ/i)).toBeInTheDocument();
   });
 });
