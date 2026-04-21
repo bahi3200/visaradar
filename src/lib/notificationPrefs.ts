@@ -66,3 +66,41 @@ export function triggerAlert(mode: AlertMode, volume: number) {
     osc.stop(ctx.currentTime + 0.3);
   } catch {}
 }
+
+// ---- Last test-notification attempt tracking ---------------------------------
+// Used by NotificationPrefsPanel to show a small "آخر محاولة" status row.
+export type NotifAttemptStatus =
+  | "success"      // notification displayed
+  | "denied"       // browser denied permission
+  | "dismissed"    // user closed the prompt without granting
+  | "unsupported"  // Notification API not available
+  | "error";       // any other failure (server / SW / constructor)
+
+export type NotifAttempt = {
+  status: NotifAttemptStatus;
+  at: number;            // epoch ms
+  source: "local" | "server";
+  message?: string;
+};
+
+const LAST_ATTEMPT_KEY = "notif_last_attempt";
+export const NOTIF_ATTEMPT_EVENT = "notif-attempt-updated";
+
+export function recordNotifAttempt(attempt: NotifAttempt) {
+  try {
+    localStorage.setItem(LAST_ATTEMPT_KEY, JSON.stringify(attempt));
+    window.dispatchEvent(new CustomEvent(NOTIF_ATTEMPT_EVENT, { detail: attempt }));
+  } catch {}
+}
+
+export function getLastNotifAttempt(): NotifAttempt | null {
+  try {
+    const raw = localStorage.getItem(LAST_ATTEMPT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as NotifAttempt;
+    if (!parsed || typeof parsed.at !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
