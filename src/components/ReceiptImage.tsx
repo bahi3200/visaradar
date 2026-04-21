@@ -84,7 +84,15 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
             FULL_SIGN_TIMEOUT_MS,
           ),
         );
-        const fullRes = await Promise.race([fullReq, fullTimeout]);
+        const fullRes = await Promise.race([fullReq, fullTimeout]).catch((err) => ({
+          data: null,
+          error: {
+            message:
+              err instanceof Error
+                ? err.message
+                : "تعذر إنشاء رابط آمن للوصول",
+          },
+        }));
         if (cancelled) return;
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
