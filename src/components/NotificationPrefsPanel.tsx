@@ -328,6 +328,61 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
           {/* Last attempt status — helps users diagnose if a test actually went through */}
           <LastAttemptCard attempt={lastAttempt} />
 
+          {/* Context diagnosis — explains why permission requests would be blocked */}
+          {(ctxIssue || devMode !== "real" || import.meta.env.DEV) && (
+            <div
+              className={`rounded-md border p-2.5 space-y-2 ${
+                ctxIssue
+                  ? "border-destructive/30 bg-destructive/5"
+                  : "border-border/60 bg-background/60"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground">
+                <ShieldAlert
+                  className={`w-3 h-3 ${ctxIssue ? "text-destructive" : "text-muted-foreground"}`}
+                />
+                سياق الإذن
+                <span
+                  className={`ms-auto text-[9px] px-1.5 py-0.5 rounded-full ${
+                    devMode === "real"
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {devMode === "real"
+                    ? "حقيقي"
+                    : devMode === "insecure"
+                    ? "محاكاة: HTTP"
+                    : "محاكاة: iframe"}
+                </span>
+              </div>
+              <p
+                className={`text-[10px] leading-relaxed ${
+                  ctxIssue ? "text-destructive/90" : "text-muted-foreground"
+                }`}
+              >
+                {ctxIssue ?? "السياق الحالي يسمح بطلب إذن الإشعارات."}
+              </p>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={cycleDevMode}
+                  className="w-full py-1.5 rounded-md bg-background hover:bg-secondary text-[10px] text-foreground border border-border transition-colors flex items-center justify-center gap-1.5"
+                  title="تبديل وضع محاكاة السياق (DEV فقط)"
+                >
+                  <FlaskConical className="w-3 h-3" />
+                  تبديل وضع المحاكاة (
+                  {devMode === "real"
+                    ? "→ HTTP"
+                    : devMode === "insecure"
+                    ? "→ iframe"
+                    : "→ حقيقي"}
+                  )
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Manual enable section — only meaningful when permission isn't already granted */}
           {permission !== "granted" && permission !== "unsupported" && (
             <div className="rounded-md border border-border/60 bg-background/60 p-2.5 space-y-1.5">
