@@ -36,7 +36,7 @@ export default function PaymentSettingsPage() {
     hint?: string;
   } | null>(null);
 
-  const { data: settings, isLoading, isFetching } = useQuery({
+  const { data: settings, isLoading, isFetching } = useQuery<PaymentSettingsRow>({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
       console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
@@ -59,7 +59,7 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       console.groupEnd();
-      return data;
+      return (data as PaymentSettingsRow) ?? null;
     },
   });
 
