@@ -24,7 +24,7 @@ export default function PaymentSettingsPage() {
     hint?: string;
   } | null>(null);
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isFetching } = useQuery({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
       console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
@@ -50,6 +50,13 @@ export default function PaymentSettingsPage() {
       return data;
     },
   });
+
+  // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
+  useEffect(() => {
+    if (!isFetching && syncing) {
+      setSyncing(false);
+    }
+  }, [isFetching]);
 
   useEffect(() => {
     if (settings) {
