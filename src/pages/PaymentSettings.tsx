@@ -10,7 +10,8 @@ import ccpLogo from "@/assets/ccp-logo.png";
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
 // نوع موحد لصف payment_settings — يطابق ما يعيده .maybeSingle()
-type PaymentSettingsRow = {
+// نعرّف الشكل الصلب أولاً (غير-nullable) لاستخدامه في data[0] بأمان
+type PaymentSettingsRowFilled = {
   id: string;
   ccp_number: string;
   ccp_key: string;
@@ -19,7 +20,10 @@ type PaymentSettingsRow = {
   referrer_bonus_days?: number;
   referred_bonus_days?: number;
   updated_at?: string;
-} | null;
+};
+
+// نوع رد useQuery (يسمح بـ null عند عدم وجود صف)
+type PaymentSettingsRow = PaymentSettingsRowFilled | null;
 
 /**
  * 🧰 Helper موحّد: يحوّل أي رد من Supabase
@@ -189,10 +193,15 @@ export default function PaymentSettingsPage() {
       }
       console.log("step 3 — upsert payload:", payload);
       const writeStart = performance.now();
-      const { data, error } = await supabase
+      // 🎯 نوع صريح لرد upsert: مصفوفة من PaymentSettingsRowFilled أو null
+      // هذا يضمن أن TypeScript يعرف أن data[0] (إن وُجد) هو PaymentSettingsRowFilled وليس any
+      const { data, error } = (await supabase
         .from("payment_settings")
         .upsert(payload, { onConflict: "id" })
-        .select();
+        .select()) as {
+        data: PaymentSettingsRowFilled[] | null;
+        error: typeof Error.prototype | null | any;
+      };
       console.log(
         "step 4 — upsert response: duration_ms=",
         (performance.now() - writeStart).toFixed(1),
@@ -226,8 +235,8 @@ export default function PaymentSettingsPage() {
       }
 
       // 🧰 تطبيع الرد عبر نفس helper المستخدم في useQuery
-      // يضمن أن ما نكتبه في الـ cache بنفس شكل ما يقرأه useQuery تماماً
-      const savedRow = normalizePaymentSettingsRow(data);
+      // النوع الصريح PaymentSettingsRow يضمن توافق 100% مع cache useQuery
+      const savedRow: PaymentSettingsRow = normalizePaymentSettingsRow(data);
       console.log("step 5 — saved row (normalized):", savedRow);
 
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
