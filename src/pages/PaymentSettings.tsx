@@ -9,6 +9,25 @@ import ccpLogo from "@/assets/ccp-logo.png";
 
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
+// 🪵 سجلات تشخيصية مشروطة بوضع التطوير فقط — لا تظهر في الإنتاج.
+// نُبقي console.error كما هو لأن الأخطاء يجب أن تصل دائماً (Sentry/تتبّع المتصفح).
+const IS_DEV = typeof import.meta !== "undefined" && !!import.meta.env?.DEV;
+const dlog = (...args: unknown[]): void => {
+  if (IS_DEV) console.log(...args);
+};
+const dwarn = (...args: unknown[]): void => {
+  if (IS_DEV) console.warn(...args);
+};
+const dgroup = (label: string): void => {
+  if (IS_DEV) console.group(label);
+};
+const dgroupCollapsed = (label: string): void => {
+  if (IS_DEV) console.groupCollapsed(label);
+};
+const dgroupEnd = (): void => {
+  if (IS_DEV) console.groupEnd();
+};
+
 // 🧾 رسائل خطأ موحّدة لكلا سيناريوهَي فشل الحفظ:
 // (1) upsert يرجع مصفوفة فارغة (RLS_REJECT)
 // (2) upsert يرجع صفاً لكن savedRow لا يمر التطبيع (EMPTY_SAVED_ROW)
