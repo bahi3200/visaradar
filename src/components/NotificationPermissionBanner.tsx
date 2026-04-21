@@ -62,6 +62,22 @@ export default function NotificationPermissionBanner() {
     }
   });
   const [showHelp, setShowHelp] = useState(false);
+  const detected = useMemo(detectBrowser, []);
+  const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
+  const [copied, setCopied] = useState(false);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  const copyOrigin = async () => {
+    try {
+      await navigator.clipboard.writeText(origin);
+      setCopied(true);
+      toast.success("تم نسخ رابط الموقع");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("تعذّر النسخ");
+    }
+  };
 
   // Auto-prompt once per browser when user is logged in and status is "default"
   useEffect(() => {
