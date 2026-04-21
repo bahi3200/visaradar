@@ -143,8 +143,15 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       });
       if (error) throw error;
       toast.success("تم إرسال الإشعار التجريبي ✅");
+      recordNotifAttempt({ status: "success", at: Date.now(), source: "server" });
     } catch (e: any) {
       toast.error("فشل إرسال الإشعار", { description: e?.message });
+      recordNotifAttempt({
+        status: "error",
+        at: Date.now(),
+        source: "server",
+        message: e?.message ?? "server error",
+      });
     } finally {
       setSending(false);
     }
