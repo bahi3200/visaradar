@@ -138,13 +138,13 @@ export default function PaymentSettingsPage() {
   const applyPaymentSettings = useCallback((data: PaymentSettingsRow) => {
     // 🛡️ Guard 1: تجاهل null/undefined كاملاً
     if (!data) {
-      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data فارغ", data);
+      dwarn("[applyPaymentSettings] تم تجاهل التحديث: data فارغ", data);
       return;
     }
 
     // 🛡️ Guard 2: تأكد أن data كائن (وليس string/number/array)
     if (typeof data !== "object" || Array.isArray(data)) {
-      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data ليس كائناً صالحاً", data);
+      dwarn("[applyPaymentSettings] تم تجاهل التحديث: data ليس كائناً صالحاً", data);
       return;
     }
 
