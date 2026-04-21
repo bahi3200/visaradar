@@ -900,8 +900,6 @@ function Step({ children }: { children: React.ReactNode }) {
   return <li className="text-xs text-muted-foreground leading-relaxed">{children}</li>;
 }
 
-const PUBLISHED_URL = "https://dev-fix-pro.lovable.app";
-
 function ContextIssueDialog({
   issue,
   onClose,
