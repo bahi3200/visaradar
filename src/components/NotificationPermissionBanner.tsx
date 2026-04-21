@@ -325,7 +325,7 @@ export default function NotificationPermissionBanner() {
     }
     const ctxIssue = getPermissionContextIssue();
     if (ctxIssue) {
-      toast.error("تعذّر تفعيل الإشعارات", { description: ctxIssue, duration: 7000 });
+      openContextDialog(ctxIssue);
       return;
     }
     try {
