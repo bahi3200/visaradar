@@ -354,7 +354,7 @@ export default function NotificationPermissionBanner() {
     // (which the browser will refuse silently) and tell the user exactly why.
     const ctxIssue = getPermissionContextIssue();
     if (ctxIssue) {
-      toast.error("تعذّر إرسال الإشعار", { description: ctxIssue, duration: 7000 });
+      openContextDialog(ctxIssue);
       recordNotifAttempt({
         status: "unsupported",
         at: Date.now(),
