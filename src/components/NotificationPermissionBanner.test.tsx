@@ -32,8 +32,7 @@ function setupNotification(permission: NotificationPermission = "default") {
     configurable: true,
     writable: true,
   });
-  // @ts-expect-error – test stub
-  globalThis.Notification = NotificationStub;
+  (globalThis as { Notification?: typeof Notification }).Notification = NotificationStub;
   return requestPermission;
 }
 
@@ -57,8 +56,7 @@ describe("NotificationPermissionBanner — requestPermission gating", () => {
   afterEach(() => {
     vi.useRealTimers();
     cleanup();
-    // @ts-expect-error – cleanup stub
-    delete globalThis.Notification;
+    delete (globalThis as { Notification?: typeof Notification }).Notification;
   });
 
   it("does NOT call requestPermission while auth is still loading", async () => {
