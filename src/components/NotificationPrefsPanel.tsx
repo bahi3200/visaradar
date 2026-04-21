@@ -10,6 +10,10 @@ import {
   Loader2,
   Bell,
   Lock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +26,10 @@ import {
   setAlertMode,
   setVolume,
   triggerAlert,
+  type NotifAttempt,
+  getLastNotifAttempt,
+  recordNotifAttempt,
+  NOTIF_ATTEMPT_EVENT,
 } from "@/lib/notificationPrefs";
 
 // Keep this in sync with NotificationPermissionBanner — these are the routes
