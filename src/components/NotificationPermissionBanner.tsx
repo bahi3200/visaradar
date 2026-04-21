@@ -146,12 +146,45 @@ function getPermission(): PermissionState {
   return Notification.permission as PermissionState;
 }
 
+// DEV-only override flags. Stored in sessionStorage so they reset per tab and
+// never affect production users. Toggled from the prefs panel "اختبار السياق" button.
+const DEV_FORCE_INSECURE_KEY = "__notif_dev_force_insecure";
+const DEV_FORCE_IFRAME_KEY = "__notif_dev_force_iframe";
+
+export type DevContextMode = "real" | "insecure" | "iframe";
+
+export function getDevContextMode(): DevContextMode {
+  try {
+    if (sessionStorage.getItem(DEV_FORCE_INSECURE_KEY) === "1") return "insecure";
+    if (sessionStorage.getItem(DEV_FORCE_IFRAME_KEY) === "1") return "iframe";
+  } catch {}
+  return "real";
+}
+
+export function setDevContextMode(mode: DevContextMode) {
+  try {
+    sessionStorage.removeItem(DEV_FORCE_INSECURE_KEY);
+    sessionStorage.removeItem(DEV_FORCE_IFRAME_KEY);
+    if (mode === "insecure") sessionStorage.setItem(DEV_FORCE_INSECURE_KEY, "1");
+    if (mode === "iframe") sessionStorage.setItem(DEV_FORCE_IFRAME_KEY, "1");
+    window.dispatchEvent(new CustomEvent("notif-dev-context-changed", { detail: mode }));
+  } catch {}
+}
+
 // Notification API only works in a "secure context": HTTPS, localhost, or 127.0.0.1.
 // Also, calling it inside a cross-origin iframe (Lovable preview) is unreliable —
 // even when permission is granted on the parent, the iframe origin may be denied.
 // This helper returns null if the context is fine, or a user-facing reason string otherwise.
 export function getPermissionContextIssue(): string | null {
   if (typeof window === "undefined") return "البيئة الحالية لا تدعم الإشعارات.";
+  // DEV overrides — useful for testing the dialog/cooldown flow without an actual iframe/HTTP host.
+  const devMode = getDevContextMode();
+  if (devMode === "insecure") {
+    return "إشعارات المتصفح تتطلب اتصالاً آمناً (HTTPS). افتح النسخة المنشورة من التطبيق. (محاكاة DEV)";
+  }
+  if (devMode === "iframe") {
+    return "لا يمكن تفعيل الإشعارات داخل معاينة المحرر. افتح الرابط المنشور في تبويب جديد. (محاكاة DEV)";
+  }
   // Secure context check (covers HTTPS + localhost). Browsers expose `isSecureContext`.
   if (typeof window.isSecureContext === "boolean" && !window.isSecureContext) {
     return "إشعارات المتصفح تتطلب اتصالاً آمناً (HTTPS). افتح النسخة المنشورة من التطبيق.";
