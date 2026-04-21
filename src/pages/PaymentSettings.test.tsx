@@ -418,4 +418,67 @@ describe("PaymentSettings — تطابق شكل cache بين useQuery و setQuer
     const cachedAfter = qc.getQueryData(setKey as readonly unknown[]);
     expect(cachedAfter).toMatchObject({ id: "row-1", ccp_number: "999" });
   });
+
+  it("🚫 فشل RLS لا يُغيّر قيم الحقول المرئية ولا يستدعي toast.success", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+    // ⛔ محاكاة رفض RLS: upsert ينجح بدون خطأ لكنه يُرجع 0 صفوف
+    mockUpsert.mockResolvedValue({ data: [], error: null });
+
+    const { qc } = renderPage();
+
+    // 1) انتظار تحميل الحقول الأربعة بقيمها الأصلية
+    const ccpInput = await screen.findByDisplayValue("111");
+    const ccpKeyInput = screen.getByDisplayValue("11");
+    const ripInput = screen.getByDisplayValue("rip-111");
+    const holderInput = screen.getByDisplayValue("أحمد");
+
+    // 2) المستخدم يُعدّل القيم الأربعة قبل الضغط على حفظ
+    const userEdits = {
+      ccp: "USER-EDIT-CCP",
+      key: "USER-EDIT-KEY",
+      rip: "USER-EDIT-RIP",
+      holder: "USER-EDIT-HOLDER",
+    };
+    fireEvent.change(ccpInput, { target: { value: userEdits.ccp } });
+    fireEvent.change(ccpKeyInput, { target: { value: userEdits.key } });
+    fireEvent.change(ripInput, { target: { value: userEdits.rip } });
+    fireEvent.change(holderInput, { target: { value: userEdits.holder } });
+
+    // 3) التقاط cache قبل الحفظ + spy على setQueryData
+    const cacheBefore = qc.getQueryData(QUERY_KEY);
+    const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
+
+    // 4) ضغط حفظ — upsert سيُرجع 0 صفوف (RLS_REJECT)
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    // ✅ 1) toast.success لم يُستدعَ مطلقاً
+    expect(toast.success).not.toHaveBeenCalled();
+
+    // ✅ 2) setQueryData لم يُستدعَ — لا تحديث متفائل بعد فشل RLS
+    expect(setQueryDataSpy).not.toHaveBeenCalled();
+
+    // ✅ 3) cache في React Query بقي بنفس المرجع تماماً (لم يُمَس)
+    const cacheAfter = qc.getQueryData(QUERY_KEY);
+    expect(cacheAfter).toBe(cacheBefore);
+
+    // ✅ 4) قيم الحقول المرئية لم يُعَد تعيينها — ما زالت تعرض ما كتبه المستخدم
+    //    (لا تعود إلى القيم الأصلية ولا تتحوّل إلى أي قيمة وهمية من savedRow)
+    expect(ccpInput).toHaveValue(userEdits.ccp);
+    expect(ccpKeyInput).toHaveValue(userEdits.key);
+    expect(ripInput).toHaveValue(userEdits.rip);
+    expect(holderInput).toHaveValue(userEdits.holder);
+
+    // ✅ 5) banner الخطأ يظهر مع كود RLS_REJECT للمستخدم
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/RLS_REJECT/i)).toBeInTheDocument();
+  });
 });
