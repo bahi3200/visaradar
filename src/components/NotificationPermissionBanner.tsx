@@ -455,7 +455,13 @@ export default function NotificationPermissionBanner() {
     // Pre-flight: confirm the API exists at all (older browsers / some in-app webviews).
     if (typeof window === "undefined" || !("Notification" in window)) {
       toast.error("متصفحك لا يدعم إشعارات الويب. جرّب Chrome / Edge / Firefox أو أضِف التطبيق إلى الشاشة الرئيسية.");
-      recordNotifAttempt({ status: "unsupported", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "unsupported",
+        at: Date.now(),
+        source: "local",
+        reason: "api_missing",
+        message: "Notification API not available",
+      });
       return;
     }
 
@@ -469,6 +475,7 @@ export default function NotificationPermissionBanner() {
         at: Date.now(),
         source: "local",
         message: ctxIssue,
+        reason: contextIssueToReason(ctxIssue),
       });
       return;
     }
@@ -498,6 +505,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: reqErr instanceof Error ? reqErr.message : "requestPermission failed",
+          reason: "other",
         });
         return;
       }
