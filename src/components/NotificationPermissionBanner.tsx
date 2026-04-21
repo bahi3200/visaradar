@@ -404,28 +404,67 @@ export default function NotificationPermissionBanner() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">
               {isDenied
-                ? "إشعارات المتصفح معطّلة"
+                ? "الإشعارات محظورة في هذا المتصفح"
                 : isGranted
                 ? "تم تفعيل الإشعارات ✅"
                 : "فعّل إشعارات المتصفح"}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              {isDenied
-                ? "لن تصلك تنبيهات فتح مواعيد التأشيرة. يجب تفعيلها يدوياً من إعدادات المتصفح."
-                : isGranted
-                ? "أرسل إشعاراً تجريبياً للتأكد أن كل شيء يعمل."
-                : "اسمح بالإشعارات حتى تصلك تنبيهات فتح مواعيد التأشيرة فوراً."}
-            </p>
+            {isDenied ? (
+              <ol className="text-xs text-muted-foreground mt-1 leading-relaxed list-decimal pr-4 space-y-0.5">
+                {getQuickDeniedSteps(detected).map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {isGranted
+                  ? "أرسل إشعاراً تجريبياً للتأكد أن كل شيء يعمل."
+                  : "اسمح بالإشعارات حتى تصلك تنبيهات فتح مواعيد التأشيرة فوراً."}
+              </p>
+            )}
             <div className="flex items-center gap-2 mt-2">
               {isDenied ? (
-                <button
-                  type="button"
-                  onClick={() => setShowHelp(true)}
-                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  كيف أفعّل الإشعارات؟
-                </button>
+                (() => {
+                  const settingsUrl = getBrowserSettingsUrl(detected);
+                  const onOpenSettings = () => {
+                    if (!settingsUrl) {
+                      // Browser doesn't allow programmatic settings deep-link → fall back to help modal.
+                      setShowHelp(true);
+                      return;
+                    }
+                    try {
+                      // Most browsers block scripted navigation to chrome://, edge://, etc.,
+                      // so we copy it to clipboard as well and instruct the user.
+                      navigator.clipboard?.writeText(settingsUrl).catch(() => {});
+                      window.open(settingsUrl, "_blank", "noopener,noreferrer");
+                      toast.message("افتح الرابط في شريط العنوان", {
+                        description: "بعض المتصفحات تمنع فتح صفحة الإعدادات تلقائياً — تم نسخ الرابط.",
+                        duration: 5000,
+                      });
+                    } catch {
+                      setShowHelp(true);
+                    }
+                  };
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        فتح إعدادات المتصفح
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowHelp(true)}
+                        className="text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        مزيد من المساعدة
+                      </button>
+                    </>
+                  );
+                })()
               ) : isGranted ? (
                 <button
                   type="button"
