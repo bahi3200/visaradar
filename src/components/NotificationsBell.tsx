@@ -346,5 +346,6 @@ export default function NotificationsBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+    </TooltipProvider>
   );
 }
