@@ -137,11 +137,41 @@ export default function NotificationPermissionBanner() {
       setPermission(result as PermissionState);
       if (result === "granted") {
         toast.success("تم تفعيل الإشعارات بنجاح ✅");
+        setJustGranted(true);
       } else if (result === "denied") {
         setShowHelp(true);
       }
     } catch {
       setShowHelp(true);
+    }
+  };
+
+  const sendTestNotification = async () => {
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      toast.error("الإشعارات غير مفعّلة");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const notif = new Notification("🔔 إشعار تجريبي", {
+        body: "إذا رأيت هذه الرسالة، فإن إشعارات المتصفح تعمل بشكل صحيح ✅",
+        icon: "/favicon.ico",
+        tag: "test-notification",
+      });
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      // Also fire the local sound/vibration alert respecting user preferences
+      try {
+        triggerAlert(getAlertMode(), getVolume());
+      } catch {}
+      toast.success("تم إرسال إشعار تجريبي ✅");
+      setTimeout(() => notif.close(), 6000);
+    } catch (e) {
+      toast.error("فشل إرسال الإشعار التجريبي");
+    } finally {
+      setSendingTest(false);
     }
   };
 
