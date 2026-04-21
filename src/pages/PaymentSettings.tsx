@@ -407,6 +407,21 @@ export default function PaymentSettingsPage() {
                     💡 {errorDetails.hint}
                   </p>
                 )}
+                {/* 🔁 زر إعادة المحاولة — يكرر handleSave مع تحديث واضح للحالة */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    aria-label="إعادة محاولة الحفظ"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 hover:bg-destructive/20 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${saving ? "animate-spin" : ""}`}
+                    />
+                    {saving ? "جاري إعادة المحاولة..." : "إعادة المحاولة"}
+                  </button>
+                </div>
               </div>
               <button
                 onClick={() => setErrorDetails(null)}
