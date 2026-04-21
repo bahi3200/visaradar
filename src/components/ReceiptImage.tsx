@@ -10,6 +10,23 @@ const MAX_SIGN_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 800;
 const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
 
+// Session-level kill switch: if Storage transform fails (e.g., plan limits,
+// unsupported format, server config), skip thumbnail requests for the rest
+// of the session to avoid wasted round-trips.
+let transformDisabled = false;
+
+const isTransformError = (err: unknown): boolean => {
+  if (!err || typeof err !== "object") return false;
+  const msg = (err as { message?: string }).message?.toLowerCase() ?? "";
+  return (
+    msg.includes("transform") ||
+    msg.includes("image processing") ||
+    msg.includes("unsupported") ||
+    msg.includes("not enabled") ||
+    msg.includes("not allowed")
+  );
+};
+
 export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
@@ -51,13 +68,24 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       for (let i = 0; i < MAX_SIGN_RETRIES; i++) {
         if (cancelled) return;
         setAttempt(i + 1);
-        const [fullRes, thumbRes] = await Promise.all([
-          supabase.storage.from("receipts").createSignedUrl(path, 3600),
-          supabase.storage.from("receipts").createSignedUrl(path, 3600, {
-            transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
-          }),
-        ]);
+        const fullPromise = supabase.storage
+          .from("receipts")
+          .createSignedUrl(path, 3600);
+        const thumbPromise = transformDisabled
+          ? Promise.resolve({ data: null, error: null } as unknown as Awaited<typeof fullPromise>)
+          : supabase.storage.from("receipts").createSignedUrl(path, 3600, {
+              transform: { width: THUMB_WIDTH, resize: "contain", quality: 75 },
+            });
+        const [fullRes, thumbRes] = await Promise.all([fullPromise, thumbPromise]);
         if (cancelled) return;
+        // Detect transform-specific failure once and disable for the session
+        if (!transformDisabled && thumbRes.error && isTransformError(thumbRes.error)) {
+          transformDisabled = true;
+          console.warn(
+            "[ReceiptImage] Storage image transform disabled for session:",
+            thumbRes.error.message,
+          );
+        }
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
           // Fallback to full URL if transform fails (e.g. non-image or unsupported format)
