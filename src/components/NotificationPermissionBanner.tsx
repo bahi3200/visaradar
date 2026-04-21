@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+// Routes where we MUST NEVER prompt for notification permission, even if a session exists.
+// These are public/auth flows where prompting would be intrusive or premature.
+const PUBLIC_BLOCKED_PREFIXES = [
+  "/auth/",
+  "/reset-password",
+  "/privacy",
+  "/terms",
+  "/install",
+  "/help",
+];
 
 const DISMISSED_KEY = "notif_perm_banner_dismissed";
 const PROMPTED_KEY = "notif_perm_prompted";
@@ -52,7 +64,8 @@ const BROWSER_LABEL: Record<BrowserKey, string> = {
 };
 
 export default function NotificationPermissionBanner() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
@@ -65,6 +78,12 @@ export default function NotificationPermissionBanner() {
   const detected = useMemo(detectBrowser, []);
   const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
   const [copied, setCopied] = useState(false);
+
+  // Block any prompting on public/auth routes — even if a stale session exists.
+  const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
+  // Authenticated only after auth has finished loading AND user is present.
+  const isAuthenticated = !authLoading && !!user;
+  const canPrompt = isAuthenticated && !isPublicRoute;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -79,9 +98,9 @@ export default function NotificationPermissionBanner() {
     }
   };
 
-  // Auto-prompt once per browser when user is logged in and status is "default"
+  // Auto-prompt once per browser, ONLY when authenticated AND not on a public route.
   useEffect(() => {
-    if (!user) return;
+    if (!canPrompt) return;
     if (permission !== "default") return;
     let prompted = false;
     try {
@@ -90,6 +109,8 @@ export default function NotificationPermissionBanner() {
     if (prompted) return;
 
     const t = setTimeout(async () => {
+      // Re-check just before firing — route or auth may have changed during the delay.
+      if (!canPrompt) return;
       try {
         localStorage.setItem(PROMPTED_KEY, "true");
         const result = await Notification.requestPermission();
@@ -100,9 +121,14 @@ export default function NotificationPermissionBanner() {
       } catch {}
     }, 1500);
     return () => clearTimeout(t);
-  }, [user, permission]);
+  }, [canPrompt, permission]);
 
   const handleEnable = async () => {
+    // Hard guard — never request permission outside an authenticated context.
+    if (!canPrompt) {
+      toast.error("سجّل الدخول أولاً لتفعيل الإشعارات");
+      return;
+    }
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
@@ -123,7 +149,8 @@ export default function NotificationPermissionBanner() {
     } catch {}
   };
 
-  if (!user) return null;
+  // Hide banner entirely on public routes or before auth resolves.
+  if (!isAuthenticated || isPublicRoute) return null;
   if (permission === "granted" || permission === "unsupported") return null;
   if (dismissed && permission !== "denied") return null;
 
