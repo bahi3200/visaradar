@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
+import { Loader2, Download, ZoomIn, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
