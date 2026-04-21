@@ -184,10 +184,13 @@ export default function NotificationPermissionBanner() {
 
   // Hide banner entirely on public routes or before auth resolves.
   if (!isAuthenticated || isPublicRoute) return null;
-  if (permission === "granted" || permission === "unsupported") return null;
-  if (dismissed && permission !== "denied") return null;
+  if (permission === "unsupported") return null;
+  // Keep visible after granting so the user can test, otherwise hide when granted.
+  if (permission === "granted" && !justGranted) return null;
+  if (dismissed && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
+  const isGranted = permission === "granted";
 
   return (
     <>
@@ -195,6 +198,8 @@ export default function NotificationPermissionBanner() {
         className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md rounded-xl border shadow-lg backdrop-blur-md ${
           isDenied
             ? "bg-destructive/10 border-destructive/30"
+            : isGranted
+            ? "bg-emerald-500/10 border-emerald-500/30"
             : "bg-background/95 border-border"
         }`}
         role="dialog"
@@ -203,18 +208,34 @@ export default function NotificationPermissionBanner() {
         <div className="flex items-start gap-3 p-3 pr-2">
           <div
             className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
-              isDenied ? "bg-destructive/20 text-destructive" : "bg-primary/15 text-primary"
+              isDenied
+                ? "bg-destructive/20 text-destructive"
+                : isGranted
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                : "bg-primary/15 text-primary"
             }`}
           >
-            {isDenied ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            {isDenied ? (
+              <BellOff className="w-4 h-4" />
+            ) : isGranted ? (
+              <BellRing className="w-4 h-4" />
+            ) : (
+              <Bell className="w-4 h-4" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {isDenied ? "إشعارات المتصفح معطّلة" : "فعّل إشعارات المتصفح"}
+              {isDenied
+                ? "إشعارات المتصفح معطّلة"
+                : isGranted
+                ? "تم تفعيل الإشعارات ✅"
+                : "فعّل إشعارات المتصفح"}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
               {isDenied
                 ? "لن تصلك تنبيهات فتح مواعيد التأشيرة. يجب تفعيلها يدوياً من إعدادات المتصفح."
+                : isGranted
+                ? "أرسل إشعاراً تجريبياً للتأكد أن كل شيء يعمل."
                 : "اسمح بالإشعارات حتى تصلك تنبيهات فتح مواعيد التأشيرة فوراً."}
             </p>
             <div className="flex items-center gap-2 mt-2">
@@ -227,6 +248,16 @@ export default function NotificationPermissionBanner() {
                   <ExternalLink className="w-3 h-3" />
                   كيف أفعّل الإشعارات؟
                 </button>
+              ) : isGranted ? (
+                <button
+                  type="button"
+                  onClick={sendTestNotification}
+                  disabled={sendingTest}
+                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                >
+                  <Send className="w-3 h-3" />
+                  {sendingTest ? "جارٍ الإرسال..." : "إرسال إشعار تجريبي"}
+                </button>
               ) : (
                 <button
                   type="button"
@@ -235,6 +266,16 @@ export default function NotificationPermissionBanner() {
                 >
                   تفعيل الآن
                 </button>
+              )}
+              {(isDenied || isGranted) && (
+                <button
+                  type="button"
+                  onClick={sendTestNotification}
+                  disabled={sendingTest || isDenied}
+                  className="text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                  hidden={!isGranted ? false : false}
+                  style={{ display: isGranted ? "none" : "none" }}
+                />
               )}
               <button
                 type="button"
