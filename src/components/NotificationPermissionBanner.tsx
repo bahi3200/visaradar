@@ -35,9 +35,30 @@ const LEGACY_PROMPTED_KEY = "notif_perm_prompted";
 
 const SNOOZE_BASE = "notif_perm_snooze_until";
 const PROMPTED_BASE = "notif_perm_prompted";
+// Cooldown applied when we detect a context that can never succeed (iframe / insecure).
+// Stored as an absolute "stop until" timestamp so reloads / nav don't reset it.
+const CTX_COOLDOWN_KEY = "notif_perm_ctx_cooldown_until";
+const CTX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // Anonymous (logged-out) users get their own bucket so a guest dismiss doesn't follow them after login.
 const ANON_BUCKET = "anon";
 const SNOOZE_DAYS = 7;
+
+function readCtxCooldownUntil(): number {
+  try {
+    const raw = localStorage.getItem(CTX_COOLDOWN_KEY);
+    if (!raw) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+function writeCtxCooldownUntil(ts: number) {
+  try {
+    if (ts > 0) localStorage.setItem(CTX_COOLDOWN_KEY, String(ts));
+    else localStorage.removeItem(CTX_COOLDOWN_KEY);
+  } catch {}
+}
 
 // Session-scoped flag to suppress re-showing during the current tab session
 // (e.g. user navigates between public ↔ private pages and we already hid this once).
