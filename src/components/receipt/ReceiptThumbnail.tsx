@@ -1,6 +1,8 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const SLOW_LOAD_THRESHOLD_MS = 4000;
 
 export interface ReceiptThumbnailProps {
   signedUrl: string;
@@ -12,6 +14,20 @@ export interface ReceiptThumbnailProps {
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
   ({ signedUrl, downloading, onOpen, onDownload }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
+  const [slow, setSlow] = useState(false);
+
+  // Reset state when src changes (retry, new signed URL)
+  useEffect(() => {
+    setImgState("loading");
+    setSlow(false);
+  }, [signedUrl]);
+
+  useEffect(() => {
+    if (imgState !== "loading") return;
+    const t = window.setTimeout(() => setSlow(true), SLOW_LOAD_THRESHOLD_MS);
+    return () => window.clearTimeout(t);
+  }, [imgState]);
+
   return (
     <div className="flex items-start gap-3 flex-wrap">
       <button
@@ -27,10 +43,17 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
             className="absolute inset-0"
             role="status"
             aria-live="polite"
-            aria-label="جارٍ تحميل صورة الوصل"
+            aria-label={slow ? "التحميل يستغرق وقتاً أطول من المعتاد" : "جارٍ تحميل صورة الوصل"}
           >
             <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
-            <ImageIcon className="absolute inset-0 m-auto w-8 h-8 text-muted-foreground/40" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
+              <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+              {slow && (
+                <span className="text-[10px] leading-tight text-muted-foreground/80 font-medium">
+                  التحميل يستغرق وقتاً أطول من المعتاد…
+                </span>
+              )}
+            </div>
           </div>
         )}
         {imgState === "error" && (
