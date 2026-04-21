@@ -108,15 +108,15 @@ export default function PaymentSettingsPage() {
   const { data: settings, isLoading, isFetching } = useQuery<PaymentSettingsRow>({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
-      console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
+      dgroupCollapsed("[PaymentSettings] FETCH payment_settings");
       const t0 = performance.now();
       const { data, error } = await supabase
         .from("payment_settings")
         .select("*")
         .limit(1)
         .maybeSingle();
-      console.log("duration_ms:", (performance.now() - t0).toFixed(1));
-      console.log("data:", data);
+      dlog("duration_ms:", (performance.now() - t0).toFixed(1));
+      dlog("data:", data);
       if (error) {
         console.error("fetch error:", {
           message: error.message,
@@ -124,10 +124,10 @@ export default function PaymentSettingsPage() {
           details: (error as any).details,
           hint: (error as any).hint,
         });
-        console.groupEnd();
+        dgroupEnd();
         throw error;
       }
-      console.groupEnd();
+      dgroupEnd();
       // 🧰 تطبيع موحّد عبر helper مشترك مع upsert
       return normalizePaymentSettingsRow(data);
     },
