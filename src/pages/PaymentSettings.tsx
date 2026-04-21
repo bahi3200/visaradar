@@ -94,7 +94,8 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       console.groupEnd();
-      return (data as PaymentSettingsRow) ?? null;
+      // 🧰 تطبيع موحّد عبر helper مشترك مع upsert
+      return normalizePaymentSettingsRow(data);
     },
   });
 
