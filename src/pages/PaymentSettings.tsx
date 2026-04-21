@@ -140,6 +140,14 @@ export default function PaymentSettingsPage() {
         throw new Error(msg);
       }
       console.log("step 5 — saved row:", data[0]);
+      const savedRow = data[0];
+      // Optimistic UI: seed the cache and the local form state immediately
+      queryClient.setQueryData(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
+      setCcpNumber(savedRow.ccp_number || "");
+      setCcpKey(savedRow.ccp_key || "");
+      setRipNumber(savedRow.rip_number || "");
+      setAccountHolder(savedRow.account_holder || "");
+      // Then revalidate in the background to stay in sync with DB
       queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
