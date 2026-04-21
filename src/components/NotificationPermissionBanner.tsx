@@ -410,10 +410,17 @@ export default function NotificationPermissionBanner() {
 
       if (delivered) {
         toast.success("تم إرسال إشعار تجريبي ✅");
+        recordNotifAttempt({ status: "success", at: Date.now(), source: "local" });
       } else {
         toast.error(
           "تعذّر عرض إشعار المتصفح — تأكد من السماح بالإشعارات من إعدادات المتصفح، أو جرّب من جهاز الكمبيوتر."
         );
+        recordNotifAttempt({
+          status: "error",
+          at: Date.now(),
+          source: "local",
+          message: "delivery failed",
+        });
       }
     } catch (e) {
       console.error("[notif] sendTestNotification error", e);
@@ -422,6 +429,12 @@ export default function NotificationPermissionBanner() {
           ? `فشل الإرسال: ${e.message}`
           : "فشل إرسال الإشعار التجريبي"
       );
+      recordNotifAttempt({
+        status: "error",
+        at: Date.now(),
+        source: "local",
+        message: e instanceof Error ? e.message : "unknown error",
+      });
     } finally {
       setSendingTest(false);
     }
