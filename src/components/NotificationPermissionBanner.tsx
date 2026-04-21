@@ -16,22 +16,59 @@ const PUBLIC_BLOCKED_PREFIXES = [
   "/help",
 ];
 
-const DISMISSED_KEY = "notif_perm_banner_dismissed"; // legacy boolean — migrated below
-const SNOOZE_UNTIL_KEY = "notif_perm_snooze_until"; // ISO timestamp until which the banner stays hidden
-const SNOOZE_DAYS = 7;
-const PROMPTED_KEY = "notif_perm_prompted";
+// Storage key conventions:
+// - Per-user keys are namespaced: `${BASE}::${userId}` so different accounts on the same browser
+//   keep separate snooze/prompt history.
+// - A legacy global key is migrated into the current user's namespace on first read.
+const LEGACY_DISMISSED_KEY = "notif_perm_banner_dismissed";
+const LEGACY_SNOOZE_KEY = "notif_perm_snooze_until";
+const LEGACY_PROMPTED_KEY = "notif_perm_prompted";
 
-function readSnoozeUntil(): number {
+const SNOOZE_BASE = "notif_perm_snooze_until";
+const PROMPTED_BASE = "notif_perm_prompted";
+// Anonymous (logged-out) users get their own bucket so a guest dismiss doesn't follow them after login.
+const ANON_BUCKET = "anon";
+const SNOOZE_DAYS = 7;
+
+// Session-scoped flag to suppress re-showing during the current tab session
+// (e.g. user navigates between public ↔ private pages and we already hid this once).
+const SESSION_HIDE_KEY = "notif_perm_session_hidden";
+
+function snoozeKey(userId: string | null) {
+  return `${SNOOZE_BASE}::${userId ?? ANON_BUCKET}`;
+}
+function promptedKey(userId: string | null) {
+  return `${PROMPTED_BASE}::${userId ?? ANON_BUCKET}`;
+}
+
+function readSnoozeUntil(userId: string | null): number {
   try {
-    // Migrate legacy boolean dismissed flag → 7-day snooze on first read
-    const legacy = localStorage.getItem(DISMISSED_KEY);
-    if (legacy === "true") {
-      const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
-      localStorage.setItem(SNOOZE_UNTIL_KEY, String(until));
-      localStorage.removeItem(DISMISSED_KEY);
-      return until;
+    const key = snoozeKey(userId);
+
+    // Migrate legacy global keys → current user's namespaced key (one-time).
+    const legacyDismissed = localStorage.getItem(LEGACY_DISMISSED_KEY);
+    const legacySnooze = localStorage.getItem(LEGACY_SNOOZE_KEY);
+    if (legacyDismissed === "true" || legacySnooze) {
+      const fromLegacy =
+        legacySnooze && Number.isFinite(Number(legacySnooze))
+          ? Number(legacySnooze)
+          : Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+      // Only seed the user's key if it doesn't already exist — never overwrite a fresher decision.
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, String(fromLegacy));
+      }
+      localStorage.removeItem(LEGACY_DISMISSED_KEY);
+      localStorage.removeItem(LEGACY_SNOOZE_KEY);
     }
-    const raw = localStorage.getItem(SNOOZE_UNTIL_KEY);
+    // Same migration for the prompted flag, so we don't re-auto-prompt a returning user.
+    const legacyPrompted = localStorage.getItem(LEGACY_PROMPTED_KEY);
+    if (legacyPrompted === "true") {
+      const pKey = promptedKey(userId);
+      if (!localStorage.getItem(pKey)) localStorage.setItem(pKey, "true");
+      localStorage.removeItem(LEGACY_PROMPTED_KEY);
+    }
+
+    const raw = localStorage.getItem(key);
     if (!raw) return 0;
     const n = Number(raw);
     return Number.isFinite(n) ? n : 0;
@@ -40,10 +77,25 @@ function readSnoozeUntil(): number {
   }
 }
 
-function writeSnoozeUntil(ts: number) {
+function writeSnoozeUntil(userId: string | null, ts: number) {
   try {
-    if (ts > 0) localStorage.setItem(SNOOZE_UNTIL_KEY, String(ts));
-    else localStorage.removeItem(SNOOZE_UNTIL_KEY);
+    const key = snoozeKey(userId);
+    if (ts > 0) localStorage.setItem(key, String(ts));
+    else localStorage.removeItem(key);
+  } catch {}
+}
+
+function readSessionHidden(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_HIDE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+function writeSessionHidden(v: boolean) {
+  try {
+    if (v) sessionStorage.setItem(SESSION_HIDE_KEY, "true");
+    else sessionStorage.removeItem(SESSION_HIDE_KEY);
   } catch {}
 }
 
