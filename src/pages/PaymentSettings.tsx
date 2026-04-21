@@ -293,7 +293,7 @@ export default function PaymentSettingsPage() {
           description: SAVE_FAILURE_COPY.hint,
         });
         setSaving(false);
-        console.groupEnd();
+        dgroupEnd();
         return;
       }
 
@@ -308,7 +308,7 @@ export default function PaymentSettingsPage() {
       console.error("[PaymentSettings] SAVE failed:", err);
       toast.error(err.message || "حدث خطأ أثناء الحفظ", { id: toastId });
     } finally {
-      console.groupEnd();
+      dgroupEnd();
       setSaving(false);
     }
   };
