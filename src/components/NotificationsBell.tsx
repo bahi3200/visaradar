@@ -227,30 +227,16 @@ export default function NotificationsBell() {
   const unreadCount = notifications.filter((n) => n.isNew).length;
   const prevUnreadRef = useRef<number>(0);
 
-  const playNotificationSound = useCallback(() => {
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
-    } catch {}
+  const playAlert = useCallback(() => {
+    triggerAlert(getAlertMode(), getVolume());
   }, []);
 
   useEffect(() => {
     if (unreadCount > prevUnreadRef.current && prevUnreadRef.current !== 0) {
-      const soundEnabled = localStorage.getItem("notif_sound") !== "false";
-      if (soundEnabled) playNotificationSound();
+      playAlert();
     }
     prevUnreadRef.current = unreadCount;
-  }, [unreadCount, playNotificationSound]);
+  }, [unreadCount, playAlert]);
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
