@@ -9,6 +9,25 @@ import ccpLogo from "@/assets/ccp-logo.png";
 
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
+// 🪵 سجلات تشخيصية مشروطة بوضع التطوير فقط — لا تظهر في الإنتاج.
+// نُبقي console.error كما هو لأن الأخطاء يجب أن تصل دائماً (Sentry/تتبّع المتصفح).
+const IS_DEV = typeof import.meta !== "undefined" && !!import.meta.env?.DEV;
+const dlog = (...args: unknown[]): void => {
+  if (IS_DEV) console.log(...args);
+};
+const dwarn = (...args: unknown[]): void => {
+  if (IS_DEV) console.warn(...args);
+};
+const dgroup = (label: string): void => {
+  if (IS_DEV) console.group(label);
+};
+const dgroupCollapsed = (label: string): void => {
+  if (IS_DEV) console.groupCollapsed(label);
+};
+const dgroupEnd = (): void => {
+  if (IS_DEV) console.groupEnd();
+};
+
 // 🧾 رسائل خطأ موحّدة لكلا سيناريوهَي فشل الحفظ:
 // (1) upsert يرجع مصفوفة فارغة (RLS_REJECT)
 // (2) upsert يرجع صفاً لكن savedRow لا يمر التطبيع (EMPTY_SAVED_ROW)
@@ -89,15 +108,15 @@ export default function PaymentSettingsPage() {
   const { data: settings, isLoading, isFetching } = useQuery<PaymentSettingsRow>({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
-      console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
+      dgroupCollapsed("[PaymentSettings] FETCH payment_settings");
       const t0 = performance.now();
       const { data, error } = await supabase
         .from("payment_settings")
         .select("*")
         .limit(1)
         .maybeSingle();
-      console.log("duration_ms:", (performance.now() - t0).toFixed(1));
-      console.log("data:", data);
+      dlog("duration_ms:", (performance.now() - t0).toFixed(1));
+      dlog("data:", data);
       if (error) {
         console.error("fetch error:", {
           message: error.message,
@@ -105,10 +124,10 @@ export default function PaymentSettingsPage() {
           details: (error as any).details,
           hint: (error as any).hint,
         });
-        console.groupEnd();
+        dgroupEnd();
         throw error;
       }
-      console.groupEnd();
+      dgroupEnd();
       // 🧰 تطبيع موحّد عبر helper مشترك مع upsert
       return normalizePaymentSettingsRow(data);
     },
@@ -119,13 +138,13 @@ export default function PaymentSettingsPage() {
   const applyPaymentSettings = useCallback((data: PaymentSettingsRow) => {
     // 🛡️ Guard 1: تجاهل null/undefined كاملاً
     if (!data) {
-      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data فارغ", data);
+      dwarn("[applyPaymentSettings] تم تجاهل التحديث: data فارغ", data);
       return;
     }
 
     // 🛡️ Guard 2: تأكد أن data كائن (وليس string/number/array)
     if (typeof data !== "object" || Array.isArray(data)) {
-      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data ليس كائناً صالحاً", data);
+      dwarn("[applyPaymentSettings] تم تجاهل التحديث: data ليس كائناً صالحاً", data);
       return;
     }
 
@@ -159,12 +178,12 @@ export default function PaymentSettingsPage() {
     setSaving(true);
     setErrorDetails(null);
     const toastId = toast.loading("جاري حفظ معلومات الدفع...");
-    console.group("[PaymentSettings] SAVE flow");
+    dgroup("[PaymentSettings] SAVE flow");
     try {
       // 🔍 Debug: verify session + admin role before write
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-      console.log("step 1 — auth.uid():", userId, "email:", sessionData?.session?.user?.email);
+      dlog("step 1 — auth.uid():", userId, "email:", sessionData?.session?.user?.email);
 
       if (!userId) {
         throw new Error("لا توجد جلسة مصادقة. يرجى تسجيل الدخول.");
@@ -172,7 +191,7 @@ export default function PaymentSettingsPage() {
 
       const { data: roleCheck, error: roleErr } = await supabase
         .rpc("has_role", { _user_id: userId, _role: "admin" });
-      console.log("step 2 — has_role(admin):", roleCheck, "err:", roleErr);
+      dlog("step 2 — has_role(admin):", roleCheck, "err:", roleErr);
 
       if (roleErr) {
         setErrorDetails({
@@ -202,7 +221,7 @@ export default function PaymentSettingsPage() {
       if (settings?.id) {
         payload.id = settings.id;
       }
-      console.log("step 3 — upsert payload:", payload);
+      dlog("step 3 — upsert payload:", payload);
       const writeStart = performance.now();
       // 🎯 نوع صريح لرد upsert: مصفوفة من PaymentSettingsRowFilled أو null
       // هذا يضمن أن TypeScript يعرف أن data[0] (إن وُجد) هو PaymentSettingsRowFilled وليس any
@@ -213,7 +232,7 @@ export default function PaymentSettingsPage() {
         data: PaymentSettingsRowFilled[] | null;
         error: typeof Error.prototype | null | any;
       };
-      console.log(
+      dlog(
         "step 4 — upsert response: duration_ms=",
         (performance.now() - writeStart).toFixed(1),
         "rows=",
@@ -235,7 +254,7 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       if (!data || data.length === 0) {
-        console.warn("step 4 — upsert returned 0 rows (silent RLS reject)");
+        dwarn("step 4 — upsert returned 0 rows (silent RLS reject)");
         setErrorDetails({
           message: SAVE_FAILURE_COPY.message,
           code: "RLS_REJECT",
@@ -247,7 +266,7 @@ export default function PaymentSettingsPage() {
           description: SAVE_FAILURE_COPY.hint,
         });
         setSaving(false);
-        console.groupEnd();
+        dgroupEnd();
         return; // ⛔ منع تحديث الواجهة
       }
 
@@ -256,11 +275,11 @@ export default function PaymentSettingsPage() {
       // 🌀 إظهار spinner قصير أثناء التحقق من شكل savedRow قبل الكتابة في cache
       setSyncing(true);
       const savedRow: PaymentSettingsRow = normalizePaymentSettingsRow(data);
-      console.log("step 5 — saved row (normalized):", savedRow);
+      dlog("step 5 — saved row (normalized):", savedRow);
 
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
       if (!savedRow) {
-        console.warn("step 5 — savedRow is null/undefined despite non-empty data array");
+        dwarn("step 5 — savedRow is null/undefined despite non-empty data array");
         setErrorDetails({
           message: SAVE_FAILURE_COPY.message,
           code: "EMPTY_SAVED_ROW",
@@ -274,7 +293,7 @@ export default function PaymentSettingsPage() {
           description: SAVE_FAILURE_COPY.hint,
         });
         setSaving(false);
-        console.groupEnd();
+        dgroupEnd();
         return;
       }
 
@@ -289,7 +308,7 @@ export default function PaymentSettingsPage() {
       console.error("[PaymentSettings] SAVE failed:", err);
       toast.error(err.message || "حدث خطأ أثناء الحفظ", { id: toastId });
     } finally {
-      console.groupEnd();
+      dgroupEnd();
       setSaving(false);
     }
   };
