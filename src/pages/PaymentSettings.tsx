@@ -9,6 +9,18 @@ import ccpLogo from "@/assets/ccp-logo.png";
 
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
+// نوع موحد لصف payment_settings — يطابق ما يعيده .maybeSingle()
+type PaymentSettingsRow = {
+  id: string;
+  ccp_number: string;
+  ccp_key: string;
+  rip_number: string;
+  account_holder: string;
+  referrer_bonus_days?: number;
+  referred_bonus_days?: number;
+  updated_at?: string;
+} | null;
+
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -24,7 +36,7 @@ export default function PaymentSettingsPage() {
     hint?: string;
   } | null>(null);
 
-  const { data: settings, isLoading, isFetching } = useQuery({
+  const { data: settings, isLoading, isFetching } = useQuery<PaymentSettingsRow>({
     queryKey: PAYMENT_SETTINGS_QUERY_KEY,
     queryFn: async () => {
       console.groupCollapsed("[PaymentSettings] FETCH payment_settings");
@@ -47,13 +59,13 @@ export default function PaymentSettingsPage() {
         throw error;
       }
       console.groupEnd();
-      return data;
+      return (data as PaymentSettingsRow) ?? null;
     },
   });
 
   // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
   // دالة موحدة لتحديث الحقول من بيانات payment_settings
-  const applyPaymentSettings = (data: typeof settings) => {
+  const applyPaymentSettings = (data: PaymentSettingsRow) => {
     if (!data) return;
     setCcpNumber(data.ccp_number || "");
     setCcpKey(data.ccp_key || "");
@@ -156,11 +168,13 @@ export default function PaymentSettingsPage() {
         return; // ⛔ منع تحديث الواجهة
       }
 
-      const savedRow = data[0];
+      // upsert يُرجع مصفوفة — نأخذ أول صف ككائن مفرد
+      // ليطابق شكل ما يعيده useQuery (.maybeSingle => كائن واحد أو null)
+      const savedRow: PaymentSettingsRow = (data[0] as PaymentSettingsRow) ?? null;
       console.log("step 5 — saved row:", savedRow);
 
-      // ✅ تحديث الواجهة فقط بعد التأكد من وجود بيانات
-      queryClient.setQueryData(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
+      // ✅ نفس الشكل تماماً (كائن واحد، ليس مصفوفة) لتجنب أي تباين
+      queryClient.setQueryData<PaymentSettingsRow>(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
       applyPaymentSettings(savedRow);
 
       // إعادة التحقق في الخلفية
