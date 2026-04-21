@@ -36,6 +36,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [transformBlocked, setTransformBlocked] = useState(transformDisabled);
   const thumbnailRef = useRef<HTMLButtonElement | null>(null);
   const hasFocusedRef = useRef(false);
 
@@ -85,6 +86,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
             "[ReceiptImage] Storage image transform disabled for session:",
             thumbRes.error.message,
           );
+          setTransformBlocked(true);
         }
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
@@ -193,6 +195,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         onOpen={() => setLightboxOpen(true)}
         onDownload={() => handleDownload("full")}
         onDownloadThumb={thumbDownloadAvailable ? () => handleDownload("thumb") : undefined}
+        fullSizeNotice={transformBlocked}
       />
       <ReceiptLightbox
         open={lightboxOpen}

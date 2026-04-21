@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown } from "lucide-react";
+import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -17,10 +17,12 @@ export interface ReceiptThumbnailProps {
   onDownload: () => void;
   /** Optional callback for downloading the smaller thumbnail variant. */
   onDownloadThumb?: () => void;
+  /** Show notice that image transform is disabled and full size will be used. */
+  fullSizeNotice?: boolean;
 }
 
 export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailProps>(
-  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb }, ref) => {
+  ({ signedUrl, downloading, onOpen, onDownload, onDownloadThumb, fullSizeNotice }, ref) => {
   const [imgState, setImgState] = useState<"loading" | "loaded" | "error">("loading");
   const [slow, setSlow] = useState(false);
 
@@ -37,6 +39,7 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
   }, [imgState]);
 
   return (
+    <div className="flex flex-col gap-2">
     <div className="flex items-start gap-3 flex-wrap">
       <button
         ref={ref}
@@ -137,6 +140,18 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
           <span>تنزيل الوصل</span>
         </button>
       )}
+    </div>
+    {fullSizeNotice && (
+      <div
+        className="inline-flex items-start gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/40 border border-border/40 text-[11px] text-muted-foreground max-w-fit"
+        role="status"
+      >
+        <Info className="w-3 h-3 mt-0.5 shrink-0 text-muted-foreground/80" />
+        <span>
+          تعذّر إنشاء نسخة مصغّرة — سيتم تحميل الصورة بالحجم الكامل.
+        </span>
+      </div>
+    )}
     </div>
   );
   }
