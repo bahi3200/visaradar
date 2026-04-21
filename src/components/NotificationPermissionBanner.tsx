@@ -219,36 +219,46 @@ export default function NotificationPermissionBanner() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              تم رفض إذن الإشعارات سابقاً. لإعادة تفعيلها، اتبع الخطوات التالية حسب متصفحك:
+            <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+              تم رفض إذن الإشعارات سابقاً. اختر متصفحك لرؤية الخطوات الدقيقة:
             </p>
-            <div className="space-y-3">
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🌐 Chrome / Edge / Brave</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>اضغط على أيقونة القفل 🔒 بجانب رابط الموقع</li>
-                  <li>اختر "إعدادات الموقع" (Site settings)</li>
-                  <li>غيّر "الإشعارات" إلى "السماح" (Allow)</li>
-                  <li>أعد تحميل الصفحة</li>
-                </ol>
-              </div>
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🦊 Firefox</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>اضغط على القفل 🔒 ثم على السهم بجانب الموقع</li>
-                  <li>اختر "مزيد من المعلومات" → "أذونات"</li>
-                  <li>أزل الإعداد بجانب "إرسال إشعارات"</li>
-                  <li>أعد تحميل الصفحة وامنح الإذن</li>
-                </ol>
-              </div>
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-foreground mb-1.5">🧭 Safari (iOS / Mac)</p>
-                <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal pr-4">
-                  <li>افتح الإعدادات → Safari → الإشعارات</li>
-                  <li>ابحث عن هذا الموقع وفعّل "السماح"</li>
-                </ol>
-              </div>
+
+            {/* Browser tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-3 border-b border-border pb-2">
+              {(Object.keys(BROWSER_LABEL) as BrowserKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
+                    activeTab === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {BROWSER_LABEL[key].split(" ").slice(1).join(" ") || BROWSER_LABEL[key]}
+                  {key === detected && <span className="mr-1">•</span>}
+                </button>
+              ))}
             </div>
+
+            {/* Origin copy helper */}
+            <div className="flex items-center gap-2 mb-3 bg-secondary/40 rounded-lg p-2">
+              <code className="flex-1 text-[11px] text-foreground truncate" dir="ltr">
+                {origin}
+              </code>
+              <button
+                type="button"
+                onClick={copyOrigin}
+                className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-background border border-border hover:bg-secondary transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? "تم" : "نسخ الرابط"}
+              </button>
+            </div>
+
+            <BrowserInstructions browser={activeTab} origin={origin} />
+
             <button
               type="button"
               onClick={() => setShowHelp(false)}
