@@ -515,7 +515,12 @@ export default function NotificationPermissionBanner() {
       setPermission("denied");
       setShowHelp(true);
       toast.error("الإشعارات محظورة. اتبع الخطوات لتفعيلها من إعدادات المتصفح.");
-      recordNotifAttempt({ status: "denied", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "denied",
+        at: Date.now(),
+        source: "local",
+        reason: "permission_denied",
+      });
       return;
     }
 
@@ -524,7 +529,12 @@ export default function NotificationPermissionBanner() {
       toast.message("لم يتم منح الإذن بعد", {
         description: "اضغط الزر مرة أخرى واختر «السماح» في نافذة المتصفح.",
       });
-      recordNotifAttempt({ status: "dismissed", at: Date.now(), source: "local" });
+      recordNotifAttempt({
+        status: "dismissed",
+        at: Date.now(),
+        source: "local",
+        reason: "user_dismissed",
+      });
       return;
     }
 
