@@ -76,6 +76,8 @@ export default function NotificationPermissionBanner() {
     }
   });
   const [showHelp, setShowHelp] = useState(false);
+  const [justGranted, setJustGranted] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const detected = useMemo(detectBrowser, []);
   const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
   const [copied, setCopied] = useState(false);
