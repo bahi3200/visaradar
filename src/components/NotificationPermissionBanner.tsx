@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+// Routes where we MUST NEVER prompt for notification permission, even if a session exists.
+// These are public/auth flows where prompting would be intrusive or premature.
+const PUBLIC_BLOCKED_PREFIXES = [
+  "/auth/",
+  "/reset-password",
+  "/privacy",
+  "/terms",
+  "/install",
+  "/help",
+];
 
 const DISMISSED_KEY = "notif_perm_banner_dismissed";
 const PROMPTED_KEY = "notif_perm_prompted";
