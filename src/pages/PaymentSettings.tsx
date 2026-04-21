@@ -175,6 +175,23 @@ export default function PaymentSettingsPage() {
       const savedRow: PaymentSettingsRow = (data[0] as PaymentSettingsRow) ?? null;
       console.log("step 5 — saved row:", savedRow);
 
+      // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
+      if (!savedRow) {
+        console.warn("step 5 — savedRow is null/undefined despite non-empty data array");
+        const msg = "⚠️ لم يتم استلام بيانات صحيحة من الخادم بعد الحفظ";
+        const hint = "الصف المُرجَع فارغ. حاول إعادة تحميل الصفحة أو أعد المحاولة.";
+        setErrorDetails({
+          message: msg,
+          code: "EMPTY_SAVED_ROW",
+          details: "data[0] resolved to null",
+          hint,
+        });
+        toast.error(msg, { id: toastId, description: hint });
+        setSaving(false);
+        console.groupEnd();
+        return;
+      }
+
       // ✅ نفس الشكل تماماً (كائن واحد، ليس مصفوفة) لتجنب أي تباين
       queryClient.setQueryData<PaymentSettingsRow>(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
       applyPaymentSettings(savedRow);
