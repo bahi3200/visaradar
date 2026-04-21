@@ -272,3 +272,189 @@ export default function NotificationPermissionBanner() {
     </>
   );
 }
+
+type StepLink = { label: string; url: string; note?: string };
+
+function Step({ children }: { children: React.ReactNode }) {
+  return <li className="text-xs text-muted-foreground leading-relaxed">{children}</li>;
+}
+
+function LinkRow({ links }: { links: StepLink[] }) {
+  if (!links.length) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      {links.map((l) => (
+        <div key={l.url} className="flex items-center gap-2">
+          <code className="flex-1 text-[10px] text-foreground bg-background rounded px-2 py-1 truncate" dir="ltr">
+            {l.url}
+          </code>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(l.url).then(() => toast.success("تم نسخ الرابط"));
+            }}
+            className="shrink-0 inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/70 transition-colors"
+          >
+            <Copy className="w-3 h-3" />
+            نسخ
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BrowserInstructions({ browser, origin }: { browser: BrowserKey; origin: string }) {
+  const encoded = encodeURIComponent(origin);
+
+  switch (browser) {
+    case "chrome":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Google Chrome</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح الرابط التالي في تبويب جديد للوصول مباشرة لإعدادات الإشعارات للموقع:</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات الموقع", url: `chrome://settings/content/siteDetails?site=${encoded}` },
+            { label: "كل أذونات الإشعارات", url: "chrome://settings/content/notifications" },
+          ]} />
+          <ol className="space-y-1 list-decimal pr-4 mt-2" start={2}>
+            <Step>غيّر "Notifications" إلى <b>Allow</b>.</Step>
+            <Step>أعد تحميل الصفحة (Ctrl+R أو Cmd+R).</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70 mt-1">
+            ملاحظة: روابط <code>chrome://</code> لا تفتح بالنقر — انسخها والصقها في شريط العنوان.
+          </p>
+        </div>
+      );
+
+    case "edge":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Microsoft Edge</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح أحد الروابط التالية في تبويب جديد (انسخه إلى شريط العنوان):</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات الموقع مباشرة", url: `edge://settings/content/siteDetails?site=${encoded}` },
+            { label: "كل أذونات الإشعارات", url: "edge://settings/content/notifications" },
+          ]} />
+          <ol className="space-y-1 list-decimal pr-4 mt-2" start={2}>
+            <Step>ابحث عن هذا الموقع في قائمة "Block" واضغط على القائمة (⋯) → <b>Allow</b>.</Step>
+            <Step>أو اضغط على أيقونة القفل 🔒 بجانب الرابط → "Permissions for this site" → فعّل <b>Notifications</b>.</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70">
+            في Edge على Windows تأكد أيضاً من تفعيل الإشعارات على مستوى النظام:
+            <br />
+            Settings → System → Notifications → Microsoft Edge → On.
+          </p>
+        </div>
+      );
+
+    case "brave":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Brave</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">brave://settings/content/notifications</code></Step>
+            <Step>أزل الموقع من قائمة "Block" أو أضفه إلى "Allow".</Step>
+            <Step>تأكد أن Brave Shields لا يحجب الإشعارات (الأيقونة 🦁 بجانب الرابط → Off).</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات Brave", url: "brave://settings/content/notifications" },
+          ]} />
+        </div>
+      );
+
+    case "firefox":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Firefox</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">about:preferences#privacy</code> ثم انزل إلى "Permissions" → "Notifications" → "Settings…".</Step>
+            <Step>ابحث عن الموقع وغيّر الحالة من "Block" إلى <b>Allow</b>، ثم احفظ.</Step>
+            <Step>أو اضغط القفل 🔒 → السهم بجانب الموقع → Clear permission ثم أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات الخصوصية", url: "about:preferences#privacy" },
+          ]} />
+        </div>
+      );
+
+    case "safari-ios":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Safari على iOS / iPadOS</p>
+          <p className="text-[11px] text-muted-foreground bg-background/60 rounded p-2">
+            ⚠️ لاستقبال إشعارات حقيقية على iPhone/iPad يجب أولاً <b>تثبيت الموقع كتطبيق على الشاشة الرئيسية</b> (Add to Home Screen)، لأن Safari لا يدعم Web Push من المتصفح مباشرة.
+          </p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح الموقع في Safari ثم اضغط زر المشاركة <b>⎙</b> أسفل الشاشة.</Step>
+            <Step>اختر <b>"Add to Home Screen" / "إضافة إلى الشاشة الرئيسية"</b>.</Step>
+            <Step>افتح التطبيق من الشاشة الرئيسية، وعند ظهور طلب الإشعارات اختر <b>السماح</b>.</Step>
+            <Step>إذا رفضتها سابقاً: اذهب إلى <b>الإعدادات → الإشعارات</b> ثم ابحث عن هذا التطبيق وفعّل "السماح بالإشعارات".</Step>
+            <Step>تأكد من تعطيل "وضع التركيز / Focus" و"عدم الإزعاج".</Step>
+          </ol>
+          <p className="text-[10px] text-muted-foreground/70">
+            مطلوب iOS 16.4 أو أحدث لدعم إشعارات Web Push.
+          </p>
+        </div>
+      );
+
+    case "safari-mac":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Safari على macOS</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>من شريط القوائم: <b>Safari → Settings (⌘,) → Websites → Notifications</b>.</Step>
+            <Step>ابحث عن هذا الموقع وغيّر الحالة من "Deny" إلى <b>Allow</b>.</Step>
+            <Step>تأكد من تعطيل "Do Not Disturb" من Control Center.</Step>
+            <Step>افتح <b>System Settings → Notifications → Safari</b> وفعّل "Allow Notifications".</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+        </div>
+      );
+
+    case "samsung":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Samsung Internet</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>اضغط على القائمة (☰) → <b>Settings</b> → <b>Sites and downloads</b> → <b>Site permissions</b> → <b>Notifications</b>.</Step>
+            <Step>ابحث عن الموقع في قائمة "Blocked" واحذفه.</Step>
+            <Step>أعد تحميل الصفحة وامنح الإذن عند الطلب.</Step>
+          </ol>
+        </div>
+      );
+
+    case "opera":
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات Opera</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>افتح: <code dir="ltr">opera://settings/content/notifications</code></Step>
+            <Step>أزل الموقع من "Block" وأضفه إلى "Allow".</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+          <LinkRow links={[
+            { label: "إعدادات إشعارات Opera", url: "opera://settings/content/notifications" },
+          ]} />
+        </div>
+      );
+
+    default:
+      return (
+        <div className="bg-secondary/40 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">خطوات عامة</p>
+          <ol className="space-y-1 list-decimal pr-4">
+            <Step>اضغط على أيقونة القفل 🔒 بجانب رابط الموقع.</Step>
+            <Step>ابحث عن "Notifications" وغيّر الحالة إلى Allow.</Step>
+            <Step>أعد تحميل الصفحة.</Step>
+          </ol>
+        </div>
+      );
+  }
+}
