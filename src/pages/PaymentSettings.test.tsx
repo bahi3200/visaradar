@@ -328,10 +328,12 @@ describe("PaymentSettings — تطابق شكل cache بين useQuery و setQuer
     // ✅ 1) toast.error استُدعي برسالة EMPTY_SAVED_ROW الواضحة
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining("لم يتم استلام بيانات صحيحة"),
+        // 📌 رسالة موحّدة بين سيناريو RLS_REJECT و EMPTY_SAVED_ROW
+        expect.stringContaining("لم يتم حفظ التغييرات"),
         expect.objectContaining({
           id: "toast-id",
-          description: expect.any(String),
+          // hint موحّد يذكر RLS وuser_roles في كلا السيناريوهين
+          description: expect.stringContaining("RLS"),
         })
       );
     });
