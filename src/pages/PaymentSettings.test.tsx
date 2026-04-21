@@ -522,18 +522,12 @@ describe("PaymentSettings — ضغط حفظ مرتين متتاليتين", () =
 
     mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
 
-    // 🎯 محاكاة دقيقة: الاستدعاء الأول لـ upsert يتأخّر أكثر من الثاني
-    //    لاختبار أن الكود لا يُطبّق نتيجة قديمة فوق نتيجة جديدة (race condition)
-    let resolveFirst: (v: any) => void;
-    const firstUpsertPromise = new Promise((r) => {
-      resolveFirst = r;
-    });
-    let callCount = 0;
-    mockUpsert.mockImplementation(() => {
-      callCount += 1;
-      if (callCount === 1) return firstUpsertPromise;
-      return Promise.resolve({ data: [secondSavedRow], error: null });
-    });
+    // 🎯 الزر يُعطَّل أثناء الحفظ (saving=true) لمنع overlap بالتصميم.
+    //    لذا نحاكي ضغطتين متتاليتين: الأولى تكتمل، ثم الثانية تنطلق.
+    //    الهدف: التأكد أن نتيجة الحفظ الثاني تكتب فوق الأول بدون دمج جزئي.
+    mockUpsert
+      .mockResolvedValueOnce({ data: [firstSavedRow], error: null })
+      .mockResolvedValueOnce({ data: [secondSavedRow], error: null });
 
     const { qc } = renderPage();
 
@@ -546,21 +540,18 @@ describe("PaymentSettings — ضغط حفظ مرتين متتاليتين", () =
     const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
     const saveBtn = screen.getByRole("button", { name: /حفظ التغييرات/i });
 
-    // 1) الضغطة الأولى: تعديل + حفظ (سيتأخّر)
+    // 1) الضغطة الأولى
     fireEvent.change(ccpInput, { target: { value: firstSavedRow.ccp_number } });
     fireEvent.click(saveBtn);
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ ccp_number: firstSavedRow.ccp_number });
+    });
 
-    // 2) الضغطة الثانية: تعديل مختلف + حفظ (سيكتمل أولاً)
+    // 2) الضغطة الثانية مباشرة بعد اكتمال الأولى
     fireEvent.change(ccpInput, { target: { value: secondSavedRow.ccp_number } });
     fireEvent.click(saveBtn);
-
-    // التأكد أن upsert استُدعي مرتين
     await waitFor(() => expect(mockUpsert).toHaveBeenCalledTimes(2));
-
-    // 3) الآن نُحرّر الاستدعاء الأول (المتأخّر) بنتيجته القديمة
-    resolveFirst!({ data: [firstSavedRow], error: null });
-
-    // 4) انتظار اكتمال كلا الاستدعاءين وكتابة الـ cache مرتين
     await waitFor(() => {
       expect(setQueryDataSpy).toHaveBeenCalledTimes(2);
     });
