@@ -63,25 +63,27 @@ export default function PaymentSettingsPage() {
     },
   });
 
-  // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
-  // دالة موحدة لتحديث الحقول من بيانات payment_settings
-  const applyPaymentSettings = (data: PaymentSettingsRow) => {
+  // دالة موحدة (محفوظة بـ useCallback) لتحديث الحقول من بيانات payment_settings
+  // setters من React مستقرة بطبيعتها، لذا التبعيات [] تكفي ولن يُعاد إنشاء الدالة
+  const applyPaymentSettings = useCallback((data: PaymentSettingsRow) => {
     if (!data) return;
     setCcpNumber(data.ccp_number || "");
     setCcpKey(data.ccp_key || "");
     setRipNumber(data.rip_number || "");
     setAccountHolder(data.account_holder || "");
-  };
+  }, []);
 
+  // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
   useEffect(() => {
     if (!isFetching && syncing) {
       setSyncing(false);
     }
-  }, [isFetching]);
+  }, [isFetching, syncing]);
 
+  // تطبيق بيانات الجلب على الحقول — applyPaymentSettings مستقرة فلا حلقات تكرار
   useEffect(() => {
     applyPaymentSettings(settings);
-  }, [settings]);
+  }, [settings, applyPaymentSettings]);
 
   const handleSave = async () => {
     setSaving(true);
