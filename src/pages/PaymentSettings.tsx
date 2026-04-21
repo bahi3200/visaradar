@@ -9,6 +9,18 @@ import ccpLogo from "@/assets/ccp-logo.png";
 
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
+// نوع موحد لصف payment_settings — يطابق ما يعيده .maybeSingle()
+type PaymentSettingsRow = {
+  id: string;
+  ccp_number: string;
+  ccp_key: string;
+  rip_number: string;
+  account_holder: string;
+  referrer_bonus_days?: number;
+  referred_bonus_days?: number;
+  updated_at?: string;
+} | null;
+
 export default function PaymentSettingsPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
