@@ -10,7 +10,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { triggerAlert, getAlertMode, getVolume, recordNotifAttempt } from "@/lib/notificationPrefs";
+import {
+  triggerAlert,
+  getAlertMode,
+  getVolume,
+  recordNotifAttempt,
+  type NotifBlockReason,
+} from "@/lib/notificationPrefs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -180,6 +186,13 @@ export function shortContextReason(issue: string): string {
   if (issue.includes("HTTPS")) return "السبب: اتصال غير آمن (HTTP)";
   if (issue.includes("معاينة") || issue.includes("iframe")) return "السبب: معاينة داخل إطار";
   return "السبب: السياق الحالي غير مدعوم";
+}
+
+// Map a context-issue sentence to the structured reason code stored on attempts.
+export function contextIssueToReason(issue: string): NotifBlockReason {
+  if (issue.includes("HTTPS")) return "insecure_context";
+  if (issue.includes("معاينة") || issue.includes("iframe")) return "iframe";
+  return "other";
 }
 
 // Centralised toast for context-blocked permission attempts. Adds an action button
