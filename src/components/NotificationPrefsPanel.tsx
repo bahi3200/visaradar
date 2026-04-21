@@ -183,6 +183,9 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       </button>
       {open && (
         <div className="px-4 py-3 space-y-3 bg-secondary/20">
+          {/* Last attempt status — helps users diagnose if a test actually went through */}
+          <LastAttemptCard attempt={lastAttempt} />
+
           {/* Manual enable section — only meaningful when permission isn't already granted */}
           {permission !== "granted" && permission !== "unsupported" && (
             <div className="rounded-md border border-border/60 bg-background/60 p-2.5 space-y-1.5">
