@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Volume2, Vibrate, BellOff, Settings2, Play } from "lucide-react";
+import { Volume2, Vibrate, BellOff, Settings2, Play, Send, Loader2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   type AlertMode,
   getAlertMode,
@@ -16,10 +18,26 @@ const OPTIONS: { value: AlertMode; label: string; icon: typeof Volume2 }[] = [
   { value: "silent", label: "بدون", icon: BellOff },
 ];
 
-export default function NotificationPrefsPanel() {
+export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: boolean }) {
   const [mode, setMode] = useState<AlertMode>(() => getAlertMode());
   const [volume, setVolumeState] = useState<number>(() => getVolume());
   const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const sendTest = async () => {
+    setSending(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-test-visa-notification", {
+        body: { countryCode: "IT" },
+      });
+      if (error) throw error;
+      toast.success("تم إرسال الإشعار التجريبي ✅");
+    } catch (e: any) {
+      toast.error("فشل إرسال الإشعار", { description: e?.message });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleMode = (m: AlertMode) => {
     setMode(m);
@@ -103,6 +121,17 @@ export default function NotificationPrefsPanel() {
             >
               <Play className="w-3 h-3" />
               تجربة الاهتزاز
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={sendTest}
+              disabled={sending}
+              className="w-full py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+              إرسال إشعار تجريبي
             </button>
           )}
         </div>
