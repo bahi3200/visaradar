@@ -65,7 +65,7 @@ export default function PaymentSettingsPage() {
 
   // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
   // دالة موحدة لتحديث الحقول من بيانات payment_settings
-  const applyPaymentSettings = (data: typeof settings) => {
+  const applyPaymentSettings = (data: PaymentSettingsRow) => {
     if (!data) return;
     setCcpNumber(data.ccp_number || "");
     setCcpKey(data.ccp_key || "");
