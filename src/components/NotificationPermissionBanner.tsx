@@ -309,10 +309,51 @@ export default function NotificationPermissionBanner() {
   };
 
   const sendTestNotification = async () => {
-    if (!("Notification" in window) || Notification.permission !== "granted") {
-      toast.error("الإشعارات غير مفعّلة");
+    // Pre-flight: confirm the API exists at all (older browsers / some in-app webviews).
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      toast.error("متصفحك لا يدعم إشعارات الويب. جرّب Chrome / Edge / Firefox أو أضِف التطبيق إلى الشاشة الرئيسية.");
       return;
     }
+
+    // If permission hasn't been decided yet, request it from inside this user gesture
+    // (browsers require a direct user activation — calling it from the button is the right place).
+    let perm: NotificationPermission = Notification.permission;
+    if (perm === "default") {
+      try {
+        // Some older Safari versions only support the callback form; handle both.
+        const reqResult = Notification.requestPermission();
+        perm = (reqResult instanceof Promise
+          ? await reqResult
+          : await new Promise<NotificationPermission>((resolve) =>
+              Notification.requestPermission((r) => resolve(r))
+            )) as NotificationPermission;
+        setPermission(perm as PermissionState);
+        if (perm === "granted") {
+          toast.success("تم تفعيل الإشعارات ✅");
+          setJustGranted(true);
+        }
+      } catch (reqErr) {
+        console.warn("[notif] requestPermission failed", reqErr);
+        toast.error("تعذّر طلب إذن الإشعارات. افتح إعدادات الموقع وفعّلها يدوياً.");
+        return;
+      }
+    }
+
+    if (perm === "denied") {
+      setPermission("denied");
+      setShowHelp(true);
+      toast.error("الإشعارات محظورة. اتبع الخطوات لتفعيلها من إعدادات المتصفح.");
+      return;
+    }
+
+    if (perm !== "granted") {
+      // User dismissed the prompt without granting.
+      toast.message("لم يتم منح الإذن بعد", {
+        description: "اضغط الزر مرة أخرى واختر «السماح» في نافذة المتصفح.",
+      });
+      return;
+    }
+
     setSendingTest(true);
     try {
       const title = "🔔 إشعار تجريبي";
