@@ -177,6 +177,31 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
   const [enabling, setEnabling] = useState(false);
   const [lastAttempt, setLastAttempt] = useState<NotifAttempt | null>(() => getLastNotifAttempt());
+  const [devMode, setDevModeState] = useState<DevContextMode>(() => getDevContextMode());
+  const [ctxIssue, setCtxIssue] = useState<string | null>(() => getPermissionContextIssue());
+
+  // Re-evaluate context issue whenever the dev override changes (or the component mounts).
+  useEffect(() => {
+    const sync = () => {
+      setDevModeState(getDevContextMode());
+      setCtxIssue(getPermissionContextIssue());
+    };
+    window.addEventListener("notif-dev-context-changed", sync);
+    return () => window.removeEventListener("notif-dev-context-changed", sync);
+  }, []);
+
+  const cycleDevMode = () => {
+    const next: DevContextMode =
+      devMode === "real" ? "insecure" : devMode === "insecure" ? "iframe" : "real";
+    setDevContextMode(next);
+    setDevModeState(next);
+    setCtxIssue(getPermissionContextIssue());
+    if (next === "real") toast.success("تم استرجاع السياق الحقيقي");
+    else
+      toast.message(`محاكاة سياق: ${next === "insecure" ? "غير آمن (HTTP)" : "iframe"}`, {
+        description: "سيتم منع طلب الإذن أثناء تفعيل المحاكاة.",
+      });
+  };
 
   const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
   const isAuthenticated = !authLoading && !!user;
