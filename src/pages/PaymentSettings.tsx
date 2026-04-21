@@ -225,10 +225,10 @@ export default function PaymentSettingsPage() {
         return; // ⛔ منع تحديث الواجهة
       }
 
-      // upsert يُرجع مصفوفة — نأخذ أول صف ككائن مفرد
-      // ليطابق شكل ما يعيده useQuery (.maybeSingle => كائن واحد أو null)
-      const savedRow: PaymentSettingsRow = (data[0] as PaymentSettingsRow) ?? null;
-      console.log("step 5 — saved row:", savedRow);
+      // 🧰 تطبيع الرد عبر نفس helper المستخدم في useQuery
+      // يضمن أن ما نكتبه في الـ cache بنفس شكل ما يقرأه useQuery تماماً
+      const savedRow = normalizePaymentSettingsRow(data);
+      console.log("step 5 — saved row (normalized):", savedRow);
 
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
       if (!savedRow) {
