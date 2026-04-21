@@ -51,13 +51,14 @@ const renderPage = () => {
   });
   // اعتراض invalidateQueries لمراقبة استدعائها بدون أن تُعيد الجلب فعلاً
   qc.invalidateQueries = invalidateSpy as any;
-  return render(
+  const utils = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <PaymentSettingsPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
+  return { ...utils, qc };
 };
 
 describe("PaymentSettings — تحديث فوري بعد upsert", () => {
