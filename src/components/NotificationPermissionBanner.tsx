@@ -96,13 +96,19 @@ export default function NotificationPermissionBanner() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
-  const [dismissed, setDismissed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(DISMISSED_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [snoozeUntil, setSnoozeUntil] = useState<number>(() => readSnoozeUntil());
+
+  // Re-evaluate snooze expiry every minute so the banner reappears automatically.
+  useEffect(() => {
+    if (snoozeUntil <= 0) return;
+    const tick = () => {
+      if (Date.now() >= snoozeUntil) setSnoozeUntil(0);
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [snoozeUntil]);
+
+  const isSnoozed = snoozeUntil > Date.now();
   const [showHelp, setShowHelp] = useState(false);
   const [justGranted, setJustGranted] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
