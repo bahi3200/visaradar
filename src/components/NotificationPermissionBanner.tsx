@@ -312,6 +312,7 @@ export default function NotificationPermissionBanner() {
     // Pre-flight: confirm the API exists at all (older browsers / some in-app webviews).
     if (typeof window === "undefined" || !("Notification" in window)) {
       toast.error("متصفحك لا يدعم إشعارات الويب. جرّب Chrome / Edge / Firefox أو أضِف التطبيق إلى الشاشة الرئيسية.");
+      recordNotifAttempt({ status: "unsupported", at: Date.now(), source: "local" });
       return;
     }
 
@@ -335,6 +336,12 @@ export default function NotificationPermissionBanner() {
       } catch (reqErr) {
         console.warn("[notif] requestPermission failed", reqErr);
         toast.error("تعذّر طلب إذن الإشعارات. افتح إعدادات الموقع وفعّلها يدوياً.");
+        recordNotifAttempt({
+          status: "error",
+          at: Date.now(),
+          source: "local",
+          message: reqErr instanceof Error ? reqErr.message : "requestPermission failed",
+        });
         return;
       }
     }
@@ -343,6 +350,7 @@ export default function NotificationPermissionBanner() {
       setPermission("denied");
       setShowHelp(true);
       toast.error("الإشعارات محظورة. اتبع الخطوات لتفعيلها من إعدادات المتصفح.");
+      recordNotifAttempt({ status: "denied", at: Date.now(), source: "local" });
       return;
     }
 
@@ -351,6 +359,7 @@ export default function NotificationPermissionBanner() {
       toast.message("لم يتم منح الإذن بعد", {
         description: "اضغط الزر مرة أخرى واختر «السماح» في نافذة المتصفح.",
       });
+      recordNotifAttempt({ status: "dismissed", at: Date.now(), source: "local" });
       return;
     }
 
