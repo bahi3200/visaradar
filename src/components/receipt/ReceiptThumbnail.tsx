@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, AlertCircle, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
+import { Loader2, Download, ZoomIn, ImageIcon, ChevronDown, FileImage, FileDown, Info, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -52,30 +52,52 @@ export const ReceiptThumbnail = forwardRef<HTMLButtonElement, ReceiptThumbnailPr
         aria-label="تكبير صورة الوصل"
         disabled={imgState === "error"}
       >
-        {imgState === "loading" && (
+        {/* Stable placeholder: same icon always rendered; only background and message swap */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-200 ${
+            imgState === "loaded" ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+          role="status"
+          aria-live="polite"
+          aria-label={
+            imgState === "error"
+              ? "تعذر تحميل صورة الوصل"
+              : slow
+              ? "التحميل يستغرق وقتاً أطول من المعتاد"
+              : "جارٍ تحميل صورة الوصل"
+          }
+        >
+          <Skeleton
+            className={`absolute inset-0 w-full h-full rounded-none transition-opacity ${
+              imgState === "loading" ? "opacity-100" : "opacity-0"
+            }`}
+          />
           <div
-            className="absolute inset-0"
-            role="status"
-            aria-live="polite"
-            aria-label={slow ? "التحميل يستغرق وقتاً أطول من المعتاد" : "جارٍ تحميل صورة الوصل"}
-          >
-            <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
-              <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
-              {slow && (
-                <span className="text-[10px] leading-tight text-muted-foreground/80 font-medium">
-                  التحميل يستغرق وقتاً أطول من المعتاد…
-                </span>
-              )}
-            </div>
+            className={`absolute inset-0 transition-colors ${
+              imgState === "error" ? "bg-destructive/5" : ""
+            }`}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
+            <ImageIcon
+              className={`w-8 h-8 transition-colors ${
+                imgState === "error" ? "text-destructive/70" : "text-muted-foreground/40"
+              }`}
+            />
+            <span
+              className={`text-[10px] leading-tight font-medium min-h-[1.25rem] transition-colors ${
+                imgState === "error"
+                  ? "text-destructive"
+                  : "text-muted-foreground/80"
+              }`}
+            >
+              {imgState === "error"
+                ? "تعذر تحميل الصورة"
+                : slow
+                ? "التحميل يستغرق وقتاً أطول من المعتاد…"
+                : "\u00A0"}
+            </span>
           </div>
-        )}
-        {imgState === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-destructive/5 text-destructive text-xs px-2 text-center">
-            <AlertCircle className="w-4 h-4" />
-            <span>تعذر تحميل الصورة</span>
-          </div>
-        )}
+        </div>
         <img
           src={signedUrl}
           alt="Receipt"
