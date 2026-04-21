@@ -11,14 +11,16 @@ interface ReceiptLightboxProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   signedUrl: string;
+  thumbUrl?: string;
   downloading: boolean;
   onDownload: () => void;
 }
 
-export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, onDownload }: ReceiptLightboxProps) {
+export function ReceiptLightbox({ open, onOpenChange, signedUrl, thumbUrl, downloading, onDownload }: ReceiptLightboxProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [fullLoaded, setFullLoaded] = useState(false);
   const fullscreenRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
 
@@ -26,6 +28,24 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
   useEffect(() => {
     if (!open) setRotation(0);
   }, [open]);
+
+  // Preload full-resolution image; swap from thumb once ready
+  useEffect(() => {
+    if (!open || !signedUrl) return;
+    setFullLoaded(false);
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => setFullLoaded(true);
+    img.onerror = () => setFullLoaded(true); // fall back to attempting render anyway
+    img.src = signedUrl;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [open, signedUrl]);
+
+  const displayUrl = fullLoaded || !thumbUrl ? signedUrl : thumbUrl;
+  const showUpgradeHint = !fullLoaded && Boolean(thumbUrl) && thumbUrl !== signedUrl;
 
   const handleRotate = () => setRotation((r) => (r + 90) % 360);
   const handleRotateCcw = () => setRotation((r) => (r - 90 + 360) % 360);
@@ -185,12 +205,19 @@ export function ReceiptLightbox({ open, onOpenChange, signedUrl, downloading, on
                     contentClass="!w-full"
                   >
                     <img
-                      src={signedUrl}
+                      src={displayUrl}
                       alt="Receipt full view"
-                      className={`w-full ${isFullscreen ? "h-screen max-h-screen" : "max-h-[85vh]"} object-contain select-none transition-transform duration-300`}
+                      decoding="async"
+                      className={`w-full ${isFullscreen ? "h-screen max-h-screen" : "max-h-[85vh]"} object-contain select-none transition-all duration-300 ${showUpgradeHint ? "blur-[2px]" : ""}`}
                       style={{ transform: `rotate(${rotation}deg)` }}
                       draggable={false}
                     />
+                    {showUpgradeHint && (
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-background/80 backdrop-blur border border-border/50 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        جارٍ تحميل النسخة الكاملة…
+                      </div>
+                    )}
                   </TransformComponent>
                   <div className="hidden sm:flex absolute bottom-3 left-1/2 -translate-x-1/2 z-10 items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border/50 text-[11px] text-muted-foreground shadow-sm">
                     <span className="flex items-center gap-1">
