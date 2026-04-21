@@ -211,7 +211,7 @@ export default function NotificationPermissionBanner() {
               isDenied
                 ? "bg-destructive/20 text-destructive"
                 : isGranted
-                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                ? "bg-primary/20 text-primary"
                 : "bg-primary/15 text-primary"
             }`}
           >
