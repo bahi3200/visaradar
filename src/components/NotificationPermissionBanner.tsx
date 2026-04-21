@@ -267,6 +267,9 @@ export default function NotificationPermissionBanner() {
   const detected = useMemo(detectBrowser, []);
   const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
   const [copied, setCopied] = useState(false);
+  const [contextIssue, setContextIssue] = useState<string | null>(null);
+
+  const openContextDialog = (reason: string) => setContextIssue(reason);
 
   // Block any prompting on public/auth routes — even if a stale session exists.
   const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
