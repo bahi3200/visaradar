@@ -199,7 +199,7 @@ export default function NotificationPermissionBanner() {
           isDenied
             ? "bg-destructive/10 border-destructive/30"
             : isGranted
-            ? "bg-emerald-500/10 border-emerald-500/30"
+            ? "bg-primary/10 border-primary/30"
             : "bg-background/95 border-border"
         }`}
         role="dialog"
