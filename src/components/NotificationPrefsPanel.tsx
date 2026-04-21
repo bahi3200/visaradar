@@ -64,6 +64,7 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
   const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>(() => getPermission());
   const [enabling, setEnabling] = useState(false);
+  const [lastAttempt, setLastAttempt] = useState<NotifAttempt | null>(() => getLastNotifAttempt());
 
   const isPublicRoute = PUBLIC_BLOCKED_PREFIXES.some((p) => location.pathname.startsWith(p));
   const isAuthenticated = !authLoading && !!user;
@@ -89,6 +90,23 @@ export default function NotificationPrefsPanel({ isAdmin = false }: { isAdmin?: 
       window.removeEventListener("focus", sync);
     };
   }, [permission]);
+
+  // Stay in sync with attempts recorded from the banner / other tabs.
+  useEffect(() => {
+    const onLocal = (e: Event) => {
+      const detail = (e as CustomEvent<NotifAttempt>).detail;
+      if (detail) setLastAttempt(detail);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "notif_last_attempt") setLastAttempt(getLastNotifAttempt());
+    };
+    window.addEventListener(NOTIF_ATTEMPT_EVENT, onLocal as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(NOTIF_ATTEMPT_EVENT, onLocal as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const handleEnable = async () => {
     // Hard guards mirror the banner — never call requestPermission outside an authenticated private context.
