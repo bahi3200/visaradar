@@ -974,7 +974,7 @@ function ContextIssueDialog({
             className="w-full"
             onClick={() => onClose()}
           >
-            <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer">
+            <a href={PUBLISHED_APP_URL} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 ml-1.5" />
               فتح النسخة المنشورة
             </a>
