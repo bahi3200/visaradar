@@ -347,6 +347,20 @@ export default function NotificationPermissionBanner() {
       return;
     }
 
+    // Context check: HTTPS + top-level window. Avoid wasting a permission attempt
+    // (which the browser will refuse silently) and tell the user exactly why.
+    const ctxIssue = getPermissionContextIssue();
+    if (ctxIssue) {
+      toast.error("تعذّر إرسال الإشعار", { description: ctxIssue, duration: 7000 });
+      recordNotifAttempt({
+        status: "unsupported",
+        at: Date.now(),
+        source: "local",
+        message: ctxIssue,
+      });
+      return;
+    }
+
     // If permission hasn't been decided yet, request it from inside this user gesture
     // (browsers require a direct user activation — calling it from the button is the right place).
     let perm: NotificationPermission = Notification.permission;
