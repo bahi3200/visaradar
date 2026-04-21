@@ -140,7 +140,7 @@ export default function PaymentSettingsPage() {
         throw new Error(msg);
       }
       console.log("step 5 — saved row:", data[0]);
-      queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
+      queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
       console.error("[PaymentSettings] SAVE failed:", err);
