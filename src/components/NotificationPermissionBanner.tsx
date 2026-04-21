@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell, BellOff, X, ExternalLink, Copy, Check } from "lucide-react";
+import { Bell, BellOff, BellRing, X, ExternalLink, Copy, Check, Send } from "lucide-react";
+import { triggerAlert, getAlertMode, getVolume } from "@/lib/notificationPrefs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -75,6 +76,8 @@ export default function NotificationPermissionBanner() {
     }
   });
   const [showHelp, setShowHelp] = useState(false);
+  const [justGranted, setJustGranted] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const detected = useMemo(detectBrowser, []);
   const [activeTab, setActiveTab] = useState<BrowserKey>(detected);
   const [copied, setCopied] = useState(false);
@@ -134,11 +137,41 @@ export default function NotificationPermissionBanner() {
       setPermission(result as PermissionState);
       if (result === "granted") {
         toast.success("تم تفعيل الإشعارات بنجاح ✅");
+        setJustGranted(true);
       } else if (result === "denied") {
         setShowHelp(true);
       }
     } catch {
       setShowHelp(true);
+    }
+  };
+
+  const sendTestNotification = async () => {
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      toast.error("الإشعارات غير مفعّلة");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const notif = new Notification("🔔 إشعار تجريبي", {
+        body: "إذا رأيت هذه الرسالة، فإن إشعارات المتصفح تعمل بشكل صحيح ✅",
+        icon: "/favicon.ico",
+        tag: "test-notification",
+      });
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      // Also fire the local sound/vibration alert respecting user preferences
+      try {
+        triggerAlert(getAlertMode(), getVolume());
+      } catch {}
+      toast.success("تم إرسال إشعار تجريبي ✅");
+      setTimeout(() => notif.close(), 6000);
+    } catch (e) {
+      toast.error("فشل إرسال الإشعار التجريبي");
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -151,10 +184,13 @@ export default function NotificationPermissionBanner() {
 
   // Hide banner entirely on public routes or before auth resolves.
   if (!isAuthenticated || isPublicRoute) return null;
-  if (permission === "granted" || permission === "unsupported") return null;
-  if (dismissed && permission !== "denied") return null;
+  if (permission === "unsupported") return null;
+  // Keep visible after granting so the user can test, otherwise hide when granted.
+  if (permission === "granted" && !justGranted) return null;
+  if (dismissed && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
+  const isGranted = permission === "granted";
 
   return (
     <>
@@ -162,6 +198,8 @@ export default function NotificationPermissionBanner() {
         className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md rounded-xl border shadow-lg backdrop-blur-md ${
           isDenied
             ? "bg-destructive/10 border-destructive/30"
+            : isGranted
+            ? "bg-primary/10 border-primary/30"
             : "bg-background/95 border-border"
         }`}
         role="dialog"
@@ -170,18 +208,34 @@ export default function NotificationPermissionBanner() {
         <div className="flex items-start gap-3 p-3 pr-2">
           <div
             className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
-              isDenied ? "bg-destructive/20 text-destructive" : "bg-primary/15 text-primary"
+              isDenied
+                ? "bg-destructive/20 text-destructive"
+                : isGranted
+                ? "bg-primary/20 text-primary"
+                : "bg-primary/15 text-primary"
             }`}
           >
-            {isDenied ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            {isDenied ? (
+              <BellOff className="w-4 h-4" />
+            ) : isGranted ? (
+              <BellRing className="w-4 h-4" />
+            ) : (
+              <Bell className="w-4 h-4" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {isDenied ? "إشعارات المتصفح معطّلة" : "فعّل إشعارات المتصفح"}
+              {isDenied
+                ? "إشعارات المتصفح معطّلة"
+                : isGranted
+                ? "تم تفعيل الإشعارات ✅"
+                : "فعّل إشعارات المتصفح"}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
               {isDenied
                 ? "لن تصلك تنبيهات فتح مواعيد التأشيرة. يجب تفعيلها يدوياً من إعدادات المتصفح."
+                : isGranted
+                ? "أرسل إشعاراً تجريبياً للتأكد أن كل شيء يعمل."
                 : "اسمح بالإشعارات حتى تصلك تنبيهات فتح مواعيد التأشيرة فوراً."}
             </p>
             <div className="flex items-center gap-2 mt-2">
@@ -193,6 +247,16 @@ export default function NotificationPermissionBanner() {
                 >
                   <ExternalLink className="w-3 h-3" />
                   كيف أفعّل الإشعارات؟
+                </button>
+              ) : isGranted ? (
+                <button
+                  type="button"
+                  onClick={sendTestNotification}
+                  disabled={sendingTest}
+                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                >
+                  <Send className="w-3 h-3" />
+                  {sendingTest ? "جارٍ الإرسال..." : "إرسال إشعار تجريبي"}
                 </button>
               ) : (
                 <button
@@ -208,7 +272,7 @@ export default function NotificationPermissionBanner() {
                 onClick={handleDismiss}
                 className="text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
               >
-                لاحقاً
+                {isGranted ? "إغلاق" : "لاحقاً"}
               </button>
             </div>
           </div>
@@ -279,17 +343,34 @@ export default function NotificationPermissionBanner() {
                 onClick={copyOrigin}
                 className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-background border border-border hover:bg-secondary transition-colors"
               >
-                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
                 {copied ? "تم" : "نسخ الرابط"}
               </button>
             </div>
 
             <BrowserInstructions browser={activeTab} origin={origin} />
 
+            {/* Test notification button — only enabled if permission is granted */}
+            <button
+              type="button"
+              onClick={sendTestNotification}
+              disabled={sendingTest || permission !== "granted"}
+              className="w-full mt-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+              title={permission !== "granted" ? "فعّل الإشعارات أولاً" : "اختبار"}
+            >
+              <Send className="w-4 h-4" />
+              {sendingTest ? "جارٍ الإرسال..." : "إرسال إشعار تجريبي"}
+            </button>
+            {permission !== "granted" && (
+              <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+                يجب تفعيل الإذن من إعدادات المتصفح أولاً ليصبح الزر فعّالاً
+              </p>
+            )}
+
             <button
               type="button"
               onClick={() => setShowHelp(false)}
-              className="w-full mt-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="w-full mt-2 py-2 rounded-lg bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
             >
               فهمت
             </button>
