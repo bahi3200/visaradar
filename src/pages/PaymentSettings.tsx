@@ -236,10 +236,16 @@ export default function PaymentSettingsPage() {
       }
       if (!data || data.length === 0) {
         console.warn("step 4 — upsert returned 0 rows (silent RLS reject)");
-        const msg = "⚠️ لم يتم حفظ التغييرات في قاعدة البيانات";
-        const hint = "السبب المحتمل: صلاحيات RLS تمنع الكتابة. تحقق أن المستخدم لديه دور 'admin' في جدول user_roles.";
-        setErrorDetails({ message: msg, code: "RLS_REJECT", details: "UPSERT returned 0 rows", hint });
-        toast.error(msg, { id: toastId, description: hint });
+        setErrorDetails({
+          message: SAVE_FAILURE_COPY.message,
+          code: "RLS_REJECT",
+          details: "UPSERT returned 0 rows",
+          hint: SAVE_FAILURE_COPY.hint,
+        });
+        toast.error(SAVE_FAILURE_COPY.message, {
+          id: toastId,
+          description: SAVE_FAILURE_COPY.hint,
+        });
         setSaving(false);
         console.groupEnd();
         return; // ⛔ منع تحديث الواجهة
@@ -255,17 +261,18 @@ export default function PaymentSettingsPage() {
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
       if (!savedRow) {
         console.warn("step 5 — savedRow is null/undefined despite non-empty data array");
-        const msg = "⚠️ لم يتم استلام بيانات صحيحة من الخادم بعد الحفظ";
-        const hint = "الصف المُرجَع فارغ. حاول إعادة تحميل الصفحة أو أعد المحاولة.";
         setErrorDetails({
-          message: msg,
+          message: SAVE_FAILURE_COPY.message,
           code: "EMPTY_SAVED_ROW",
           details: "data[0] resolved to null",
-          hint,
+          hint: SAVE_FAILURE_COPY.hint,
         });
         // 🛑 إيقاف spinner فوراً قبل عرض toast الخطأ حتى لا يبقى ظاهراً
         setSyncing(false);
-        toast.error(msg, { id: toastId, description: hint });
+        toast.error(SAVE_FAILURE_COPY.message, {
+          id: toastId,
+          description: SAVE_FAILURE_COPY.hint,
+        });
         setSaving(false);
         console.groupEnd();
         return;
