@@ -273,11 +273,18 @@ export default function NotificationPermissionBanner() {
     // If the user is just closing the success banner after granting, don't snooze.
     if (justGranted || permission === "granted") {
       setJustGranted(false);
+      // Mark this tab session as hidden so we don't pop it again on the next route change.
+      writeSessionHidden(true);
+      setSessionHidden(true);
       return;
     }
     const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
     setSnoozeUntil(until);
-    writeSnoozeUntil(until);
+    writeSnoozeUntil(userId, until);
+    // Also flag this tab session so the banner doesn't briefly reappear during cross-route navigation
+    // before the localStorage read settles on slower devices.
+    writeSessionHidden(true);
+    setSessionHidden(true);
     toast.message(`سنذكّرك بعد ${SNOOZE_DAYS} أيام`, {
       description: "يمكنك دائماً تفعيل الإشعارات من إعدادات حسابك.",
       duration: 4000,
@@ -289,8 +296,8 @@ export default function NotificationPermissionBanner() {
   if (permission === "unsupported") return null;
   // Keep visible after granting so the user can test, otherwise hide when granted.
   if (permission === "granted" && !justGranted) return null;
-  // "denied" always shows (it's important info); other states respect snooze.
-  if (isSnoozed && permission !== "denied" && !justGranted) return null;
+  // "denied" always shows (it's important info); other states respect snooze + session-hide.
+  if ((isSnoozed || sessionHidden) && permission !== "denied" && !justGranted) return null;
 
   const isDenied = permission === "denied";
   const isGranted = permission === "granted";
