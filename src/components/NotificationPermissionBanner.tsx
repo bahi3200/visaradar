@@ -201,7 +201,7 @@ export default function NotificationPermissionBanner() {
     if (permission !== "default") return;
     let prompted = false;
     try {
-      prompted = localStorage.getItem(PROMPTED_KEY) === "true";
+      prompted = localStorage.getItem(promptedKey(userId)) === "true";
     } catch {}
     if (prompted) return;
 
