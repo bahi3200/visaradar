@@ -193,10 +193,15 @@ export default function PaymentSettingsPage() {
       }
       console.log("step 3 — upsert payload:", payload);
       const writeStart = performance.now();
-      const { data, error } = await supabase
+      // 🎯 نوع صريح لرد upsert: مصفوفة من PaymentSettingsRowFilled أو null
+      // هذا يضمن أن TypeScript يعرف أن data[0] (إن وُجد) هو PaymentSettingsRowFilled وليس any
+      const { data, error } = (await supabase
         .from("payment_settings")
         .upsert(payload, { onConflict: "id" })
-        .select();
+        .select()) as {
+        data: PaymentSettingsRowFilled[] | null;
+        error: typeof Error.prototype | null | any;
+      };
       console.log(
         "step 4 — upsert response: duration_ms=",
         (performance.now() - writeStart).toFixed(1),
