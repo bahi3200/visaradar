@@ -593,6 +593,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: "service worker not registered",
+          reason: "no_service_worker",
         });
         setSendingTest(false);
         return;
