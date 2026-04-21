@@ -66,11 +66,30 @@ export default function PaymentSettingsPage() {
   // دالة موحدة (محفوظة بـ useCallback) لتحديث الحقول من بيانات payment_settings
   // setters من React مستقرة بطبيعتها، لذا التبعيات [] تكفي ولن يُعاد إنشاء الدالة
   const applyPaymentSettings = useCallback((data: PaymentSettingsRow) => {
-    if (!data) return;
-    setCcpNumber(data.ccp_number || "");
-    setCcpKey(data.ccp_key || "");
-    setRipNumber(data.rip_number || "");
-    setAccountHolder(data.account_holder || "");
+    // 🛡️ Guard 1: تجاهل null/undefined كاملاً
+    if (!data) {
+      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data فارغ", data);
+      return;
+    }
+
+    // 🛡️ Guard 2: تأكد أن data كائن (وليس string/number/array)
+    if (typeof data !== "object" || Array.isArray(data)) {
+      console.warn("[applyPaymentSettings] تم تجاهل التحديث: data ليس كائناً صالحاً", data);
+      return;
+    }
+
+    // 🛡️ Guard 3: helper آمن — يحوّل null/undefined/non-string إلى ""
+    const safe = (v: unknown): string => {
+      if (v === null || v === undefined) return "";
+      if (typeof v === "string") return v;
+      // أرقام أو أنواع أخرى يتم تحويلها لنص لتجنب undefined في input value
+      return String(v);
+    };
+
+    setCcpNumber(safe(data.ccp_number));
+    setCcpKey(safe(data.ccp_key));
+    setRipNumber(safe(data.rip_number));
+    setAccountHolder(safe(data.account_holder));
   }, []);
 
   // إخفاء إشعار التزامن عند انتهاء التحقق في الخلفية
