@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,12 @@ import { ar } from "date-fns/locale";
 import { toast } from "sonner";
 import NotificationPrefsPanel from "./NotificationPrefsPanel";
 import { getAlertMode, getVolume, triggerAlert } from "@/lib/notificationPrefs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   IT: "🇮🇹 إيطاليا",
@@ -45,6 +51,15 @@ export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const channelInstanceRef = useRef(`notifications-${crypto.randomUUID()}`);
+  const [permState, setPermState] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      setPermState("unsupported");
+    } else {
+      setPermState(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -242,18 +257,52 @@ export default function NotificationsBell() {
 
   if (!user) return null;
 
+  const permIcon =
+    permState === "granted" ? (
+      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+    ) : permState === "denied" ? (
+      <XCircle className="w-3 h-3 text-rose-500" />
+    ) : permState === "unsupported" ? (
+      <HelpCircle className="w-3 h-3 text-muted-foreground" />
+    ) : null;
+
+  const permLabel =
+    permState === "granted"
+      ? "مسموح"
+      : permState === "denied"
+      ? "مرفوض"
+      : permState === "unsupported"
+      ? "غير مدعوم"
+      : "غير محدد";
+
   return (
-    <Popover open={open} onOpenChange={handleOpen}>
-      <PopoverTrigger asChild>
-        <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors outline-none">
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground border-0 flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
-          )}
-        </button>
-      </PopoverTrigger>
+    <TooltipProvider delayDuration={300}>
+      <Popover open={open} onOpenChange={handleOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors outline-none">
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground border-0 flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Badge>
+                )}
+                {permIcon && (
+                  <span className="absolute -bottom-0.5 -right-0.5 bg-background rounded-full p-0.5 border border-border">
+                    {permIcon}
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <span className="text-xs">
+              الإشعارات: {permLabel}
+              {unreadCount > 0 && ` • ${unreadCount} جديد`}
+            </span>
+          </TooltipContent>
+        </Tooltip>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border/50">
           <h4 className="text-sm font-semibold">الإشعارات</h4>
@@ -297,5 +346,6 @@ export default function NotificationsBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+    </TooltipProvider>
   );
 }
