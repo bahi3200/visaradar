@@ -57,20 +57,25 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       new Promise<void>((resolve) => setTimeout(resolve, ms));
 
     const load = async () => {
+      // Reset all derived state at the start of every load so a retry
+      // never inherits stale error/attempt/url from the previous run.
       setLoading(true);
       setError(null);
-      const path = extractStoragePath(receiptUrl);
-      if (!path) {
-        if (!cancelled) {
-          setSignedUrl(receiptUrl);
-          setThumbUrl(receiptUrl);
-          setLoading(false);
+      setAttempt(0);
+      let succeeded = false;
+      try {
+        const path = extractStoragePath(receiptUrl);
+        if (!path) {
+          if (!cancelled) {
+            setSignedUrl(receiptUrl);
+            setThumbUrl(receiptUrl);
+            succeeded = true;
+          }
+          return;
         }
-        return;
-      }
 
-      let lastErr: string | null = null;
-      for (let i = 0; i < MAX_SIGN_RETRIES; i++) {
+        let lastErr: string | null = null;
+        for (let i = 0; i < MAX_SIGN_RETRIES; i++) {
         if (cancelled) return;
         setAttempt(i + 1);
         // Request the full signed URL on its own — never let the optional
@@ -97,7 +102,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         if (!fullRes.error && fullRes.data?.signedUrl) {
           setSignedUrl(fullRes.data.signedUrl);
           setThumbUrl(fullRes.data.signedUrl); // optimistic fallback
-          setLoading(false);
+          succeeded = true;
           // Fire-and-forget thumbnail request with a hard timeout so a
           // hanging transform endpoint never re-blocks the UI.
           if (fileKind === "image" && !transformDisabled) {
@@ -138,10 +143,31 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         if (i < MAX_SIGN_RETRIES - 1) {
           await sleep(RETRY_BASE_DELAY_MS * Math.pow(2, i));
         }
-      }
-      if (!cancelled) {
-        setError(lastErr || "تعذر تحميل الصورة");
-        setLoading(false);
+        }
+        if (!cancelled) {
+          setError(lastErr || "تعذر تحميل الصورة");
+        }
+      } catch (err) {
+        // Last-resort guard: any unexpected throw must still surface an
+        // error UI instead of an infinite spinner.
+        if (!cancelled) {
+          console.error("[ReceiptImage] Unexpected load failure:", err);
+          setError(
+            err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء تحميل الوصل",
+          );
+        }
+      } finally {
+        // Guarantee the spinner clears on every exit path: success,
+        // handled error, timeout, thrown exception. Skip only when the
+        // effect was cancelled (component unmounted / deps changed) so we
+        // don't touch state on a stale render.
+        if (!cancelled) {
+          setLoading(false);
+          // Reset attempt counter on terminal success so future retries
+          // start clean; keep it on failure so the user sees how many
+          // tries we made before giving up.
+          if (succeeded) setAttempt(0);
+        }
       }
     };
     load();
