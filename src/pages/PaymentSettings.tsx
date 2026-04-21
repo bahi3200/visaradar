@@ -2,7 +2,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, CreditCard } from "lucide-react";
+import { Save, CreditCard, AlertCircle, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
@@ -14,6 +14,12 @@ export default function PaymentSettingsPage() {
   const [ccpKey, setCcpKey] = useState("");
   const [ripNumber, setRipNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [errorDetails, setErrorDetails] = useState<{
+    message: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  } | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["payment-settings"],
@@ -39,6 +45,7 @@ export default function PaymentSettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setErrorDetails(null);
     try {
       const payload: any = {
         ccp_number: ccpNumber.trim(),
@@ -54,9 +61,19 @@ export default function PaymentSettingsPage() {
         .from("payment_settings")
         .upsert(payload, { onConflict: "id" })
         .select();
-      if (error) throw error;
+      if (error) {
+        setErrorDetails({
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        });
+        throw error;
+      }
       if (!data || data.length === 0) {
-        throw new Error("لم يتم حفظ التغييرات. تحقق من صلاحياتك.");
+        const msg = "لم يتم حفظ التغييرات. تحقق من صلاحياتك (RLS).";
+        setErrorDetails({ message: msg, hint: "تأكد أن المستخدم لديه دور admin." });
+        throw new Error(msg);
       }
       queryClient.invalidateQueries({ queryKey: ["payment-settings"] });
       toast.success("تم حفظ معلومات الدفع بنجاح");
@@ -152,6 +169,44 @@ export default function PaymentSettingsPage() {
               className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
+
+          {/* Error Banner */}
+          {errorDetails && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <p className="font-bold text-destructive">فشل الحفظ</p>
+                <p className="text-sm text-foreground break-words">
+                  {errorDetails.message}
+                </p>
+                {errorDetails.code && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    code: {errorDetails.code}
+                  </p>
+                )}
+                {errorDetails.details && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    {errorDetails.details}
+                  </p>
+                )}
+                {errorDetails.hint && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    💡 {errorDetails.hint}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setErrorDetails(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                aria-label="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Save Button */}
           <button
