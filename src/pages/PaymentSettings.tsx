@@ -9,6 +9,17 @@ import ccpLogo from "@/assets/ccp-logo.png";
 
 const PAYMENT_SETTINGS_QUERY_KEY = ["payment-settings"] as const;
 
+// 🧾 رسائل خطأ موحّدة لكلا سيناريوهَي فشل الحفظ:
+// (1) upsert يرجع مصفوفة فارغة (RLS_REJECT)
+// (2) upsert يرجع صفاً لكن savedRow لا يمر التطبيع (EMPTY_SAVED_ROW)
+// التوحيد يضمن تجربة مستخدم متسقة ونفس صياغة الرسالة في كل مكان.
+const SAVE_FAILURE_COPY = {
+  message: "⚠️ لم يتم حفظ التغييرات في قاعدة البيانات",
+  hint:
+    "السبب المحتمل: صلاحيات RLS تمنع الكتابة أو الصف المُرجَع غير صالح. " +
+    "تحقق أن المستخدم لديه دور 'admin' في جدول user_roles، ثم أعد المحاولة.",
+} as const;
+
 // نوع موحد لصف payment_settings — يطابق ما يعيده .maybeSingle()
 // نعرّف الشكل الصلب أولاً (غير-nullable) لاستخدامه في data[0] بأمان
 type PaymentSettingsRowFilled = {
