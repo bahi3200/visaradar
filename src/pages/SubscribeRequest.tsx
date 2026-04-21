@@ -224,6 +224,20 @@ export default function SubscribeRequestPage() {
         }).catch((err) => console.error("AI verification error:", err));
       }
 
+      // Notify admins (Telegram + audit log). Fire-and-forget — never block user.
+      supabase.functions
+        .invoke("notify-admin-new-payment", {
+          body: { requestId: (request as any).id },
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[notify-admin-new-payment] invoke error:", error);
+          } else {
+            console.log("[notify-admin-new-payment] result:", data);
+          }
+        })
+        .catch((err) => console.error("[notify-admin-new-payment] fatal:", err));
+
       toast.success(isRenewal ? "تم إرسال طلب التجديد بنجاح!" : isUpgrade ? "تم إرسال طلب الترقية بنجاح!" : "تم إرسال طلبك بنجاح!");
       queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       setSelectedPackageId("");
