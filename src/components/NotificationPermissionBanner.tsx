@@ -643,6 +643,7 @@ export default function NotificationPermissionBanner() {
           at: Date.now(),
           source: "local",
           message: "delivery failed",
+          reason: "delivery_failed",
         });
       }
     } catch (e) {
@@ -657,6 +658,7 @@ export default function NotificationPermissionBanner() {
         at: Date.now(),
         source: "local",
         message: e instanceof Error ? e.message : "unknown error",
+        reason: "delivery_failed",
       });
     } finally {
       setSendingTest(false);
