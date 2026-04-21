@@ -299,4 +299,56 @@ describe("PaymentSettings — تطابق شكل cache بين useQuery و setQuer
     expect(cached).not.toEqual({});
     expect(cached).not.toEqual([]);
   });
+
+  it("🛡️ EMPTY_SAVED_ROW: upsert يرجع [null] → لا يُستدعى setQueryData ويظهر toast.error", async () => {
+    const initialRow = {
+      id: "row-1",
+      ccp_number: "111",
+      ccp_key: "11",
+      rip_number: "rip-111",
+      account_holder: "أحمد",
+    };
+    mockMaybeSingle.mockResolvedValue({ data: initialRow, error: null });
+    // ⚠️ مصفوفة غير فارغة لكن العنصر الوحيد null → يجب أن يلتقطها الحارس الثاني
+    mockUpsert.mockResolvedValue({ data: [null], error: null });
+
+    const { qc } = renderPage();
+
+    // انتظار اكتمال الجلب الأولي للـ cache
+    await waitFor(() => {
+      expect(qc.getQueryData(QUERY_KEY)).toMatchObject({ id: "row-1" });
+    });
+
+    const cacheBefore = qc.getQueryData(QUERY_KEY);
+    const setQueryDataSpy = vi.spyOn(qc, "setQueryData");
+
+    fireEvent.click(screen.getByRole("button", { name: /حفظ التغييرات/i }));
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalled());
+
+    // ✅ 1) toast.error استُدعي برسالة EMPTY_SAVED_ROW الواضحة
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("لم يتم استلام بيانات صحيحة"),
+        expect.objectContaining({
+          id: "toast-id",
+          description: expect.any(String),
+        })
+      );
+    });
+
+    // ✅ 2) toast.success لم يُستدعَ
+    expect(toast.success).not.toHaveBeenCalled();
+
+    // ✅ 3) setQueryData لم يُستدعَ بعد فشل التطبيع
+    expect(setQueryDataSpy).not.toHaveBeenCalled();
+
+    // ✅ 4) cache بقي بنفس المرجع تماماً
+    const cacheAfter = qc.getQueryData(QUERY_KEY);
+    expect(cacheAfter).toBe(cacheBefore);
+    expect(cacheAfter).toMatchObject({ id: "row-1", ccp_number: "111" });
+
+    // ✅ 5) رسالة الخطأ تظهر داخل الواجهة (banner) مع كود EMPTY_SAVED_ROW
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/EMPTY_SAVED_ROW/i)).toBeInTheDocument();
+  });
 });
