@@ -98,9 +98,9 @@ export default function NotificationPermissionBanner() {
     }
   };
 
-  // Auto-prompt once per browser when user is logged in and status is "default"
+  // Auto-prompt once per browser, ONLY when authenticated AND not on a public route.
   useEffect(() => {
-    if (!user) return;
+    if (!canPrompt) return;
     if (permission !== "default") return;
     let prompted = false;
     try {
@@ -109,6 +109,8 @@ export default function NotificationPermissionBanner() {
     if (prompted) return;
 
     const t = setTimeout(async () => {
+      // Re-check just before firing — route or auth may have changed during the delay.
+      if (!canPrompt) return;
       try {
         localStorage.setItem(PROMPTED_KEY, "true");
         const result = await Notification.requestPermission();
@@ -119,9 +121,14 @@ export default function NotificationPermissionBanner() {
       } catch {}
     }, 1500);
     return () => clearTimeout(t);
-  }, [user, permission]);
+  }, [canPrompt, permission]);
 
   const handleEnable = async () => {
+    // Hard guard — never request permission outside an authenticated context.
+    if (!canPrompt) {
+      toast.error("سجّل الدخول أولاً لتفعيل الإشعارات");
+      return;
+    }
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
@@ -142,7 +149,8 @@ export default function NotificationPermissionBanner() {
     } catch {}
   };
 
-  if (!user) return null;
+  // Hide banner entirely on public routes or before auth resolves.
+  if (!isAuthenticated || isPublicRoute) return null;
   if (permission === "granted" || permission === "unsupported") return null;
   if (dismissed && permission !== "denied") return null;
 
