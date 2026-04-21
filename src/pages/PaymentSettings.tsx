@@ -236,6 +236,8 @@ export default function PaymentSettingsPage() {
 
       // 🧰 تطبيع الرد عبر نفس helper المستخدم في useQuery
       // النوع الصريح PaymentSettingsRow يضمن توافق 100% مع cache useQuery
+      // 🌀 إظهار spinner قصير أثناء التحقق من شكل savedRow قبل الكتابة في cache
+      setSyncing(true);
       const savedRow: PaymentSettingsRow = normalizePaymentSettingsRow(data);
       console.log("step 5 — saved row (normalized):", savedRow);
 
@@ -250,6 +252,8 @@ export default function PaymentSettingsPage() {
           details: "data[0] resolved to null",
           hint,
         });
+        // 🛑 إيقاف spinner فوراً قبل عرض toast الخطأ حتى لا يبقى ظاهراً
+        setSyncing(false);
         toast.error(msg, { id: toastId, description: hint });
         setSaving(false);
         console.groupEnd();
@@ -260,8 +264,7 @@ export default function PaymentSettingsPage() {
       queryClient.setQueryData<PaymentSettingsRow>(PAYMENT_SETTINGS_QUERY_KEY, savedRow);
       applyPaymentSettings(savedRow);
 
-      // إعادة التحقق في الخلفية
-      setSyncing(true);
+      // إعادة التحقق في الخلفية (syncing مُفعَّل مسبقاً)
       queryClient.invalidateQueries({ queryKey: PAYMENT_SETTINGS_QUERY_KEY });
       toast.success("✅ تم حفظ معلومات الدفع بنجاح", { id: toastId });
     } catch (err: any) {
