@@ -350,10 +350,27 @@ export default function NotificationPermissionBanner() {
 
             <BrowserInstructions browser={activeTab} origin={origin} />
 
+            {/* Test notification button — only enabled if permission is granted */}
+            <button
+              type="button"
+              onClick={sendTestNotification}
+              disabled={sendingTest || permission !== "granted"}
+              className="w-full mt-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+              title={permission !== "granted" ? "فعّل الإشعارات أولاً" : "اختبار"}
+            >
+              <Send className="w-4 h-4" />
+              {sendingTest ? "جارٍ الإرسال..." : "إرسال إشعار تجريبي"}
+            </button>
+            {permission !== "granted" && (
+              <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+                يجب تفعيل الإذن من إعدادات المتصفح أولاً ليصبح الزر فعّالاً
+              </p>
+            )}
+
             <button
               type="button"
               onClick={() => setShowHelp(false)}
-              className="w-full mt-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="w-full mt-2 py-2 rounded-lg bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
             >
               فهمت
             </button>
