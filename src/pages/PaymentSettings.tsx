@@ -235,8 +235,8 @@ export default function PaymentSettingsPage() {
       }
 
       // 🧰 تطبيع الرد عبر نفس helper المستخدم في useQuery
-      // يضمن أن ما نكتبه في الـ cache بنفس شكل ما يقرأه useQuery تماماً
-      const savedRow = normalizePaymentSettingsRow(data);
+      // النوع الصريح PaymentSettingsRow يضمن توافق 100% مع cache useQuery
+      const savedRow: PaymentSettingsRow = normalizePaymentSettingsRow(data);
       console.log("step 5 — saved row (normalized):", savedRow);
 
       // 🛡️ حارس ثانٍ: تأكد أن savedRow كائن صالح قبل لمس الـ cache أو الواجهة
