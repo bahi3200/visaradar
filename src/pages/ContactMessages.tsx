@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply } from "lucide-react";
+import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply, Sparkles, Loader2 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ export default function ContactMessages() {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [aiTone, setAiTone] = useState<"professional" | "friendly" | "apologetic">("professional");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: messages = [], isLoading, refetch } = useQuery({
     queryKey: ["contact_messages"],
@@ -108,6 +110,32 @@ export default function ContactMessages() {
   const handleSendReply = () => {
     if (!replyText.trim() || !selectedMessage) return;
     sendReply.mutate({ message: selectedMessage, reply: replyText.trim() });
+  };
+
+  const handleSuggestReply = async () => {
+    if (!selectedMessage) return;
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-support-reply", {
+        body: {
+          full_name: selectedMessage.full_name,
+          subject: selectedMessage.subject,
+          message: selectedMessage.message,
+          tone: aiTone,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const suggestion = (data as any)?.suggestion?.toString().trim();
+      if (!suggestion) throw new Error("لم يتم توليد رد");
+      setReplyText(suggestion);
+      setShowReplyForm(true);
+      toast.success("تم اقتراح الرد. عدّله قبل الإرسال إن أحببت.");
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر توليد الرد");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const filtered = messages.filter((m: any) => {
@@ -307,20 +335,62 @@ export default function ContactMessages() {
               {/* Reply Section */}
               <div className="border-t border-border/40 pt-4">
                 {!showReplyForm ? (
-                  <Button
-                    onClick={() => setShowReplyForm(true)}
-                    className="w-full gap-2"
-                    variant="default"
-                  >
-                    <Reply className="w-4 h-4" />
-                    الرد على الرسالة
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => setShowReplyForm(true)}
+                      className="w-full gap-2"
+                      variant="default"
+                    >
+                      <Reply className="w-4 h-4" />
+                      الرد على الرسالة
+                    </Button>
+                    <div className="flex gap-2">
+                      <Select value={aiTone} onValueChange={(v: any) => setAiTone(v)}>
+                        <SelectTrigger className="w-32 h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="professional">احترافي</SelectItem>
+                          <SelectItem value="friendly">ودّي</SelectItem>
+                          <SelectItem value="apologetic">اعتذاري</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={handleSuggestReply}
+                        disabled={isGenerating}
+                        variant="outline"
+                        className="flex-1 gap-2"
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 text-primary" />
+                        )}
+                        {isGenerating ? "جارٍ التوليد…" : "اقتراح رد بالـ AI"}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Reply className="w-4 h-4" />
                       <span>الرد إلى: <strong className="text-foreground">{selectedMessage.email}</strong></span>
                     </div>
+                    <Button
+                      type="button"
+                      onClick={handleSuggestReply}
+                      disabled={isGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      )}
+                      إعادة الاقتراح ({aiTone === "professional" ? "احترافي" : aiTone === "friendly" ? "ودّي" : "اعتذاري"})
+                    </Button>
                     <Textarea
                       placeholder="اكتب ردك هنا..."
                       value={replyText}
