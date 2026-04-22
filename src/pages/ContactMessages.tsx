@@ -335,20 +335,62 @@ export default function ContactMessages() {
               {/* Reply Section */}
               <div className="border-t border-border/40 pt-4">
                 {!showReplyForm ? (
-                  <Button
-                    onClick={() => setShowReplyForm(true)}
-                    className="w-full gap-2"
-                    variant="default"
-                  >
-                    <Reply className="w-4 h-4" />
-                    الرد على الرسالة
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => setShowReplyForm(true)}
+                      className="w-full gap-2"
+                      variant="default"
+                    >
+                      <Reply className="w-4 h-4" />
+                      الرد على الرسالة
+                    </Button>
+                    <div className="flex gap-2">
+                      <Select value={aiTone} onValueChange={(v: any) => setAiTone(v)}>
+                        <SelectTrigger className="w-32 h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="professional">احترافي</SelectItem>
+                          <SelectItem value="friendly">ودّي</SelectItem>
+                          <SelectItem value="apologetic">اعتذاري</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={handleSuggestReply}
+                        disabled={isGenerating}
+                        variant="outline"
+                        className="flex-1 gap-2"
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 text-primary" />
+                        )}
+                        {isGenerating ? "جارٍ التوليد…" : "اقتراح رد بالـ AI"}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Reply className="w-4 h-4" />
                       <span>الرد إلى: <strong className="text-foreground">{selectedMessage.email}</strong></span>
                     </div>
+                    <Button
+                      type="button"
+                      onClick={handleSuggestReply}
+                      disabled={isGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      )}
+                      إعادة الاقتراح ({aiTone === "professional" ? "احترافي" : aiTone === "friendly" ? "ودّي" : "اعتذاري"})
+                    </Button>
                     <Textarea
                       placeholder="اكتب ردك هنا..."
                       value={replyText}
