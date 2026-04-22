@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, WifiOff, Clock, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptThumbnail } from "./receipt/ReceiptThumbnail";
 import { ReceiptLightbox } from "./receipt/ReceiptLightbox";
@@ -11,6 +11,90 @@ const RETRY_BASE_DELAY_MS = 800;
 const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
 const FULL_SIGN_TIMEOUT_MS = 10000;
 const THUMB_TIMEOUT_MS = 6000; // Don't let a hanging transform request block the full URL
+const TOTAL_LOAD_BUDGET_MS = 25000; // Hard cap so the UI never hangs longer than this
+
+type ErrorKind = "timeout" | "network" | "auth" | "notfound" | "unknown";
+
+interface ClassifiedError {
+  kind: ErrorKind;
+  message: string;
+  hint: string;
+}
+
+const classifyError = (raw: string | null | undefined): ClassifiedError => {
+  const msg = (raw || "").toLowerCase();
+  if (!raw) {
+    return {
+      kind: "unknown",
+      message: "تعذر تحميل الوصل",
+      hint: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+    };
+  }
+  if (msg.includes("timeout") || msg.includes("مهلة") || msg.includes("timed out")) {
+    return {
+      kind: "timeout",
+      message: "انتهت مهلة الاتصال",
+      hint: "الخادم يستغرق وقتًا أطول من المعتاد. تحقق من الإنترنت ثم أعد المحاولة.",
+    };
+  }
+  if (
+    msg.includes("network") ||
+    msg.includes("fetch") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("offline")
+  ) {
+    return {
+      kind: "network",
+      message: "تعذّر الاتصال بالخادم",
+      hint: "تحقق من اتصال الإنترنت وأعد المحاولة.",
+    };
+  }
+  if (
+    msg.includes("not found") ||
+    msg.includes("404") ||
+    msg.includes("does not exist") ||
+    msg.includes("no such")
+  ) {
+    return {
+      kind: "notfound",
+      message: "الوصل غير موجود",
+      hint: "قد يكون الملف قد حُذف أو نُقل. اطلب من المستخدم رفع وصل جديد.",
+    };
+  }
+  if (
+    msg.includes("unauthorized") ||
+    msg.includes("forbidden") ||
+    msg.includes("permission") ||
+    msg.includes("401") ||
+    msg.includes("403")
+  ) {
+    return {
+      kind: "auth",
+      message: "ليست لديك صلاحية الوصول",
+      hint: "أعد تسجيل الدخول للتأكد من صلاحياتك.",
+    };
+  }
+  return {
+    kind: "unknown",
+    message: raw,
+    hint: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+  };
+};
+
+const ErrorIcon = ({ kind }: { kind: ErrorKind }) => {
+  switch (kind) {
+    case "timeout":
+      return <Clock className="w-5 h-5 shrink-0" />;
+    case "network":
+      return <WifiOff className="w-5 h-5 shrink-0" />;
+    case "auth":
+      return <ShieldAlert className="w-5 h-5 shrink-0" />;
+    case "notfound":
+    case "unknown":
+    default:
+      return <AlertCircle className="w-5 h-5 shrink-0" />;
+  }
+};
 
 // Session-level kill switch: if Storage transform fails (e.g., plan limits,
 // unsupported format, server config), skip thumbnail requests for the rest
