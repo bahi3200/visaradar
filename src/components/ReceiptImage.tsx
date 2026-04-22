@@ -120,11 +120,13 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<ErrorKind>("unknown");
   const [downloading, setDownloading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
   const [transformBlocked, setTransformBlocked] = useState(transformDisabled);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const thumbnailRef = useRef<HTMLButtonElement | null>(null);
   const hasFocusedRef = useRef(false);
 
@@ -137,6 +139,22 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    const startedAt = Date.now();
+    // Lightweight ticker so the user sees that progress is being made and
+    // knows roughly how long they've been waiting. 500ms keeps it smooth
+    // without thrashing React.
+    const ticker = window.setInterval(() => {
+      if (!cancelled) setElapsedMs(Date.now() - startedAt);
+    }, 500);
+    // Hard cap: if the entire load goes past the budget, abort with a
+    // clear timeout error instead of letting the spinner spin forever.
+    const budgetTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setError("انتهت المهلة الإجمالية لتحميل الوصل");
+      setErrorKind("timeout");
+      setLoading(false);
+    }, TOTAL_LOAD_BUDGET_MS);
     const sleep = (ms: number) =>
       new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -145,7 +163,9 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       // never inherits stale error/attempt/url from the previous run.
       setLoading(true);
       setError(null);
+      setErrorKind("unknown");
       setAttempt(0);
+      setElapsedMs(0);
       let succeeded = false;
       try {
         const path = extractStoragePath(receiptUrl);
@@ -231,16 +251,20 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         }
         }
         if (!cancelled) {
-          setError(lastErr || "تعذر تحميل الصورة");
+          const classified = classifyError(lastErr);
+          setError(classified.message);
+          setErrorKind(classified.kind);
         }
       } catch (err) {
         // Last-resort guard: any unexpected throw must still surface an
         // error UI instead of an infinite spinner.
         if (!cancelled) {
           console.error("[ReceiptImage] Unexpected load failure:", err);
-          setError(
+          const classified = classifyError(
             err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء تحميل الوصل",
           );
+          setError(classified.message);
+          setErrorKind(classified.kind);
         }
       } finally {
         // Guarantee the spinner clears on every exit path: success,
@@ -259,6 +283,8 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     load();
     return () => {
       cancelled = true;
+      window.clearInterval(ticker);
+      window.clearTimeout(budgetTimer);
     };
   }, [receiptUrl, retryNonce, fileKind]);
 
@@ -271,6 +297,8 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     setTransformBlocked(false);
     setSignedUrl(null);
     setThumbUrl(null);
+    setError(null);
+    setErrorKind("unknown");
     setRetryNonce((n) => n + 1);
   };
 
