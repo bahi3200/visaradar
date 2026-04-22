@@ -845,6 +845,54 @@ export type Database = {
         }
         Relationships: []
       }
+      visa_appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string | null
+          appointment_type: string
+          booking_url: string | null
+          center_name: string | null
+          country_code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time?: string | null
+          appointment_type: string
+          booking_url?: string | null
+          center_name?: string | null
+          country_code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string | null
+          appointment_type?: string
+          booking_url?: string | null
+          center_name?: string | null
+          country_code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       visa_monitor_checks: {
         Row: {
           checked_at: string
