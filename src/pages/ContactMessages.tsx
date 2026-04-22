@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply } from "lucide-react";
+import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply, Sparkles, Loader2 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ export default function ContactMessages() {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [aiTone, setAiTone] = useState<"professional" | "friendly" | "apologetic">("professional");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: messages = [], isLoading, refetch } = useQuery({
     queryKey: ["contact_messages"],
@@ -108,6 +110,32 @@ export default function ContactMessages() {
   const handleSendReply = () => {
     if (!replyText.trim() || !selectedMessage) return;
     sendReply.mutate({ message: selectedMessage, reply: replyText.trim() });
+  };
+
+  const handleSuggestReply = async () => {
+    if (!selectedMessage) return;
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-support-reply", {
+        body: {
+          full_name: selectedMessage.full_name,
+          subject: selectedMessage.subject,
+          message: selectedMessage.message,
+          tone: aiTone,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const suggestion = (data as any)?.suggestion?.toString().trim();
+      if (!suggestion) throw new Error("لم يتم توليد رد");
+      setReplyText(suggestion);
+      setShowReplyForm(true);
+      toast.success("تم اقتراح الرد. عدّله قبل الإرسال إن أحببت.");
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر توليد الرد");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const filtered = messages.filter((m: any) => {
