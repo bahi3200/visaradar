@@ -362,7 +362,7 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
             </span>
           )}
           {slow && (
-            <span className="text-[11px] text-amber-600 dark:text-amber-400">
+            <span className="text-[11px] text-muted-foreground/90">
               التحميل أبطأ من المعتاد ({seconds}s / {budgetSeconds}s)
             </span>
           )}
