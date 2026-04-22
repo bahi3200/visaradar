@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, WifiOff, Clock, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptThumbnail } from "./receipt/ReceiptThumbnail";
 import { ReceiptLightbox } from "./receipt/ReceiptLightbox";
@@ -11,6 +11,90 @@ const RETRY_BASE_DELAY_MS = 800;
 const THUMB_WIDTH = 400; // px — server-side resize via Storage transform
 const FULL_SIGN_TIMEOUT_MS = 10000;
 const THUMB_TIMEOUT_MS = 6000; // Don't let a hanging transform request block the full URL
+const TOTAL_LOAD_BUDGET_MS = 25000; // Hard cap so the UI never hangs longer than this
+
+type ErrorKind = "timeout" | "network" | "auth" | "notfound" | "unknown";
+
+interface ClassifiedError {
+  kind: ErrorKind;
+  message: string;
+  hint: string;
+}
+
+const classifyError = (raw: string | null | undefined): ClassifiedError => {
+  const msg = (raw || "").toLowerCase();
+  if (!raw) {
+    return {
+      kind: "unknown",
+      message: "تعذر تحميل الوصل",
+      hint: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+    };
+  }
+  if (msg.includes("timeout") || msg.includes("مهلة") || msg.includes("timed out")) {
+    return {
+      kind: "timeout",
+      message: "انتهت مهلة الاتصال",
+      hint: "الخادم يستغرق وقتًا أطول من المعتاد. تحقق من الإنترنت ثم أعد المحاولة.",
+    };
+  }
+  if (
+    msg.includes("network") ||
+    msg.includes("fetch") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("offline")
+  ) {
+    return {
+      kind: "network",
+      message: "تعذّر الاتصال بالخادم",
+      hint: "تحقق من اتصال الإنترنت وأعد المحاولة.",
+    };
+  }
+  if (
+    msg.includes("not found") ||
+    msg.includes("404") ||
+    msg.includes("does not exist") ||
+    msg.includes("no such")
+  ) {
+    return {
+      kind: "notfound",
+      message: "الوصل غير موجود",
+      hint: "قد يكون الملف قد حُذف أو نُقل. اطلب من المستخدم رفع وصل جديد.",
+    };
+  }
+  if (
+    msg.includes("unauthorized") ||
+    msg.includes("forbidden") ||
+    msg.includes("permission") ||
+    msg.includes("401") ||
+    msg.includes("403")
+  ) {
+    return {
+      kind: "auth",
+      message: "ليست لديك صلاحية الوصول",
+      hint: "أعد تسجيل الدخول للتأكد من صلاحياتك.",
+    };
+  }
+  return {
+    kind: "unknown",
+    message: raw,
+    hint: "حدث خطأ غير متوقع. حاول مرة أخرى.",
+  };
+};
+
+const ErrorIcon = ({ kind }: { kind: ErrorKind }) => {
+  switch (kind) {
+    case "timeout":
+      return <Clock className="w-5 h-5 shrink-0" />;
+    case "network":
+      return <WifiOff className="w-5 h-5 shrink-0" />;
+    case "auth":
+      return <ShieldAlert className="w-5 h-5 shrink-0" />;
+    case "notfound":
+    case "unknown":
+    default:
+      return <AlertCircle className="w-5 h-5 shrink-0" />;
+  }
+};
 
 // Session-level kill switch: if Storage transform fails (e.g., plan limits,
 // unsupported format, server config), skip thumbnail requests for the rest
@@ -36,11 +120,13 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<ErrorKind>("unknown");
   const [downloading, setDownloading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
   const [transformBlocked, setTransformBlocked] = useState(transformDisabled);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const thumbnailRef = useRef<HTMLButtonElement | null>(null);
   const hasFocusedRef = useRef(false);
 
@@ -53,6 +139,22 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    const startedAt = Date.now();
+    // Lightweight ticker so the user sees that progress is being made and
+    // knows roughly how long they've been waiting. 500ms keeps it smooth
+    // without thrashing React.
+    const ticker = window.setInterval(() => {
+      if (!cancelled) setElapsedMs(Date.now() - startedAt);
+    }, 500);
+    // Hard cap: if the entire load goes past the budget, abort with a
+    // clear timeout error instead of letting the spinner spin forever.
+    const budgetTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setError("انتهت المهلة الإجمالية لتحميل الوصل");
+      setErrorKind("timeout");
+      setLoading(false);
+    }, TOTAL_LOAD_BUDGET_MS);
     const sleep = (ms: number) =>
       new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -61,7 +163,9 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
       // never inherits stale error/attempt/url from the previous run.
       setLoading(true);
       setError(null);
+      setErrorKind("unknown");
       setAttempt(0);
+      setElapsedMs(0);
       let succeeded = false;
       try {
         const path = extractStoragePath(receiptUrl);
@@ -147,16 +251,20 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
         }
         }
         if (!cancelled) {
-          setError(lastErr || "تعذر تحميل الصورة");
+          const classified = classifyError(lastErr);
+          setError(classified.message);
+          setErrorKind(classified.kind);
         }
       } catch (err) {
         // Last-resort guard: any unexpected throw must still surface an
         // error UI instead of an infinite spinner.
         if (!cancelled) {
           console.error("[ReceiptImage] Unexpected load failure:", err);
-          setError(
+          const classified = classifyError(
             err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء تحميل الوصل",
           );
+          setError(classified.message);
+          setErrorKind(classified.kind);
         }
       } finally {
         // Guarantee the spinner clears on every exit path: success,
@@ -175,6 +283,8 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     load();
     return () => {
       cancelled = true;
+      window.clearInterval(ticker);
+      window.clearTimeout(budgetTimer);
     };
   }, [receiptUrl, retryNonce, fileKind]);
 
@@ -187,6 +297,8 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
     setTransformBlocked(false);
     setSignedUrl(null);
     setThumbUrl(null);
+    setError(null);
+    setErrorKind("unknown");
     setRetryNonce((n) => n + 1);
   };
 
@@ -228,30 +340,69 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const thumbDownloadAvailable = Boolean(fileKind === "image" && thumbUrl && thumbUrl !== signedUrl);
 
   if (loading) {
+    const seconds = Math.floor(elapsedMs / 1000);
+    const budgetSeconds = Math.floor(TOTAL_LOAD_BUDGET_MS / 1000);
+    const progress = Math.min(100, Math.round((elapsedMs / TOTAL_LOAD_BUDGET_MS) * 100));
+    const slow = seconds >= 6;
     return (
-      <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-border/50 bg-muted/30">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        {attempt > 1 && (
-          <span className="text-xs text-muted-foreground">
-            محاولة {attempt} من {MAX_SIGN_RETRIES}…
+      <div
+        className="flex flex-col items-center justify-center gap-3 h-40 px-4 rounded-xl border border-border/50 bg-muted/30"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-1 text-center">
+          <span className="text-xs font-medium text-muted-foreground">
+            جاري تحميل الوصل…
           </span>
-        )}
+          {attempt > 1 && (
+            <span className="text-[11px] text-muted-foreground/80">
+              إعادة محاولة تلقائية {attempt} من {MAX_SIGN_RETRIES}
+            </span>
+          )}
+          {slow && (
+            <span className="text-[11px] text-muted-foreground/90">
+              التحميل أبطأ من المعتاد ({seconds}s / {budgetSeconds}s)
+            </span>
+          )}
+        </div>
+        <div className="w-32 h-1 rounded-full bg-border overflow-hidden">
+          <div
+            className="h-full bg-primary transition-[width] duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
     );
   }
 
   if (error || !signedUrl) {
+    const classified = classifyError(error);
+    const kind = error ? errorKind : classified.kind;
+    const message = error || classified.message;
+    const hint = classified.hint;
     return (
-      <div className="flex flex-col items-center justify-center gap-2 h-40 px-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm text-center">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error || "لا يمكن عرض الوصل"}</span>
+      <div
+        className="flex flex-col items-center justify-center gap-2 min-h-40 px-4 py-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm text-center"
+        role="alert"
+      >
+        <div className="flex items-center gap-2 font-medium">
+          <ErrorIcon kind={kind} />
+          <span>{message}</span>
         </div>
+        <p className="text-xs text-destructive/80 max-w-xs leading-relaxed">{hint}</p>
+        {attempt > 1 && (
+          <span className="text-[11px] text-destructive/70">
+            تمت {attempt} محاولات تلقائية قبل التوقف
+          </span>
+        )}
         <button
           type="button"
           onClick={handleRetry}
-          className="px-3 py-1 rounded-md text-xs bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 transition-colors"
+          className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 transition-colors"
         >
+          <RefreshCw className="w-3.5 h-3.5" />
           إعادة المحاولة
         </button>
       </div>
