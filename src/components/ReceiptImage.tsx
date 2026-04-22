@@ -340,30 +340,69 @@ export function ReceiptImage({ receiptUrl }: { receiptUrl: string }) {
   const thumbDownloadAvailable = Boolean(fileKind === "image" && thumbUrl && thumbUrl !== signedUrl);
 
   if (loading) {
+    const seconds = Math.floor(elapsedMs / 1000);
+    const budgetSeconds = Math.floor(TOTAL_LOAD_BUDGET_MS / 1000);
+    const progress = Math.min(100, Math.round((elapsedMs / TOTAL_LOAD_BUDGET_MS) * 100));
+    const slow = seconds >= 6;
     return (
-      <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-border/50 bg-muted/30">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        {attempt > 1 && (
-          <span className="text-xs text-muted-foreground">
-            محاولة {attempt} من {MAX_SIGN_RETRIES}…
+      <div
+        className="flex flex-col items-center justify-center gap-3 h-40 px-4 rounded-xl border border-border/50 bg-muted/30"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-1 text-center">
+          <span className="text-xs font-medium text-muted-foreground">
+            جاري تحميل الوصل…
           </span>
-        )}
+          {attempt > 1 && (
+            <span className="text-[11px] text-muted-foreground/80">
+              إعادة محاولة تلقائية {attempt} من {MAX_SIGN_RETRIES}
+            </span>
+          )}
+          {slow && (
+            <span className="text-[11px] text-amber-600 dark:text-amber-400">
+              التحميل أبطأ من المعتاد ({seconds}s / {budgetSeconds}s)
+            </span>
+          )}
+        </div>
+        <div className="w-32 h-1 rounded-full bg-border overflow-hidden">
+          <div
+            className="h-full bg-primary transition-[width] duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
     );
   }
 
   if (error || !signedUrl) {
+    const classified = classifyError(error);
+    const kind = error ? errorKind : classified.kind;
+    const message = error || classified.message;
+    const hint = classified.hint;
     return (
-      <div className="flex flex-col items-center justify-center gap-2 h-40 px-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm text-center">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error || "لا يمكن عرض الوصل"}</span>
+      <div
+        className="flex flex-col items-center justify-center gap-2 min-h-40 px-4 py-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm text-center"
+        role="alert"
+      >
+        <div className="flex items-center gap-2 font-medium">
+          <ErrorIcon kind={kind} />
+          <span>{message}</span>
         </div>
+        <p className="text-xs text-destructive/80 max-w-xs leading-relaxed">{hint}</p>
+        {attempt > 1 && (
+          <span className="text-[11px] text-destructive/70">
+            تمت {attempt} محاولات تلقائية قبل التوقف
+          </span>
+        )}
         <button
           type="button"
           onClick={handleRetry}
-          className="px-3 py-1 rounded-md text-xs bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 transition-colors"
+          className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 transition-colors"
         >
+          <RefreshCw className="w-3.5 h-3.5" />
           إعادة المحاولة
         </button>
       </div>
