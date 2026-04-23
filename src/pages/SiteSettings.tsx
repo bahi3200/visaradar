@@ -284,8 +284,59 @@ export default function SiteSettingsPage() {
                 placeholder={field.placeholder}
                 className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
+              {verifyResult?.[field.key] && (
+                <div
+                  className={`mt-2 rounded-lg border px-3 py-2 text-xs flex items-start gap-2 ${
+                    verifyResult[field.key].matches
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "border-destructive/40 bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {verifyResult[field.key].matches ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0" dir="ltr">
+                    <div className="font-mono break-all">
+                      {verifyResult[field.key].db || <em className="opacity-60">(فارغ)</em>}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+
+          <div className="pt-2 border-t border-border/40 space-y-2">
+            <button
+              type="button"
+              onClick={handleVerifySocialSave}
+              disabled={verifying}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 text-primary font-medium py-2.5 text-sm transition-all hover:bg-primary/20 disabled:opacity-50"
+            >
+              {verifying ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  جاري التحقق...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  اختبار الحفظ — جلب القيم من قاعدة البيانات
+                </>
+              )}
+            </button>
+            {verifiedAt && (
+              <p className="text-[11px] text-muted-foreground text-center">
+                آخر تحقق:{" "}
+                {verifiedAt.toLocaleTimeString("ar", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </p>
+            )}
+          </div>
         </motion.div>
 
         <motion.div
