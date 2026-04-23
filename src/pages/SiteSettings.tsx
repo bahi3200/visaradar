@@ -1,11 +1,12 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap, ShieldAlert } from "lucide-react";
+import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap, ShieldAlert, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const socialFields = [
   { key: "public_facebook_url", label: "فيسبوك", icon: Facebook, placeholder: "https://facebook.com/yourpage" },
