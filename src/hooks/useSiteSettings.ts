@@ -24,10 +24,13 @@ export function useSiteSettings() {
 
   const updateSetting = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      // upsert على عمود key (له قيد UNIQUE) لإنشاء الصف إن لم يوجد، وتحديثه إن وُجد.
       const { error } = await (supabase as any)
         .from("site_settings")
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq("key", key);
+        .upsert(
+          { key, value, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
       if (error) throw error;
     },
     onSuccess: () => {
