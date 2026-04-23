@@ -189,6 +189,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
       <QuickLinks isAdmin={isAdmin} />
       <CityGallery />
       <VisaTips />
+      <SocialMediaSection />
     </Layout>
   );
 }
