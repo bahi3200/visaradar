@@ -105,6 +105,11 @@ export default function SiteSettingsPage() {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<
+    Record<string, { db: string; matches: boolean }> | null
+  >(null);
+  const [verifiedAt, setVerifiedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (settings) setValues(settings);
