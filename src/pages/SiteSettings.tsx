@@ -1,9 +1,11 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap } from "lucide-react";
+import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useAuth } from "@/hooks/useAuth";
 
 const socialFields = [
   { key: "public_facebook_url", label: "فيسبوك", icon: Facebook, placeholder: "https://facebook.com/yourpage" },
@@ -98,6 +100,8 @@ function normalizeReminderDays(raw: string): { value: string; days: number[]; er
 
 export default function SiteSettingsPage() {
   const { settings, isLoading, updateSetting } = useSiteSettings();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -106,6 +110,14 @@ export default function SiteSettingsPage() {
   }, [settings]);
 
   const handleSave = async () => {
+    if (!user) {
+      toast.error("يجب تسجيل الدخول أولاً");
+      return;
+    }
+    if (!isAdmin) {
+      toast.error("غير مصرّح: هذه الإعدادات للمسؤولين فقط");
+      return;
+    }
     setSaving(true);
     let savedAny = false;
     let hadError = false;
@@ -164,6 +176,36 @@ export default function SiteSettingsPage() {
     return (
       <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
         <div className="text-center py-20 text-muted-foreground animate-pulse">جاري التحميل...</div>
+      </AdminLayout>
+    );
+  }
+
+  // Permission check — block non-admins explicitly even if routing is bypassed.
+  if (authLoading || roleLoading) {
+    return (
+      <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
+        <div className="text-center py-20 text-muted-foreground animate-pulse">جاري التحقق من الصلاحيات...</div>
+      </AdminLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
+        <div className="max-w-xl mx-auto">
+          <div
+            role="alert"
+            className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-center space-y-3"
+          >
+            <ShieldAlert className="w-10 h-10 text-destructive mx-auto" />
+            <h2 className="font-heading text-lg font-bold text-foreground">صلاحيات غير كافية</h2>
+            <p className="text-sm text-muted-foreground">
+              {user
+                ? "هذه الصفحة مخصّصة للمسؤولين فقط. لا يمكنك عرض أو تعديل إعدادات الموقع."
+                : "يرجى تسجيل الدخول بحساب مسؤول للوصول إلى إعدادات الموقع."}
+            </p>
+          </div>
+        </div>
       </AdminLayout>
     );
   }
