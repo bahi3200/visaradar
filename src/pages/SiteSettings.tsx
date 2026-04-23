@@ -178,6 +178,46 @@ export default function SiteSettingsPage() {
     }
   };
 
+  const handleVerifySocialSave = async () => {
+    if (!isAdmin) {
+      toast.error("غير مصرّح");
+      return;
+    }
+    setVerifying(true);
+    try {
+      const keys = socialFields.map((f) => f.key);
+      const { data, error } = await supabase
+        .from("site_settings" as any)
+        .select("key, value")
+        .in("key", keys);
+      if (error) throw error;
+      const dbMap: Record<string, string> = {};
+      (data as any[])?.forEach((row: any) => {
+        dbMap[row.key] = row.value ?? "";
+      });
+      const result: Record<string, { db: string; matches: boolean }> = {};
+      let allMatch = true;
+      for (const f of socialFields) {
+        const dbVal = dbMap[f.key] ?? "";
+        const formVal = (values[f.key] ?? "").trim();
+        const matches = dbVal.trim() === formVal;
+        if (!matches) allMatch = false;
+        result[f.key] = { db: dbVal, matches };
+      }
+      setVerifyResult(result);
+      setVerifiedAt(new Date());
+      if (allMatch) {
+        toast.success("✓ القيم في قاعدة البيانات مطابقة تماماً للحقول");
+      } else {
+        toast.warning("بعض الحقول لم تُحفظ بعد — اضغط «حفظ الإعدادات» أولاً");
+      }
+    } catch (e: any) {
+      toast.error(`فشل التحقق: ${e?.message ?? "خطأ غير معروف"}`);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <AdminLayout title="إعدادات الموقع" subtitle="إدارة روابط السوشيال ميديا والتذكيرات">
