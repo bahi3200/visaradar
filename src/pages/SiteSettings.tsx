@@ -107,46 +107,52 @@ export default function SiteSettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    let savedAny = false;
+    let hadError = false;
     try {
+      // 1) Social media URLs — تُحفظ دائماً حتى لو كانت بقية الحقول غير صالحة.
       for (const field of socialFields) {
         if (values[field.key] !== settings[field.key]) {
           await updateSetting.mutateAsync({ key: field.key, value: values[field.key] || "" });
+          savedAny = true;
         }
       }
-      // Reminder days (optional — only validate if user provided a value)
+      // 2) Reminder days (اختياري — لا يمنع حفظ بقية الأقسام إن كان غير صالح)
       const raw = (values[REMINDER_KEY] ?? "").trim();
       const previousReminder = (settings[REMINDER_KEY] ?? "").trim();
       if (raw.length > 0) {
         const norm = normalizeReminderDays(raw);
         if (norm.error) {
           toast.error(norm.error);
-          setSaving(false);
-          return;
-        }
-        if (norm.value !== previousReminder) {
+          hadError = true;
+        } else if (norm.value !== previousReminder) {
           await updateSetting.mutateAsync({ key: REMINDER_KEY, value: norm.value });
           setValues((v) => ({ ...v, [REMINDER_KEY]: norm.value }));
+          savedAny = true;
         }
       } else if (previousReminder.length > 0) {
-        // User cleared the field — persist empty
         await updateSetting.mutateAsync({ key: REMINDER_KEY, value: "" });
+        savedAny = true;
       }
-      // Quick test message
+      // 3) Quick test message — مستقل تماماً، لا يمنع حفظ السوشيال ميديا.
       const quickRaw = (values[QUICK_TEST_KEY] ?? "").trim();
-      if (!quickRaw) {
-        toast.error("نص رسالة الاختبار السريع لا يمكن أن يكون فارغاً");
-        setSaving(false);
-        return;
+      const previousQuick = settings[QUICK_TEST_KEY] ?? "";
+      if (quickRaw !== previousQuick.trim()) {
+        if (!quickRaw) {
+          toast.error("تم تجاهل رسالة الاختبار: لا يمكن أن تكون فارغة");
+          hadError = true;
+        } else if (quickRaw.length > QUICK_TEST_MAX) {
+          toast.error(`تم تجاهل رسالة الاختبار: طويلة جداً (الحد ${QUICK_TEST_MAX} حرف)`);
+          hadError = true;
+        } else {
+          await updateSetting.mutateAsync({ key: QUICK_TEST_KEY, value: quickRaw });
+          savedAny = true;
+        }
       }
-      if (quickRaw.length > QUICK_TEST_MAX) {
-        toast.error(`نص رسالة الاختبار طويل جداً (الحد الأقصى ${QUICK_TEST_MAX} حرف)`);
-        setSaving(false);
-        return;
-      }
-      if (quickRaw !== (settings[QUICK_TEST_KEY] ?? "")) {
-        await updateSetting.mutateAsync({ key: QUICK_TEST_KEY, value: quickRaw });
-      }
-      toast.success("تم حفظ الإعدادات بنجاح");
+
+      if (savedAny && !hadError) toast.success("تم حفظ الإعدادات بنجاح");
+      else if (savedAny && hadError) toast.success("تم حفظ الحقول الصالحة فقط");
+      else if (!hadError) toast.info("لا توجد تغييرات للحفظ");
     } catch {
       toast.error("فشل في حفظ الإعدادات");
     } finally {
