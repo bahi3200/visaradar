@@ -1,11 +1,12 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap, ShieldAlert } from "lucide-react";
+import { Save, Facebook, Instagram, Send as TelegramIcon, Music2, Clock, Zap, ShieldAlert, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const socialFields = [
   { key: "public_facebook_url", label: "فيسبوك", icon: Facebook, placeholder: "https://facebook.com/yourpage" },
@@ -104,6 +105,11 @@ export default function SiteSettingsPage() {
   const { isAdmin, isLoading: roleLoading } = useIsAdmin();
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<
+    Record<string, { db: string; matches: boolean }> | null
+  >(null);
+  const [verifiedAt, setVerifiedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (settings) setValues(settings);
@@ -169,6 +175,46 @@ export default function SiteSettingsPage() {
       toast.error("فشل في حفظ الإعدادات");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleVerifySocialSave = async () => {
+    if (!isAdmin) {
+      toast.error("غير مصرّح");
+      return;
+    }
+    setVerifying(true);
+    try {
+      const keys = socialFields.map((f) => f.key);
+      const { data, error } = await supabase
+        .from("site_settings" as any)
+        .select("key, value")
+        .in("key", keys);
+      if (error) throw error;
+      const dbMap: Record<string, string> = {};
+      (data as any[])?.forEach((row: any) => {
+        dbMap[row.key] = row.value ?? "";
+      });
+      const result: Record<string, { db: string; matches: boolean }> = {};
+      let allMatch = true;
+      for (const f of socialFields) {
+        const dbVal = dbMap[f.key] ?? "";
+        const formVal = (values[f.key] ?? "").trim();
+        const matches = dbVal.trim() === formVal;
+        if (!matches) allMatch = false;
+        result[f.key] = { db: dbVal, matches };
+      }
+      setVerifyResult(result);
+      setVerifiedAt(new Date());
+      if (allMatch) {
+        toast.success("✓ القيم في قاعدة البيانات مطابقة تماماً للحقول");
+      } else {
+        toast.warning("بعض الحقول لم تُحفظ بعد — اضغط «حفظ الإعدادات» أولاً");
+      }
+    } catch (e: any) {
+      toast.error(`فشل التحقق: ${e?.message ?? "خطأ غير معروف"}`);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -238,8 +284,59 @@ export default function SiteSettingsPage() {
                 placeholder={field.placeholder}
                 className="w-full rounded-xl border border-border/50 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
+              {verifyResult?.[field.key] && (
+                <div
+                  className={`mt-2 rounded-lg border px-3 py-2 text-xs flex items-start gap-2 ${
+                    verifyResult[field.key].matches
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "border-destructive/40 bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {verifyResult[field.key].matches ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0" dir="ltr">
+                    <div className="font-mono break-all">
+                      {verifyResult[field.key].db || <em className="opacity-60">(فارغ)</em>}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+
+          <div className="pt-2 border-t border-border/40 space-y-2">
+            <button
+              type="button"
+              onClick={handleVerifySocialSave}
+              disabled={verifying}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 text-primary font-medium py-2.5 text-sm transition-all hover:bg-primary/20 disabled:opacity-50"
+            >
+              {verifying ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  جاري التحقق...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  اختبار الحفظ — جلب القيم من قاعدة البيانات
+                </>
+              )}
+            </button>
+            {verifiedAt && (
+              <p className="text-[11px] text-muted-foreground text-center">
+                آخر تحقق:{" "}
+                {verifiedAt.toLocaleTimeString("ar", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </p>
+            )}
+          </div>
         </motion.div>
 
         <motion.div
