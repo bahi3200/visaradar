@@ -4,10 +4,12 @@ import { motion } from "framer-motion";
 import { Bell, Briefcase, ArrowLeft, Shield, Zap, Globe, Eye, Crown, Lock, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import heroBg from "@/assets/hero-bg.jpg";
+import { useEffect } from "react";
+import { toast } from "sonner";
 import HeroSection from "@/components/home/HeroSection";
 import StatsSection from "@/components/home/StatsSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
@@ -26,6 +28,7 @@ const visaCountries = [
 export default function HomePage() {
   const { user } = useAuth();
   const reduced = useReducedMotion();
+  const queryClient = useQueryClient();
 
   const { data: subscriptions, isLoading: subLoading } = useQuery({
     queryKey: ["my-subscriptions-all", user?.id],
@@ -41,6 +44,66 @@ export default function HomePage() {
     },
     enabled: !!user,
   });
+
+  // Realtime: refetch subscription state instantly when a new active
+  // subscription is created/updated, or when a pending request is approved.
+  // This hides the "غير مشترك" alert without a page reload.
+  useEffect(() => {
+    if (!user) return;
+    const wasSubscribedRef = { current: false };
+
+    const channel = supabase
+      .channel(`sub-status-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subscriptions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["my-subscriptions-all", user.id] });
+          // Defer the toast so the refetch completes first
+          setTimeout(() => {
+            const fresh = queryClient.getQueryData<any[] | null>([
+              "my-subscriptions-all",
+              user.id,
+            ]);
+            const isNowSubscribed = !!(fresh && fresh.length > 0);
+            if (isNowSubscribed && !wasSubscribedRef.current) {
+              toast.success("🎉 تم تفعيل اشتراكك! ستصلك الآن تنبيهات فتح التأشيرات.");
+            }
+            wasSubscribedRef.current = isNowSubscribed;
+          }, 400);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "subscription_requests",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          // When admin approves the request a new subscription row is created;
+          // also nudge the query to refetch.
+          if (payload?.new?.status === "approved") {
+            queryClient.invalidateQueries({ queryKey: ["my-subscriptions-all", user.id] });
+          }
+        },
+      )
+      .subscribe();
+
+    // Initialize the "was subscribed" baseline from current cache
+    const initial = queryClient.getQueryData<any[] | null>(["my-subscriptions-all", user.id]);
+    wasSubscribedRef.current = !!(initial && initial.length > 0);
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   // Merge all active subscriptions into a single view
   const mergedSubscription = subscriptions ? {
