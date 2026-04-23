@@ -7,6 +7,7 @@ import QuickLinks from "@/components/subscriber/QuickLinks";
 import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
+import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
@@ -188,6 +189,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
       <QuickLinks isAdmin={isAdmin} />
       <CityGallery />
       <VisaTips />
+      <SocialMediaSection />
     </Layout>
   );
 }

@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
-const socialConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+// روابط افتراضية تظهر دائماً للزوار حتى لو لم يقم الأدمن بتخصيصها بعد.
+// يستطيع الأدمن تجاوزها من إعدادات الموقع.
+const socialConfig: Record<string, { icon: React.ReactNode; label: string; color: string; fallback: string }> = {
   public_facebook_url: {
     icon: (
       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
     ),
     label: "Facebook",
     color: "hover:text-blue-500",
+    fallback: "https://facebook.com/visaradar",
   },
   public_instagram_url: {
     icon: (
@@ -15,6 +18,7 @@ const socialConfig: Record<string, { icon: React.ReactNode; label: string; color
     ),
     label: "Instagram",
     color: "hover:text-pink-500",
+    fallback: "https://instagram.com/visaradar",
   },
   public_tiktok_url: {
     icon: (
@@ -22,6 +26,7 @@ const socialConfig: Record<string, { icon: React.ReactNode; label: string; color
     ),
     label: "TikTok",
     color: "hover:text-foreground",
+    fallback: "https://tiktok.com/@visaradar",
   },
   public_telegram_url: {
     icon: (
@@ -29,33 +34,34 @@ const socialConfig: Record<string, { icon: React.ReactNode; label: string; color
     ),
     label: "Telegram",
     color: "hover:text-blue-400",
+    fallback: "https://t.me/visaradar",
   },
 };
 
 export default function SocialMediaSection() {
-  const { settings, isLoading } = useSiteSettings();
+  const { settings } = useSiteSettings();
 
-  const activeSocials = Object.entries(socialConfig).filter(
-    ([key]) => settings[key] && settings[key].trim() !== ""
-  );
-
-  if (isLoading || activeSocials.length === 0) return null;
+  // نعرض دائماً جميع الأيقونات، نستخدم رابط الأدمن إذا توفّر، وإلا الرابط الافتراضي.
+  const activeSocials = Object.entries(socialConfig).map(([key, cfg]) => {
+    const adminUrl = settings[key]?.trim();
+    return [key, { ...cfg, url: adminUrl && adminUrl.length > 0 ? adminUrl : cfg.fallback }] as const;
+  });
 
   return (
-    <section className="container pb-14">
+    <section className="container py-10">
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         className="text-center"
       >
-        <h2 className="font-heading text-xl font-bold text-foreground mb-2">تابعنا على السوشيال ميديا</h2>
-        <p className="text-sm text-muted-foreground mb-6">ابقَ على اطلاع بآخر الأخبار والتحديثات</p>
+        <h2 className="font-heading text-xl md:text-2xl font-bold text-foreground mb-2">تابعنا على السوشيال ميديا</h2>
+        <p className="text-sm text-muted-foreground mb-6">ابقَ على اطلاع بآخر الأخبار والتحديثات وفرص التأشيرات</p>
         <div className="flex justify-center gap-4">
-          {activeSocials.map(([key, { icon, label, color }]) => (
+          {activeSocials.map(([key, { icon, label, color, url }]) => (
             <motion.a
               key={key}
-              href={settings[key]}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={label}

@@ -118,6 +118,9 @@ export default function HomePage() {
       {/* Stats */}
       <StatsSection />
 
+      {/* Social Media — visible to all guests up front */}
+      <SocialMediaSection />
+
       {/* Monitored Countries */}
       <section className="container py-14">
         <motion.h2 initial={reduced ? noMotion : { opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} className="font-heading text-2xl md:text-3xl font-bold text-foreground text-center mb-3">الدول المراقبة</motion.h2>
@@ -212,9 +215,6 @@ export default function HomePage() {
 
       {/* Testimonials */}
       <TestimonialsSection />
-
-      {/* Social Media */}
-      <SocialMediaSection />
 
       {/* FAQ */}
       <FAQSection />
