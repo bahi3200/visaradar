@@ -177,6 +177,12 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                     {checkingTg ? "جارٍ التحقق..." : "تحديث حالة الربط"}
                   </button>
                 </div>
+                {autoPolling && (
+                  <p className="text-[10px] text-sky-400/80 mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                    فحص تلقائي كل 30 ثانية حتى يكتمل الربط
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
