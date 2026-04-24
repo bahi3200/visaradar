@@ -60,6 +60,63 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         />
       )}
 
+      {/* Telegram Link CTA — visible to ALL non-admin users who haven't linked yet */}
+      {showTelegramCTA && (
+        <section className="container pt-4">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            role="alert"
+            className="relative rounded-2xl border-2 border-sky-500/50 p-4 sm:p-5 overflow-hidden bg-card shadow-[0_8px_30px_-10px_hsl(200_85%_55%/0.4)]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-l from-sky-500/15 via-sky-500/5 to-transparent" />
+            <div className="absolute -top-8 -left-8 w-32 h-32 bg-sky-500/15 rounded-full blur-2xl animate-pulse" />
+            <div className="relative flex items-start gap-3 sm:gap-4">
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <Send className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 ring-2 ring-card animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-heading text-sm sm:text-base font-black text-foreground">
+                    اربط حساب Telegram لتصلك التنبيهات
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    خطوة مهمّة
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-3">
+                  {isSubscribed
+                    ? "اشتراكك نشط، لكن لن تصلك تنبيهات فتح المواعيد عبر Telegram حتى تربط حسابك مع البوت الرسمي."
+                    : "حتى لو اشتركت، التنبيهات تُرسل عبر Telegram. اربط حسابك الآن في أقل من دقيقة."}
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link
+                    to="/telegram-link"
+                    className="inline-flex items-center gap-1.5 bg-gradient-to-l from-sky-500 to-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    اربط Telegram الآن
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </Link>
+                  <a
+                    href="https://t.me/VisaRadar16_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 px-2 py-1 transition-colors"
+                  >
+                    فتح البوت مباشرة
+                  </a>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+      )}
+
       {/* Subscribe CTA */}
       {showSubscribeCTA && (
         <>
