@@ -106,6 +106,93 @@ const TelegramLink = () => {
     toast.success("تم نسخ الرابط");
   };
 
+  const runDiagnostic = async () => {
+    if (!user) {
+      setDiagnostic({
+        checkedAt: new Date().toISOString(),
+        dbTelegramId: null,
+        formChatId: chatId.trim(),
+        matches: false,
+        reason: "لم يتم تسجيل الدخول. سجّل الدخول أولاً ثم أعد المحاولة.",
+        severity: "error",
+      });
+      return;
+    }
+    setDiagnosing(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("telegram_id, telegram_linked_at, telegram_username")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const formVal = chatId.trim();
+      const dbVal = data?.telegram_id ?? null;
+      const checkedAt = new Date().toISOString();
+
+      if (error) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: `فشل قراءة الملف الشخصي من القاعدة: ${error.message}. تحقق من الاتصال أو الصلاحيات.`,
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!data) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: "لم يُعثر على ملف شخصي لهذا الحساب. اضغط على 'تحقق' لإنشائه أو راجع الدعم.",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!dbVal) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: formVal
+            ? "أدخلت chat_id لكنه لم يُحفظ بعد. اضغط زر 'تحقق' لإكمال الربط. قد تكون الأسباب: لم تبدأ محادثة /start مع البوت، أو chat_id غير صحيح، أو فشل استدعاء الدالة."
+            : "لم يتم حفظ أي chat_id بعد. اتبع الخطوات 1→4 وأدخل الرقم ثم اضغط 'تحقق'.",
+          severity: "warning",
+        });
+        return;
+      }
+
+      const matches = formVal ? formVal === dbVal : true;
+      setDiagnostic({
+        checkedAt,
+        dbTelegramId: dbVal,
+        formChatId: formVal,
+        matches,
+        reason: matches
+          ? `✅ تم حفظ telegram_id بنجاح في القاعدة${data.telegram_username ? ` (المستخدم: @${data.telegram_username})` : ""}. ستصلك التنبيهات تلقائيًا عند فتح المواعيد.`
+          : `chat_id المُدخل (${formVal}) لا يطابق المحفوظ (${dbVal}). إذا أردت تغييره، فك الربط أولاً ثم أعد التحقق.`,
+        severity: matches ? "success" : "warning",
+      });
+    } catch (e) {
+      setDiagnostic({
+        checkedAt: new Date().toISOString(),
+        dbTelegramId: null,
+        formChatId: chatId.trim(),
+        matches: false,
+        reason: e instanceof Error ? e.message : "خطأ غير متوقع أثناء التشخيص",
+        severity: "error",
+      });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="container max-w-3xl py-8 md:py-12 space-y-6" dir="rtl">
