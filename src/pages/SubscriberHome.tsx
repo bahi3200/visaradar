@@ -43,10 +43,18 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   // Optimistic local override: hide CTA the instant we detect a saved telegram_id
   const [localLinked, setLocalLinked] = useState(false);
 
-  // Reset local override whenever the parent prop confirms the link (or user changes)
+  // Reset local override on user change / sign-out to prevent stale "hidden" state
+  // leaking across accounts. The optimistic flag should only ever apply to the
+  // currently signed-in user.
+  useEffect(() => {
+    setLocalLinked(false);
+  }, [user?.id]);
+
+  // Also clear the optimistic flag once the parent prop confirms the link,
+  // so we fall back to the source of truth (my-profile query).
   useEffect(() => {
     if (telegramLinked) setLocalLinked(false);
-  }, [telegramLinked, user?.id]);
+  }, [telegramLinked]);
 
   const handleRefreshTelegram = async () => {
     if (!user) return;
