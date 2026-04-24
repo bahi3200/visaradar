@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight } from "lucide-react";
+import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,15 @@ import { formatLinkedSince, formatFullDateAr } from "@/lib/relativeTime";
 const BOT_USERNAME = "VisaRadar16_bot";
 const BOT_LINK = `https://t.me/${BOT_USERNAME}`;
 
+interface DiagnosticState {
+  checkedAt: string;
+  dbTelegramId: string | null;
+  formChatId: string;
+  matches: boolean;
+  reason: string;
+  severity: "success" | "warning" | "error" | "info";
+}
+
 const TelegramLink = () => {
   const { user } = useAuth();
   const [chatId, setChatId] = useState("");
@@ -22,6 +31,8 @@ const TelegramLink = () => {
   const [linkedAt, setLinkedAt] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticState | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +104,93 @@ const TelegramLink = () => {
   const copyBotLink = () => {
     navigator.clipboard.writeText(BOT_LINK);
     toast.success("تم نسخ الرابط");
+  };
+
+  const runDiagnostic = async () => {
+    if (!user) {
+      setDiagnostic({
+        checkedAt: new Date().toISOString(),
+        dbTelegramId: null,
+        formChatId: chatId.trim(),
+        matches: false,
+        reason: "لم يتم تسجيل الدخول. سجّل الدخول أولاً ثم أعد المحاولة.",
+        severity: "error",
+      });
+      return;
+    }
+    setDiagnosing(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("telegram_id, telegram_linked_at, telegram_username")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const formVal = chatId.trim();
+      const dbVal = data?.telegram_id ?? null;
+      const checkedAt = new Date().toISOString();
+
+      if (error) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: `فشل قراءة الملف الشخصي من القاعدة: ${error.message}. تحقق من الاتصال أو الصلاحيات.`,
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!data) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: "لم يُعثر على ملف شخصي لهذا الحساب. اضغط على 'تحقق' لإنشائه أو راجع الدعم.",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!dbVal) {
+        setDiagnostic({
+          checkedAt,
+          dbTelegramId: null,
+          formChatId: formVal,
+          matches: false,
+          reason: formVal
+            ? "أدخلت chat_id لكنه لم يُحفظ بعد. اضغط زر 'تحقق' لإكمال الربط. قد تكون الأسباب: لم تبدأ محادثة /start مع البوت، أو chat_id غير صحيح، أو فشل استدعاء الدالة."
+            : "لم يتم حفظ أي chat_id بعد. اتبع الخطوات 1→4 وأدخل الرقم ثم اضغط 'تحقق'.",
+          severity: "warning",
+        });
+        return;
+      }
+
+      const matches = formVal ? formVal === dbVal : true;
+      setDiagnostic({
+        checkedAt,
+        dbTelegramId: dbVal,
+        formChatId: formVal,
+        matches,
+        reason: matches
+          ? `✅ تم حفظ telegram_id بنجاح في القاعدة${data.telegram_username ? ` (المستخدم: @${data.telegram_username})` : ""}. ستصلك التنبيهات تلقائيًا عند فتح المواعيد.`
+          : `chat_id المُدخل (${formVal}) لا يطابق المحفوظ (${dbVal}). إذا أردت تغييره، فك الربط أولاً ثم أعد التحقق.`,
+        severity: matches ? "success" : "warning",
+      });
+    } catch (e) {
+      setDiagnostic({
+        checkedAt: new Date().toISOString(),
+        dbTelegramId: null,
+        formChatId: chatId.trim(),
+        matches: false,
+        reason: e instanceof Error ? e.message : "خطأ غير متوقع أثناء التشخيص",
+        severity: "error",
+      });
+    } finally {
+      setDiagnosing(false);
+    }
   };
 
   return (
@@ -246,6 +344,90 @@ const TelegramLink = () => {
             <p className="text-xs text-muted-foreground text-center">
               ⚠️ يجب أن تكون قد بدأت المحادثة مع البوت بأمر /start قبل التحقق
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Diagnostic panel */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                <Info className="w-4 h-4" />
+              </Badge>
+              <CardTitle>تشخيص حالة الربط</CardTitle>
+            </div>
+            <CardDescription>
+              اضغط الزر للتحقق مباشرة من قاعدة البيانات: هل تم حفظ telegram_id فعلاً؟ ولماذا قد تفشل العملية؟
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={runDiagnostic}
+              disabled={diagnosing}
+              className="w-full"
+            >
+              <RefreshCw className={`w-4 h-4 ml-2 ${diagnosing ? "animate-spin" : ""}`} />
+              {diagnosing ? "جارٍ الفحص..." : "فحص الحالة الآن"}
+            </Button>
+
+            {diagnostic && (
+              <div
+                className={`rounded-lg border p-4 space-y-3 ${
+                  diagnostic.severity === "success"
+                    ? "border-green-500/40 bg-green-500/5"
+                    : diagnostic.severity === "warning"
+                    ? "border-yellow-500/40 bg-yellow-500/5"
+                    : diagnostic.severity === "error"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-border bg-muted/30"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  {diagnostic.severity === "success" ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                  ) : diagnostic.severity === "warning" ? (
+                    <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                  ) : diagnostic.severity === "error" ? (
+                    <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  ) : (
+                    <Info className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                  )}
+                  <p className="text-sm leading-relaxed flex-1">{diagnostic.reason}</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-background/60">
+                    <span className="text-muted-foreground">في قاعدة البيانات:</span>
+                    <span className="font-mono font-bold" dir="ltr">
+                      {diagnostic.dbTelegramId ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-background/60">
+                    <span className="text-muted-foreground">في الحقل أعلاه:</span>
+                    <span className="font-mono font-bold" dir="ltr">
+                      {diagnostic.formChatId || "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground/70 text-left" dir="ltr">
+                  Checked at: {new Date(diagnostic.checkedAt).toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground space-y-1.5 border-t pt-3">
+              <p className="font-bold text-foreground">أسباب شائعة لفشل الربط:</p>
+              <ul className="space-y-1 list-disc pr-5">
+                <li>لم تضغط /start في محادثة البوت قبل التحقق.</li>
+                <li>chat_id خاطئ (تأكد أنه رقم بدون مسافات).</li>
+                <li>حظرت البوت أو حذفت المحادثة.</li>
+                <li>مشكلة مؤقتة في الشبكة أو في دالة <code className="font-mono">telegram-verify-chat</code>.</li>
+                <li>غير مسجّل الدخول في الموقع.</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
 
