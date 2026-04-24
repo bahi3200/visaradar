@@ -9,7 +9,7 @@ import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -173,6 +173,25 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                     اربط Telegram الآن
                     <ArrowLeft className="w-3.5 h-3.5" />
                   </Link>
+                  <button
+                    type="button"
+                    onClick={handleRefreshTelegram}
+                    disabled={checkingTg}
+                    className="inline-flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 font-bold text-xs px-4 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                    aria-label="تحقق فوري من حالة الربط"
+                  >
+                    {checkingTg ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        جارٍ التحقق...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        تحقّقت من الربط
+                      </>
+                    )}
+                  </button>
                   <a
                     href="https://t.me/VisaRadar16_bot"
                     target="_blank"
@@ -181,15 +200,6 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                   >
                     فتح البوت مباشرة
                   </a>
-                  <button
-                    type="button"
-                    onClick={handleRefreshTelegram}
-                    disabled={checkingTg}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 px-2 py-1 transition-colors disabled:opacity-60"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${checkingTg ? "animate-spin" : ""}`} />
-                    {checkingTg ? "جارٍ التحقق..." : "تحديث حالة الربط"}
-                  </button>
                 </div>
                 {autoPolling && (
                   <p className="text-[10px] text-sky-400/80 mt-2 flex items-center gap-1.5">
