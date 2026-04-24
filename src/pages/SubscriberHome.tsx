@@ -142,6 +142,15 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                   >
                     فتح البوت مباشرة
                   </a>
+                  <button
+                    type="button"
+                    onClick={handleRefreshTelegram}
+                    disabled={checkingTg}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 px-2 py-1 transition-colors disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${checkingTg ? "animate-spin" : ""}`} />
+                    {checkingTg ? "جارٍ التحقق..." : "تحديث حالة الربط"}
+                  </button>
                 </div>
               </div>
             </div>
