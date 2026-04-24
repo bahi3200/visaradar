@@ -347,6 +347,90 @@ const TelegramLink = () => {
           </CardContent>
         </Card>
 
+        {/* Diagnostic panel */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                <Info className="w-4 h-4" />
+              </Badge>
+              <CardTitle>تشخيص حالة الربط</CardTitle>
+            </div>
+            <CardDescription>
+              اضغط الزر للتحقق مباشرة من قاعدة البيانات: هل تم حفظ telegram_id فعلاً؟ ولماذا قد تفشل العملية؟
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={runDiagnostic}
+              disabled={diagnosing}
+              className="w-full"
+            >
+              <RefreshCw className={`w-4 h-4 ml-2 ${diagnosing ? "animate-spin" : ""}`} />
+              {diagnosing ? "جارٍ الفحص..." : "فحص الحالة الآن"}
+            </Button>
+
+            {diagnostic && (
+              <div
+                className={`rounded-lg border p-4 space-y-3 ${
+                  diagnostic.severity === "success"
+                    ? "border-green-500/40 bg-green-500/5"
+                    : diagnostic.severity === "warning"
+                    ? "border-yellow-500/40 bg-yellow-500/5"
+                    : diagnostic.severity === "error"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-border bg-muted/30"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  {diagnostic.severity === "success" ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                  ) : diagnostic.severity === "warning" ? (
+                    <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                  ) : diagnostic.severity === "error" ? (
+                    <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  ) : (
+                    <Info className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                  )}
+                  <p className="text-sm leading-relaxed flex-1">{diagnostic.reason}</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-background/60">
+                    <span className="text-muted-foreground">في قاعدة البيانات:</span>
+                    <span className="font-mono font-bold" dir="ltr">
+                      {diagnostic.dbTelegramId ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-background/60">
+                    <span className="text-muted-foreground">في الحقل أعلاه:</span>
+                    <span className="font-mono font-bold" dir="ltr">
+                      {diagnostic.formChatId || "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground/70 text-left" dir="ltr">
+                  Checked at: {new Date(diagnostic.checkedAt).toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground space-y-1.5 border-t pt-3">
+              <p className="font-bold text-foreground">أسباب شائعة لفشل الربط:</p>
+              <ul className="space-y-1 list-disc pr-5">
+                <li>لم تضغط /start في محادثة البوت قبل التحقق.</li>
+                <li>chat_id خاطئ (تأكد أنه رقم بدون مسافات).</li>
+                <li>حظرت البوت أو حذفت المحادثة.</li>
+                <li>مشكلة مؤقتة في الشبكة أو في دالة <code className="font-mono">telegram-verify-chat</code>.</li>
+                <li>غير مسجّل الدخول في الموقع.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="text-center">
           <Button variant="link" asChild>
             <Link to="/profile">العودة إلى الملف الشخصي</Link>
