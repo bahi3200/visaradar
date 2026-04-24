@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight } from "lucide-react";
+import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,15 @@ import { formatLinkedSince, formatFullDateAr } from "@/lib/relativeTime";
 const BOT_USERNAME = "VisaRadar16_bot";
 const BOT_LINK = `https://t.me/${BOT_USERNAME}`;
 
+interface DiagnosticState {
+  checkedAt: string;
+  dbTelegramId: string | null;
+  formChatId: string;
+  matches: boolean;
+  reason: string;
+  severity: "success" | "warning" | "error" | "info";
+}
+
 const TelegramLink = () => {
   const { user } = useAuth();
   const [chatId, setChatId] = useState("");
@@ -22,6 +31,8 @@ const TelegramLink = () => {
   const [linkedAt, setLinkedAt] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticState | null>(null);
 
   useEffect(() => {
     if (!user) return;
