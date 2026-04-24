@@ -11,6 +11,11 @@ import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface SubscriptionData {
   expires_at: string;
@@ -31,6 +36,33 @@ interface Props {
 }
 
 export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading, countryExpiries = {}, telegramLinked = false }: Props) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [checkingTg, setCheckingTg] = useState(false);
+
+  const handleRefreshTelegram = async () => {
+    if (!user) return;
+    setCheckingTg(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("telegram_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
+      if (data?.telegram_id) {
+        toast.success("✅ حسابك مرتبط بـ Telegram بنجاح!");
+      } else {
+        toast.info("لم يتم الربط بعد. تأكد من إكمال خطوات الربط مع البوت.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل التحقق من حالة الربط");
+    } finally {
+      setCheckingTg(false);
+    }
+  };
+
   const isSubscribed = !!subscription;
   const daysLeft = subscription
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -110,6 +142,15 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                   >
                     فتح البوت مباشرة
                   </a>
+                  <button
+                    type="button"
+                    onClick={handleRefreshTelegram}
+                    disabled={checkingTg}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 px-2 py-1 transition-colors disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${checkingTg ? "animate-spin" : ""}`} />
+                    {checkingTg ? "جارٍ التحقق..." : "تحديث حالة الربط"}
+                  </button>
                 </div>
               </div>
             </div>
