@@ -11,7 +11,7 @@ import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +39,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [checkingTg, setCheckingTg] = useState(false);
+  const [autoPolling, setAutoPolling] = useState(false);
 
   const handleRefreshTelegram = async () => {
     if (!user) return;
@@ -70,6 +71,30 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
 
   const showSubscribeCTA = !isSubscribed && !isAdmin && !isLoading;
   const showTelegramCTA = !telegramLinked && !isAdmin && !isLoading;
+
+  // Auto-poll telegram link status every 30s while CTA is visible
+  useEffect(() => {
+    if (!showTelegramCTA || !user) {
+      setAutoPolling(false);
+      return;
+    }
+    setAutoPolling(true);
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("telegram_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.telegram_id) {
+        await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
+        toast.success("✅ تم اكتشاف ربط Telegram بنجاح!");
+      }
+    }, 30_000);
+    return () => {
+      clearInterval(interval);
+      setAutoPolling(false);
+    };
+  }, [showTelegramCTA, user, queryClient]);
 
   return (
     <Layout>
