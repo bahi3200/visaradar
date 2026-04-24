@@ -40,6 +40,13 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   const queryClient = useQueryClient();
   const [checkingTg, setCheckingTg] = useState(false);
   const [autoPolling, setAutoPolling] = useState(false);
+  // Optimistic local override: hide CTA the instant we detect a saved telegram_id
+  const [localLinked, setLocalLinked] = useState(false);
+
+  // Reset local override whenever the parent prop confirms the link (or user changes)
+  useEffect(() => {
+    if (telegramLinked) setLocalLinked(false);
+  }, [telegramLinked, user?.id]);
 
   const handleRefreshTelegram = async () => {
     if (!user) return;
@@ -51,11 +58,14 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
       if (data?.telegram_id) {
+        // Hide the CTA instantly, regardless of when my-profile refetches
+        setLocalLinked(true);
         toast.success("✅ حسابك مرتبط بـ Telegram بنجاح!");
+        queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
       } else {
         toast.info("لم يتم الربط بعد. تأكد من إكمال خطوات الربط مع البوت.");
+        queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "فشل التحقق من حالة الربط");
@@ -70,7 +80,9 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
     : 0;
 
   const showSubscribeCTA = !isSubscribed && !isAdmin && !isLoading;
-  const showTelegramCTA = !telegramLinked && !isAdmin && !isLoading;
+  // Use OR: hide if either parent prop OR local optimistic state confirms link
+  const effectivelyLinked = telegramLinked || localLinked;
+  const showTelegramCTA = !effectivelyLinked && !isAdmin && !isLoading;
 
   // Auto-poll telegram link status every 30s while CTA is visible
   useEffect(() => {
@@ -86,8 +98,10 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         .eq("user_id", user.id)
         .maybeSingle();
       if (data?.telegram_id) {
-        await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
+        // Optimistically hide CTA immediately
+        setLocalLinked(true);
         toast.success("✅ تم اكتشاف ربط Telegram بنجاح!");
+        queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
       }
     }, 30_000);
     return () => {
