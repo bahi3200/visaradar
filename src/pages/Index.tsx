@@ -135,7 +135,7 @@ export default function HomePage() {
       if (!user) return null;
       const { data } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, telegram_id")
         .eq("user_id", user.id)
         .maybeSingle();
       return data;
@@ -164,6 +164,7 @@ export default function HomePage() {
         isAdmin={!!isPrivileged}
         isLoading={subLoading}
         countryExpiries={countryExpiries}
+        telegramLinked={!!profile?.telegram_id}
       />
     );
   }

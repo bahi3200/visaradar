@@ -9,7 +9,7 @@ import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SubscriptionData {
@@ -27,15 +27,17 @@ interface Props {
   isAdmin: boolean;
   isLoading?: boolean;
   countryExpiries?: Record<string, string>;
+  telegramLinked?: boolean;
 }
 
-export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading, countryExpiries = {} }: Props) {
+export default function SubscriberHome({ subscription, fullName, isAdmin, isLoading, countryExpiries = {}, telegramLinked = false }: Props) {
   const isSubscribed = !!subscription;
   const daysLeft = subscription
     ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const showSubscribeCTA = !isSubscribed && !isAdmin && !isLoading;
+  const showTelegramCTA = !telegramLinked && !isAdmin && !isLoading;
 
   return (
     <Layout>
