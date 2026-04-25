@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useTelegramLinkPolling } from "./useTelegramLinkPolling";
@@ -186,9 +186,12 @@ describe("useTelegramLinkPolling", () => {
 
     await act(async () => {
       vi.advanceTimersByTime(1000);
+      // Flush the maybeSingle().then() microtask chain
+      await Promise.resolve();
+      await Promise.resolve();
       await Promise.resolve();
     });
 
-    await waitFor(() => expect(onLinked).toHaveBeenCalledTimes(1));
+    expect(onLinked).toHaveBeenCalledTimes(1);
   });
 });
