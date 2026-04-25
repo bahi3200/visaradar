@@ -239,6 +239,17 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                       </>
                     )}
                   </button>
+                  {checkingTg && (
+                    <button
+                      type="button"
+                      onClick={handleCancelCheck}
+                      aria-label="إلغاء التحقق"
+                      className="inline-flex items-center gap-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/40 font-bold text-xs px-3 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      إلغاء
+                    </button>
+                  )}
                   <a
                     href="https://t.me/VisaRadar16_bot"
                     target="_blank"
