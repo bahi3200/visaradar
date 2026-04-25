@@ -11,7 +11,7 @@ import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,11 +43,19 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   // Optimistic local override: hide CTA the instant we detect a saved telegram_id
   const [localLinked, setLocalLinked] = useState(false);
 
-  // Reset local override on user change / sign-out to prevent stale "hidden" state
-  // leaking across accounts. The optimistic flag should only ever apply to the
-  // currently signed-in user.
-  useEffect(() => {
-    setLocalLinked(false);
+  // Track previous user id so we can synchronously reset all session-scoped
+  // UI state BEFORE the next render whenever the user signs out or switches
+  // accounts. useLayoutEffect prevents the alert from briefly showing the
+  // previous account's "hidden / checking" state.
+  const prevUserIdRef = useRef<string | null>(user?.id ?? null);
+  useLayoutEffect(() => {
+    const currentId = user?.id ?? null;
+    if (prevUserIdRef.current !== currentId) {
+      setLocalLinked(false);
+      setCheckingTg(false);
+      setAutoPolling(false);
+      prevUserIdRef.current = currentId;
+    }
   }, [user?.id]);
 
   // Also clear the optimistic flag once the parent prop confirms the link,
@@ -123,12 +131,6 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
       setAutoPolling(false);
     };
   }, [showTelegramCTA, user?.id, queryClient]);
-
-  // Hard-stop any in-flight manual check state on user change / sign-out.
-  useEffect(() => {
-    setCheckingTg(false);
-    setAutoPolling(false);
-  }, [user?.id]);
 
   return (
     <Layout>
