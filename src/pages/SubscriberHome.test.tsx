@@ -162,3 +162,95 @@ describe("SubscriberHome — verify button resilience", () => {
     expect(toastError).not.toHaveBeenCalled();
   });
 });
+
+describe("SubscriberHome — user switch invalidates in-flight verify", () => {
+  it("ignores a late successful response when the user switched accounts mid-flight", async () => {
+    // First click: hangs forever — we'll resolve it manually after switching users.
+    let resolveFirst: (v: { data: { telegram_id: string } | null; error: null }) => void = () => {};
+    const firstPromise = new Promise<{ data: { telegram_id: string } | null; error: null }>((res) => {
+      resolveFirst = res;
+    });
+    maybeSingle.mockReturnValueOnce(firstPromise);
+
+    const view = renderHome();
+    const btn = screen.getByLabelText("تحقق فوري من حالة الربط") as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect((screen.getByLabelText("تحقق فوري من حالة الربط") as HTMLButtonElement).disabled).toBe(true);
+
+    // Simulate account switch: change auth user id and re-render.
+    authState.user = { id: "user-2" };
+    await act(async () => {
+      view.rerender(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <SubscriberHome
+              subscription={null}
+              fullName="Other User"
+              isAdmin={false}
+              isLoading={false}
+              telegramLinked={false}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    });
+
+    // After switch, button must be re-enabled (no stale "checking" carry-over).
+    const btnAfterSwitch = screen.getByLabelText("تحقق فوري من حالة الربط") as HTMLButtonElement;
+    expect(btnAfterSwitch.disabled).toBe(false);
+
+    // Now the OLD request finally resolves with a positive link for user-1.
+    await act(async () => {
+      resolveFirst({ data: { telegram_id: "stale-tg-id" }, error: null });
+      await Promise.resolve();
+    });
+
+    // CRITICAL: no success toast should fire for the previous user, and the
+    // CTA must remain visible (localLinked NOT set) for user-2.
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("تحقق فوري من حالة الربط")).toBeInTheDocument();
+  });
+
+  it("ignores a late error response after the user signed out / switched", async () => {
+    let rejectFirst: (e: Error) => void = () => {};
+    const firstPromise = new Promise<never>((_res, rej) => {
+      rejectFirst = rej;
+    });
+    maybeSingle.mockReturnValueOnce(firstPromise);
+
+    const view = renderHome();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("تحقق فوري من حالة الربط"));
+    });
+
+    // Switch account.
+    authState.user = { id: "user-2" };
+    await act(async () => {
+      view.rerender(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <SubscriberHome
+              subscription={null}
+              fullName="Other User"
+              isAdmin={false}
+              isLoading={false}
+              telegramLinked={false}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    });
+
+    // OLD request rejects after the switch — must NOT surface to the new user.
+    await act(async () => {
+      rejectFirst(new Error("Stale failure"));
+      await Promise.resolve();
+    });
+
+    expect(toastError).not.toHaveBeenCalled();
+    // Button must still be enabled for the new user.
+    expect((screen.getByLabelText("تحقق فوري من حالة الربط") as HTMLButtonElement).disabled).toBe(false);
+  });
+});
