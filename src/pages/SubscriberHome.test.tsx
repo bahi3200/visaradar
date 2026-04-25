@@ -81,6 +81,8 @@ beforeEach(() => {
   toastError.mockReset();
   toastInfo.mockReset();
   toastSuccess.mockReset();
+  authState.user = { id: "user-1" };
+  authState.loading = false;
 });
 
 afterEach(() => {
