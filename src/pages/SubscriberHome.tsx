@@ -15,6 +15,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTelegramLinkPolling } from "@/hooks/useTelegramLinkPolling";
 import { toast } from "sonner";
 
 interface SubscriptionData {
@@ -107,37 +108,19 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   const effectivelyLinked = telegramLinked || localLinked;
   const showTelegramCTA = !effectivelyLinked && !isAdmin && !isLoading;
 
-  // Auto-poll telegram link status every 30s while CTA is visible
+  // Auto-poll telegram link status every 30s while CTA is visible.
+  // Polling stops immediately when user signs out or switches accounts.
+  const pollingActive = !!user?.id && showTelegramCTA;
   useEffect(() => {
-    // Stop polling immediately if user signs out or switches accounts,
-    // or if there's no remaining reason to poll.
-    if (!user?.id || !showTelegramCTA) {
-      setAutoPolling(false);
-      return;
-    }
-    let cancelled = false;
-    setAutoPolling(true);
-    const interval = setInterval(async () => {
-      if (cancelled) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("telegram_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      if (data?.telegram_id) {
-        // Optimistically hide CTA immediately
-        setLocalLinked(true);
-        toast.success("✅ تم اكتشاف ربط Telegram بنجاح!");
-        queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
-      }
-    }, 30_000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      setAutoPolling(false);
-    };
-  }, [showTelegramCTA, user?.id, queryClient]);
+    setAutoPolling(pollingActive);
+    if (!pollingActive) return;
+    return () => setAutoPolling(false);
+  }, [pollingActive]);
+  useTelegramLinkPolling({
+    userId: user?.id ?? null,
+    enabled: showTelegramCTA,
+    onLinked: () => setLocalLinked(true),
+  });
 
   return (
     <Layout>
