@@ -65,8 +65,14 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   }, [telegramLinked]);
 
   const handleRefreshTelegram = async () => {
-    if (!user) return;
+    if (!user || checkingTg) return;
     setCheckingTg(true);
+    // Safety timeout: never leave the button disabled longer than 10s
+    // even if the network request hangs.
+    const timeoutId = setTimeout(() => {
+      setCheckingTg(false);
+      toast.error("انتهت مهلة التحقق. حاول مرة أخرى.");
+    }, 10_000);
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -86,6 +92,7 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "فشل التحقق من حالة الربط");
     } finally {
+      clearTimeout(timeoutId);
       setCheckingTg(false);
     }
   };
@@ -199,8 +206,9 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
                     type="button"
                     onClick={handleRefreshTelegram}
                     disabled={checkingTg}
-                    className="inline-flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 font-bold text-xs px-4 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                    aria-busy={checkingTg}
                     aria-label="تحقق فوري من حالة الربط"
+                    className="inline-flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 font-bold text-xs px-4 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md disabled:bg-emerald-500/15"
                   >
                     {checkingTg ? (
                       <>
