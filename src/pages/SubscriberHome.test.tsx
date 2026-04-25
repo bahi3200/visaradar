@@ -30,8 +30,12 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const authState: { user: { id: string } | null; loading: boolean } = {
+  user: { id: "user-1" },
+  loading: false,
+};
 vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ user: { id: "user-1" }, loading: false }),
+  useAuth: () => authState,
 }));
 
 // Disable polling side-effects entirely for these tests; we only care about
