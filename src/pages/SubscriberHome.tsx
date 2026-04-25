@@ -94,17 +94,22 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
 
   // Auto-poll telegram link status every 30s while CTA is visible
   useEffect(() => {
-    if (!showTelegramCTA || !user) {
+    // Stop polling immediately if user signs out or switches accounts,
+    // or if there's no remaining reason to poll.
+    if (!user?.id || !showTelegramCTA) {
       setAutoPolling(false);
       return;
     }
+    let cancelled = false;
     setAutoPolling(true);
     const interval = setInterval(async () => {
+      if (cancelled) return;
       const { data } = await supabase
         .from("profiles")
         .select("telegram_id")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (cancelled) return;
       if (data?.telegram_id) {
         // Optimistically hide CTA immediately
         setLocalLinked(true);
@@ -113,10 +118,17 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
       }
     }, 30_000);
     return () => {
+      cancelled = true;
       clearInterval(interval);
       setAutoPolling(false);
     };
-  }, [showTelegramCTA, user, queryClient]);
+  }, [showTelegramCTA, user?.id, queryClient]);
+
+  // Hard-stop any in-flight manual check state on user change / sign-out.
+  useEffect(() => {
+    setCheckingTg(false);
+    setAutoPolling(false);
+  }, [user?.id]);
 
   return (
     <Layout>
