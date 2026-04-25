@@ -9,7 +9,7 @@ import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import SocialMediaSection from "@/components/home/SocialMediaSection";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send, CheckCircle2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,6 +43,8 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   const [autoPolling, setAutoPolling] = useState(false);
   // Optimistic local override: hide CTA the instant we detect a saved telegram_id
   const [localLinked, setLocalLinked] = useState(false);
+  // Holds the in-flight verification's cleanup so the user can cancel early.
+  const checkCancelRef = useRef<(() => void) | null>(null);
 
   // Track previous user id so we can synchronously reset all session-scoped
   // UI state BEFORE the next render whenever the user signs out or switches
@@ -52,6 +54,9 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   useLayoutEffect(() => {
     const currentId = user?.id ?? null;
     if (prevUserIdRef.current !== currentId) {
+      // Abort any in-flight manual verification from the previous account.
+      checkCancelRef.current?.();
+      checkCancelRef.current = null;
       setLocalLinked(false);
       setCheckingTg(false);
       setAutoPolling(false);
@@ -68,18 +73,37 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
   const handleRefreshTelegram = async () => {
     if (!user || checkingTg) return;
     setCheckingTg(true);
+
+    // `cancelled` short-circuits the response handler if the user (or a
+    // logout / account switch) aborts the operation before it resolves.
+    let cancelled = false;
     // Safety timeout: never leave the button disabled longer than 10s
     // even if the network request hangs.
     const timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      checkCancelRef.current = null;
       setCheckingTg(false);
       toast.error("انتهت مهلة التحقق. حاول مرة أخرى.");
     }, 10_000);
+
+    // Expose a cancel handle so the cancel button (and session-reset effect)
+    // can abort this in-flight check.
+    checkCancelRef.current = () => {
+      if (cancelled) return;
+      cancelled = true;
+      clearTimeout(timeoutId);
+      checkCancelRef.current = null;
+      setCheckingTg(false);
+    };
+
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("telegram_id")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (cancelled) return;
       if (error) throw error;
       if (data?.telegram_id) {
         // Hide the CTA instantly, regardless of when my-profile refetches
@@ -91,11 +115,21 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
         queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
       }
     } catch (e) {
+      if (cancelled) return;
       toast.error(e instanceof Error ? e.message : "فشل التحقق من حالة الربط");
     } finally {
-      clearTimeout(timeoutId);
-      setCheckingTg(false);
+      if (!cancelled) {
+        clearTimeout(timeoutId);
+        checkCancelRef.current = null;
+        setCheckingTg(false);
+      }
     }
+  };
+
+  const handleCancelCheck = () => {
+    if (!checkingTg) return;
+    checkCancelRef.current?.();
+    toast.info("تم إلغاء عملية التحقق.");
   };
 
   const isSubscribed = !!subscription;
