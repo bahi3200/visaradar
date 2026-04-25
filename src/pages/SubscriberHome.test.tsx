@@ -60,7 +60,7 @@ vi.mock("@/components/home/SocialMediaSection", () => ({ default: () => null }))
 
 function renderHome() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const ui = (
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <SubscriberHome
@@ -73,6 +73,7 @@ function renderHome() {
       </MemoryRouter>
     </QueryClientProvider>
   );
+  return render(ui);
 }
 
 beforeEach(() => {
