@@ -3,6 +3,9 @@ import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";
+import PromoBanner from "@/components/pricing/PromoBanner";
+import { getPromoState, formatCountdown } from "@/lib/promoUtils";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate } from "react-router-dom";
@@ -31,6 +34,13 @@ export default function PricingPage() {
   const [serviceType, setServiceType] = useState<ServiceType>("both");
   const [selectedCountry, setSelectedCountry] = useState<string>("IT");
   const [selectedGoldenCountries, setSelectedGoldenCountries] = useState<string[]>(["IT"]);
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  // Tick every second so per-card countdowns and price flips stay live.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["packages"],
@@ -83,7 +93,8 @@ export default function PricingPage() {
 
   const getPackageAction = (pkg: any) => {
     const isCurrentPackage = hasActiveSubscription && activeSubscription?.package_id === pkg.id;
-    const isUpgradeAvailable = hasActiveSubscription && !isCurrentPackage && (pkg.price || 0) > currentPackagePrice;
+    const effective = getPromoState(pkg, now).effectivePrice ?? 0;
+    const isUpgradeAvailable = hasActiveSubscription && !isCurrentPackage && effective > currentPackagePrice;
     const canRenew = isCurrentPackage && daysLeft <= 15;
 
     if (!hasActiveSubscription) {
@@ -164,6 +175,7 @@ export default function PricingPage() {
 
   return (
     <Layout>
+      {packages && packages.length > 0 && <PromoBanner packages={packages} />}
       {/* Hero */}
       <section className="gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
