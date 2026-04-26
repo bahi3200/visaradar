@@ -194,4 +194,92 @@ describe("useTelegramLinkPolling", () => {
 
     expect(onLinked).toHaveBeenCalledTimes(1);
   });
+
+  it("never registers a setInterval when enabled=false from the start (showTelegramCTA=false)", async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    const onLinked = vi.fn();
+
+    const { unmount } = renderHook(
+      () =>
+        useTelegramLinkPolling({
+          userId: "user-1",
+          enabled: false,
+          intervalMs: 1000,
+          onLinked,
+        }),
+      { wrapper }
+    );
+
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(maybeSingle).not.toHaveBeenCalled();
+    expect(onLinked).not.toHaveBeenCalled();
+
+    unmount();
+    expect(clearIntervalSpy).not.toHaveBeenCalled();
+
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
+  });
+
+  it("does not register setInterval when userId is null even if enabled=true", async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    const onLinked = vi.fn();
+
+    renderHook(
+      () =>
+        useTelegramLinkPolling({
+          userId: null,
+          enabled: true,
+          intervalMs: 1000,
+          onLinked,
+        }),
+      { wrapper }
+    );
+
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(maybeSingle).not.toHaveBeenCalled();
+
+    setIntervalSpy.mockRestore();
+  });
+
+  it("registers setInterval only after enabled flips from false to true", async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    const onLinked = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useTelegramLinkPolling({
+          userId: "user-1",
+          enabled,
+          intervalMs: 1000,
+          onLinked,
+        }),
+      { wrapper, initialProps: { enabled: false } }
+    );
+
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(maybeSingle).toHaveBeenCalledTimes(1);
+
+    setIntervalSpy.mockRestore();
+  });
 });
