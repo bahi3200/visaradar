@@ -253,6 +253,9 @@ export type Database = {
           name_ar: string
           name_en: string
           price: number | null
+          promo_ends_at: string | null
+          promo_price: number | null
+          promo_starts_at: string | null
           service_type: string
           sort_order: number
           updated_at: string
@@ -268,6 +271,9 @@ export type Database = {
           name_ar: string
           name_en: string
           price?: number | null
+          promo_ends_at?: string | null
+          promo_price?: number | null
+          promo_starts_at?: string | null
           service_type?: string
           sort_order?: number
           updated_at?: string
@@ -283,6 +289,9 @@ export type Database = {
           name_ar?: string
           name_en?: string
           price?: number | null
+          promo_ends_at?: string | null
+          promo_price?: number | null
+          promo_starts_at?: string | null
           service_type?: string
           sort_order?: number
           updated_at?: string
