@@ -20,6 +20,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { getPromoState } from "@/lib/promoUtils";
+
+/** Convert ISO string → "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 type Package = {
   id: string;
@@ -293,10 +301,46 @@ export default function ManagePackages() {
 
               <div className="mb-4 pb-4 border-b border-border/30">
                 {pkg.price ? (
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
-                    <span className="text-xs text-muted-foreground">د.ج</span>
-                  </div>
+                  (() => {
+                    const promo = getPromoState(pkg);
+                    if (promo.isPromo) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground line-through tabular-nums">{promo.originalPrice}</span>
+                            <span className="text-[10px] font-black bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
+                              -{promo.discountPct}%
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-heading text-2xl font-black text-accent tabular-nums">{promo.effectivePrice}</span>
+                            <span className="text-xs text-muted-foreground">د.ج</span>
+                          </div>
+                          <p className="text-[10px] text-accent font-medium inline-flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            عرض ساري
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (pkg.promo_price && (pkg.promo_starts_at || pkg.promo_ends_at)) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
+                            <span className="text-xs text-muted-foreground">د.ج</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">عرض مُجدوَل (غير نشط الآن)</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
+                        <span className="text-xs text-muted-foreground">د.ج</span>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <span className="font-heading text-base font-bold text-accent">قريباً</span>
                 )}
