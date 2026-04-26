@@ -7,7 +7,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import {
   Plus, Edit2, Trash2, Crown, Package as PackageIcon,
-  Eye, EyeOff, Save, X, Loader2, Calendar, Globe
+  Eye, EyeOff, Save, X, Loader2, Calendar, Globe, Sparkles
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -20,6 +20,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { getPromoState } from "@/lib/promoUtils";
+
+/** Convert ISO string → "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 type Package = {
   id: string;
@@ -33,6 +41,9 @@ type Package = {
   service_type: string;
   sort_order: number;
   features_ar: string[] | null;
+  promo_price: number | null;
+  promo_starts_at: string | null;
+  promo_ends_at: string | null;
 };
 
 const packageSchema = z.object({
@@ -46,7 +57,23 @@ const packageSchema = z.object({
   is_golden: z.boolean(),
   is_active: z.boolean(),
   features_text: z.string().max(2000, "الميزات طويلة جداً"),
-});
+  promo_price: z.coerce.number().min(0).max(1000000).nullable(),
+  promo_starts_at: z.string(),
+  promo_ends_at: z.string(),
+}).refine(
+  (d) => {
+    if (d.promo_price === null || d.promo_price === 0) return true;
+    if (d.price === null || d.price === 0) return false;
+    return d.promo_price < d.price;
+  },
+  { message: "السعر الترويجي يجب أن يكون أقل من السعر الأصلي", path: ["promo_price"] },
+).refine(
+  (d) => {
+    if (!d.promo_starts_at || !d.promo_ends_at) return true;
+    return new Date(d.promo_starts_at) < new Date(d.promo_ends_at);
+  },
+  { message: "تاريخ نهاية العرض يجب أن يكون بعد تاريخ البداية", path: ["promo_ends_at"] },
+);
 
 const emptyForm = {
   name_ar: "",
@@ -59,6 +86,9 @@ const emptyForm = {
   is_golden: false,
   is_active: true,
   features_text: "",
+  promo_price: 0,
+  promo_starts_at: "",
+  promo_ends_at: "",
 };
 
 export default function ManagePackages() {
@@ -101,6 +131,9 @@ export default function ManagePackages() {
       is_golden: pkg.is_golden,
       is_active: pkg.is_active,
       features_text: (pkg.features_ar || []).join("\n"),
+      promo_price: pkg.promo_price ?? 0,
+      promo_starts_at: pkg.promo_starts_at ? toLocalInput(pkg.promo_starts_at) : "",
+      promo_ends_at: pkg.promo_ends_at ? toLocalInput(pkg.promo_ends_at) : "",
     });
     setDialogOpen(true);
   };
@@ -131,6 +164,9 @@ export default function ManagePackages() {
         is_golden: parsed.data.is_golden,
         is_active: parsed.data.is_active,
         features_ar,
+        promo_price: parsed.data.promo_price && parsed.data.promo_price > 0 ? parsed.data.promo_price : null,
+        promo_starts_at: parsed.data.promo_starts_at ? new Date(parsed.data.promo_starts_at).toISOString() : null,
+        promo_ends_at: parsed.data.promo_ends_at ? new Date(parsed.data.promo_ends_at).toISOString() : null,
       };
 
       if (editing) {
@@ -265,10 +301,46 @@ export default function ManagePackages() {
 
               <div className="mb-4 pb-4 border-b border-border/30">
                 {pkg.price ? (
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
-                    <span className="text-xs text-muted-foreground">د.ج</span>
-                  </div>
+                  (() => {
+                    const promo = getPromoState(pkg);
+                    if (promo.isPromo) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground line-through tabular-nums">{promo.originalPrice}</span>
+                            <span className="text-[10px] font-black bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
+                              -{promo.discountPct}%
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-heading text-2xl font-black text-accent tabular-nums">{promo.effectivePrice}</span>
+                            <span className="text-xs text-muted-foreground">د.ج</span>
+                          </div>
+                          <p className="text-[10px] text-accent font-medium inline-flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            عرض ساري
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (pkg.promo_price && (pkg.promo_starts_at || pkg.promo_ends_at)) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
+                            <span className="text-xs text-muted-foreground">د.ج</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">عرض مُجدوَل (غير نشط الآن)</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-heading text-2xl font-black text-foreground">{pkg.price}</span>
+                        <span className="text-xs text-muted-foreground">د.ج</span>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <span className="font-heading text-base font-bold text-accent">قريباً</span>
                 )}
@@ -412,6 +484,53 @@ export default function ManagePackages() {
                 maxLength={2000}
               />
               <p className="text-[10px] text-muted-foreground">حتى 30 ميزة، كل ميزة في سطر منفصل</p>
+            </div>
+
+            {/* Promo section */}
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <Label className="text-sm font-bold text-foreground">العرض الترويجي (اختياري)</Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                اضبط سعراً مخفّضاً ثابتاً ومدة زمنية. يُطبَّق تلقائياً عند بداية المدة ويعود السعر الأصلي بعد انتهائها.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
+                  <Input
+                    id="promo_price"
+                    type="number"
+                    min={0}
+                    value={form.promo_price ?? 0}
+                    onChange={(e) => setForm({ ...form, promo_price: Number(e.target.value) })}
+                    placeholder="0 = بلا عرض"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_starts_at">تاريخ البداية</Label>
+                  <Input
+                    id="promo_starts_at"
+                    type="datetime-local"
+                    value={form.promo_starts_at}
+                    onChange={(e) => setForm({ ...form, promo_starts_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_ends_at">تاريخ النهاية</Label>
+                  <Input
+                    id="promo_ends_at"
+                    type="datetime-local"
+                    value={form.promo_ends_at}
+                    onChange={(e) => setForm({ ...form, promo_ends_at: e.target.value })}
+                  />
+                </div>
+              </div>
+              {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price && (
+                <p className="text-[11px] text-accent font-medium">
+                  معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
