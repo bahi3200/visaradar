@@ -486,6 +486,53 @@ export default function ManagePackages() {
               <p className="text-[10px] text-muted-foreground">حتى 30 ميزة، كل ميزة في سطر منفصل</p>
             </div>
 
+            {/* Promo section */}
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <Label className="text-sm font-bold text-foreground">العرض الترويجي (اختياري)</Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                اضبط سعراً مخفّضاً ثابتاً ومدة زمنية. يُطبَّق تلقائياً عند بداية المدة ويعود السعر الأصلي بعد انتهائها.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
+                  <Input
+                    id="promo_price"
+                    type="number"
+                    min={0}
+                    value={form.promo_price ?? 0}
+                    onChange={(e) => setForm({ ...form, promo_price: Number(e.target.value) })}
+                    placeholder="0 = بلا عرض"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_starts_at">تاريخ البداية</Label>
+                  <Input
+                    id="promo_starts_at"
+                    type="datetime-local"
+                    value={form.promo_starts_at}
+                    onChange={(e) => setForm({ ...form, promo_starts_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_ends_at">تاريخ النهاية</Label>
+                  <Input
+                    id="promo_ends_at"
+                    type="datetime-local"
+                    value={form.promo_ends_at}
+                    onChange={(e) => setForm({ ...form, promo_ends_at: e.target.value })}
+                  />
+                </div>
+              </div>
+              {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price && (
+                <p className="text-[11px] text-accent font-medium">
+                  معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border/50">
                 <div>
