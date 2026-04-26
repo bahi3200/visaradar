@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { getPromoState } from "@/lib/promoUtils";
 
 /** Convert ISO string → "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. */
@@ -27,6 +28,11 @@ function toLocalInput(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Build a "YYYY-MM-DDTHH:mm" string from a Date (local time). */
+function dateToLocalInput(d: Date): string {
+  return toLocalInput(d.toISOString());
 }
 
 type Package = {
