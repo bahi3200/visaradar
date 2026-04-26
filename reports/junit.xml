@@ -1,0 +1,961 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="188" failures="0" errors="0" time="3.920762893">
+    <testsuite name="src/components/Navbar.test.tsx" timestamp="2026-04-26T21:35:45.242Z" hostname="sandbox-pool-59d469576c-m498r" tests="2" failures="0" errors="0" skipped="0" time="0.808659059">
+        <testcase classname="src/components/Navbar.test.tsx" name="Navbar — keyboard shortcuts link &gt; exposes /help/shortcuts inside the user dropdown menu (desktop)" time="0.589385782">
+        </testcase>
+        <testcase classname="src/components/Navbar.test.tsx" name="Navbar — keyboard shortcuts link &gt; exposes /help/shortcuts inside the mobile menu" time="0.217130345">
+            <system-err>
+Error: Not implemented: window.scrollTo
+    at module.exports (/dev-server/node_modules/.bun/jsdom@20.0.3/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at /dev-server/node_modules/.bun/jsdom@20.0.3/node_modules/jsdom/lib/jsdom/browser/Window.js:870:7
+    at file:///dev-server/node_modules/.bun/framer-motion@11.18.2+6dbf9a050bc9aadb/node_modules/framer-motion/dist/es/render/utils/KeyframesResolver.mjs:41:24
+    at Array.forEach (&lt;anonymous&gt;)
+    at measureAllKeyframes (file:///dev-server/node_modules/.bun/framer-motion@11.18.2+6dbf9a050bc9aadb/node_modules/framer-motion/dist/es/render/utils/KeyframesResolver.mjs:39:28)
+    at triggerCallback (file:///dev-server/node_modules/.bun/framer-motion@11.18.2+6dbf9a050bc9aadb/node_modules/framer-motion/dist/es/frameloop/render-step.mjs:28:9)
+    at Set.forEach (&lt;anonymous&gt;)
+    at Object.process (file:///dev-server/node_modules/.bun/framer-motion@11.18.2+6dbf9a050bc9aadb/node_modules/framer-motion/dist/es/frameloop/render-step.mjs:67:23)
+    at processBatch (file:///dev-server/node_modules/.bun/framer-motion@11.18.2+6dbf9a050bc9aadb/node_modules/framer-motion/dist/es/frameloop/batcher.mjs:39:26)
+    at invokeTheCallbackFunction (/dev-server/node_modules/.bun/jsdom@20.0.3/node_modules/jsdom/lib/jsdom/living/generated/Function.js:19:26) [90mundefined[39m
+
+            </system-err>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/NotificationPermissionBanner.test.tsx" timestamp="2026-04-26T21:35:45.249Z" hostname="sandbox-pool-59d469576c-m498r" tests="5" failures="0" errors="0" skipped="0" time="0.09144987">
+        <testcase classname="src/components/NotificationPermissionBanner.test.tsx" name="NotificationPermissionBanner — requestPermission gating &gt; does NOT call requestPermission while auth is still loading" time="0.028849078">
+            <system-err>
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/components/NotificationPermissionBanner.test.tsx" name="NotificationPermissionBanner — requestPermission gating &gt; does NOT call requestPermission on public auth routes (even when authenticated)" time="0.004469063">
+        </testcase>
+        <testcase classname="src/components/NotificationPermissionBanner.test.tsx" name="NotificationPermissionBanner — requestPermission gating &gt; does NOT call requestPermission on /privacy, /terms, /reset-password, /install, /help" time="0.013575703">
+        </testcase>
+        <testcase classname="src/components/NotificationPermissionBanner.test.tsx" name="NotificationPermissionBanner — requestPermission gating &gt; DOES auto-prompt once after auth resolves on a private route" time="0.032674451">
+        </testcase>
+        <testcase classname="src/components/NotificationPermissionBanner.test.tsx" name="NotificationPermissionBanner — requestPermission gating &gt; does NOT re-prompt if the user was already prompted (per-user flag)" time="0.009591781">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useGlobalShortcuts.test.tsx" timestamp="2026-04-26T21:35:45.251Z" hostname="sandbox-pool-59d469576c-m498r" tests="6" failures="0" errors="0" skipped="0" time="0.082365631">
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; navigates to /dashboard on g then d" time="0.036315873">
+        </testcase>
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; navigates to /jobs on g then j" time="0.009350556">
+        </testcase>
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; opens /help/shortcuts when ? is pressed" time="0.00576129">
+        </testcase>
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; focuses an input[type=search] when / is pressed" time="0.018078287">
+        </testcase>
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; ignores shortcuts while typing in an input" time="0.004217112">
+        </testcase>
+        <testcase classname="src/hooks/useGlobalShortcuts.test.tsx" name="useGlobalShortcuts &gt; aborts the g-sequence after timeout" time="0.004433239">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useTelegramLinkPolling.test.tsx" timestamp="2026-04-26T21:35:45.253Z" hostname="sandbox-pool-59d469576c-m498r" tests="8" failures="0" errors="0" skipped="0" time="0.069109889">
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; polls profile every interval while enabled and userId is set" time="0.028449867">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; stops polling immediately when userId becomes null (sign-out)" time="0.015575506">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; stops polling immediately when userId changes (account switch) and ignores stale in-flight responses" time="0.005217388">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; does not poll when enabled is false" time="0.004112144">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; calls onLinked when profile returns telegram_id" time="0.003011577">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; never registers a setInterval when enabled=false from the start (showTelegramCTA=false)" time="0.003896627">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; does not register setInterval when userId is null even if enabled=true" time="0.003463233">
+        </testcase>
+        <testcase classname="src/hooks/useTelegramLinkPolling.test.tsx" name="useTelegramLinkPolling &gt; registers setInterval only after enabled flips from false to true" time="0.003362743">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/receiptStorage.test.ts" timestamp="2026-04-26T21:35:45.257Z" hostname="sandbox-pool-59d469576c-m498r" tests="9" failures="0" errors="0" skipped="0" time="0.007268885">
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; returns null for empty string" time="0.002048731">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; strips the &apos;receipts/&apos; prefix from a direct storage path" time="0.000423554">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; extracts path from a legacy public URL" time="0.000253571">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; extracts path from a signed URL (with token query)" time="0.000227581">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; extracts path from a generic /object/receipts/ URL (no public/sign segment)" time="0.000109537">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; decodes URL-encoded characters in the path" time="0.000134623">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; returns null for an unrelated URL" time="0.000104817">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; handles signed URL with multiple query params" time="0.000076133">
+        </testcase>
+        <testcase classname="src/lib/receiptStorage.test.ts" name="extractStoragePath &gt; detects receipt filename and kind" time="0.001537398">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/relativeTime.test.ts" timestamp="2026-04-26T21:35:45.261Z" hostname="sandbox-pool-59d469576c-m498r" tests="37" failures="0" errors="0" skipped="0" time="0.061709282">
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; invalid inputs &gt; returns empty string for null" time="0.005515775">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; invalid inputs &gt; returns empty string for undefined" time="0.000958927">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; invalid inputs &gt; returns empty string for empty string" time="0.000669368">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; invalid inputs &gt; returns empty string for invalid date string" time="0.000529848">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; invalid inputs &gt; returns empty string for invalid Date object" time="0.000587969">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; seconds &gt; returns &apos;قبل لحظات&apos; for less than 45 seconds" time="0.00068998">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; minutes &gt; returns &apos;قبل دقيقة&apos; for ~1 minute" time="0.000458667">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; minutes &gt; returns &apos;قبل دقيقتين&apos; for exactly 2 minutes" time="0.000542996">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; minutes &gt; returns &apos;قبل N دقائق&apos; for 3-10 minutes" time="0.001001679">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; minutes &gt; returns &apos;قبل N دقيقة&apos; for 11-59 minutes" time="0.000654454">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; hours &gt; returns &apos;قبل ساعة&apos; for ~1 hour" time="0.000564482">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; hours &gt; returns &apos;قبل ساعتين&apos; for exactly 2 hours" time="0.000481906">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; hours &gt; returns &apos;قبل N ساعات&apos; for 3-10 hours" time="0.000395301">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; hours &gt; returns &apos;قبل N ساعة&apos; for 11-23 hours" time="0.000378393">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; days &gt; returns &apos;قبل يوم&apos; for ~1 day" time="0.000324892">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; days &gt; returns &apos;قبل يومين&apos; for exactly 2 days" time="0.000289973">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; days &gt; returns &apos;قبل N أيام&apos; for 3-10 days" time="0.000400339">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; days &gt; returns &apos;قبل N يوماً&apos; for 11-29 days" time="0.000400655">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; months &gt; returns &apos;قبل شهر&apos; for ~1 month" time="0.000387355">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; months &gt; returns &apos;قبل شهرين&apos; for exactly 2 months" time="0.000376827">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; months &gt; returns &apos;قبل N أشهر&apos; for 3-10 months" time="0.000342904">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; years &gt; returns &apos;قبل سنة&apos; for ~1 year" time="0.000370217">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; years &gt; returns &apos;قبل سنتين&apos; for exactly 2 years" time="0.00037001">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; years &gt; returns &apos;قبل N سنوات&apos; for 3-10 years" time="0.000379153">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; years &gt; returns &apos;قبل N سنة&apos; for 11+ years" time="0.000375167">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; future dates &gt; replaces &apos;قبل&apos; with &apos;خلال&apos; for future minutes" time="0.000370344">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; future dates &gt; replaces &apos;قبل&apos; with &apos;خلال&apos; for future days" time="0.00037978">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; future dates &gt; handles &apos;خلال لحظات&apos; for near-future" time="0.000350503">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; input types &gt; accepts ISO string" time="0.000625971">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatRelativeArabic &gt; input types &gt; accepts Date object" time="0.000428252">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatLinkedSince &gt; returns empty string for invalid input" time="0.000508933">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatLinkedSince &gt; replaces &apos;قبل&apos; with &apos;مرتبط منذ&apos; for past dates" time="0.000401019">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatLinkedSince &gt; replaces &apos;قبل لحظات&apos; correctly" time="0.000491683">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatLinkedSince &gt; does not transform future-prefix &apos;خلال&apos;" time="0.00048983">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatFullDateAr &gt; returns empty string for invalid input" time="0.000566575">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatFullDateAr &gt; returns a non-empty localized string for valid date" time="0.034742764">
+        </testcase>
+        <testcase classname="src/lib/relativeTime.test.ts" name="formatFullDateAr &gt; accepts ISO string" time="0.001148621">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/PaymentSettings.test.tsx" timestamp="2026-04-26T21:35:45.276Z" hostname="sandbox-pool-59d469576c-m498r" tests="12" failures="0" errors="0" skipped="0" time="0.679890156">
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تحديث فوري بعد upsert &gt; يحدّث الحقول الأربعة فوراً بعد نجاح upsert قبل اكتمال invalidateQueries" time="0.195528324">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 19.9
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;old-ccp&apos;[39m,
+    ccp_key: [32m&apos;old-key&apos;[39m,
+    rip_number: [32m&apos;old-rip&apos;[39m,
+    account_holder: [32m&apos;old-holder&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;9999999999&apos;[39m,
+    ccp_key: [32m&apos;77&apos;[39m,
+    rip_number: [32m&apos;00799999000123456789&apos;[39m,
+    account_holder: [32m&apos;محمد الجديد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.202Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.3 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;9999999999&apos;[39m,
+    ccp_key: [32m&apos;77&apos;[39m,
+    rip_number: [32m&apos;00799999000123456789&apos;[39m,
+    account_holder: [32m&apos;محمد الجديد&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+  ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+  ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تحديث فوري بعد upsert &gt; عند data.length===0: لا تُحدَّث الواجهة، يظهر toast خطأ واضح، ولا تُستدعى invalidateQueries" time="0.078911337">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.9
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;old-ccp&apos;[39m,
+    ccp_key: [32m&apos;old-key&apos;[39m,
+    rip_number: [32m&apos;old-rip&apos;[39m,
+    account_holder: [32m&apos;old-holder&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;محاولة-جديدة&apos;[39m,
+    ccp_key: [32m&apos;old-key&apos;[39m,
+    rip_number: [32m&apos;old-rip&apos;[39m,
+    account_holder: [32m&apos;old-holder&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.273Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m0[39m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+  step 4 — upsert returned 0 rows (silent RLS reject)
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; ✅ النجاح: useQuery يكتب كائناً واحداً، وsetQueryData بعد upsert يكتب نفس الشكل" time="0.04135924">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 1.2
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.329Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;222&apos;[39m,
+    ccp_key: [32m&apos;22&apos;[39m,
+    rip_number: [32m&apos;rip-222&apos;[39m,
+    account_holder: [32m&apos;محمد&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; ⛔ رفض RLS (data.length===0): cache لا يتغير بعد فشل upsert" time="0.034489192">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.9
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.368Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m0[39m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+  step 4 — upsert returned 0 rows (silent RLS reject)
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; 📭 لا يوجد صف (maybeSingle =&gt; null): useQuery يكتب null في cache" time="0.011215854">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.7
+  data: [1mnull[22m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+[applyPaymentSettings] تم تجاهل التحديث: data فارغ [1mnull[22m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; 🛡️ EMPTY_SAVED_ROW: upsert يرجع [null] → لا يُستدعى setQueryData ويظهر toast.error" time="0.044043157">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.5
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.414Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.6 rows= [33m1[39m
+  step 5 — saved row (normalized): [1mnull[22m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+  step 5 — savedRow is null/undefined despite non-empty data array
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; 🔑 QUERY_KEY متطابق حرفياً بين useQuery و setQueryData (لا اختلاف array/object key order)" time="0.031687097">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.6
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.452Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;999&apos;[39m,
+    ccp_key: [32m&apos;99&apos;[39m,
+    rip_number: [32m&apos;rip-999&apos;[39m,
+    account_holder: [32m&apos;محمد&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطابق شكل cache بين useQuery و setQueryData &gt; 🚫 فشل RLS لا يُغيّر قيم الحقول المرئية ولا يستدعي toast.success" time="0.067051838">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 3.0
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;USER-EDIT-CCP&apos;[39m,
+    ccp_key: [32m&apos;USER-EDIT-KEY&apos;[39m,
+    rip_number: [32m&apos;USER-EDIT-RIP&apos;[39m,
+    account_holder: [32m&apos;USER-EDIT-HOLDER&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.512Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m0[39m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+  step 4 — upsert returned 0 rows (silent RLS reject)
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — ضغط حفظ مرتين متتاليتين &gt; 🔁 ضغط حفظ مرتين متتاليتين: cache النهائي يطابق آخر upsert بدون تداخل" time="0.053987286">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 1.1
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;AAA-1&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.564Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.2 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;AAA-1&apos;[39m,
+    ccp_key: [32m&apos;K1&apos;[39m,
+    rip_number: [32m&apos;rip-AAA-1&apos;[39m,
+    account_holder: [32m&apos;حفظ-أول&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;BBB-2&apos;[39m,
+    ccp_key: [32m&apos;K1&apos;[39m,
+    rip_number: [32m&apos;rip-AAA-1&apos;[39m,
+    account_holder: [32m&apos;حفظ-أول&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.577Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;BBB-2&apos;[39m,
+    ccp_key: [32m&apos;K2&apos;[39m,
+    rip_number: [32m&apos;rip-BBB-2&apos;[39m,
+    account_holder: [32m&apos;حفظ-ثاني&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — ضغط حفظ مرتين متتاليتين &gt; 🔁 ضغطتان ناجحتان متسلسلتان: cache يساوي تماماً نتيجة آخر upsert" time="0.045256471">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 1.3
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;000&apos;[39m,
+    ccp_key: [32m&apos;00&apos;[39m,
+    rip_number: [32m&apos;rip-000&apos;[39m,
+    account_holder: [32m&apos;بداية&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;00&apos;[39m,
+    rip_number: [32m&apos;rip-000&apos;[39m,
+    account_holder: [32m&apos;بداية&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.613Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أول&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;222&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أول&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.623Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;222&apos;[39m,
+    ccp_key: [32m&apos;22&apos;[39m,
+    rip_number: [32m&apos;rip-222&apos;[39m,
+    account_holder: [32m&apos;ثاني&apos;[39m,
+    referrer_bonus_days: [90mundefined[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطبيع شكل الصف بعد upsert بأنواع مختلطة &gt; 🧬 upsert يُرجع حقولاً بأنواع مختلطة → cache يحتفظ بشكل PaymentSettingsRow المُطبَّع" time="0.037798257">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.7
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.658Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): {
+    id: [32m&apos;12345&apos;[39m,
+    ccp_number: [32m&apos;9876543210&apos;[39m,
+    ccp_key: [32m&apos;&apos;[39m,
+    rip_number: [32m&apos;00799999000123456789&apos;[39m,
+    account_holder: [32m&apos;محمد المختلط&apos;[39m,
+    referrer_bonus_days: [33m7[39m,
+    referred_bonus_days: [90mundefined[39m,
+    updated_at: [90mundefined[39m
+  }
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/PaymentSettings.test.tsx" name="PaymentSettings — تطبيع شكل الصف بعد upsert بأنواع مختلطة &gt; 🧬 upsert يُرجع كائناً بدون id (نوع صحيح لكن بيانات ناقصة) → التطبيع يرفضه ولا يُكتب cache" time="0.035523645">
+            <system-out>
+[PaymentSettings] FETCH payment_settings
+  duration_ms: 0.7
+  data: {
+    id: [32m&apos;row-1&apos;[39m,
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m
+  }
+
+[PaymentSettings] SAVE flow
+
+  step 1 — auth.uid(): admin-uid email: admin@test.com
+
+  step 2 — has_role(admin): [33mtrue[39m err: [1mnull[22m
+  step 3 — upsert payload: {
+    ccp_number: [32m&apos;111&apos;[39m,
+    ccp_key: [32m&apos;11&apos;[39m,
+    rip_number: [32m&apos;rip-111&apos;[39m,
+    account_holder: [32m&apos;أحمد&apos;[39m,
+    updated_at: [32m&apos;2026-04-26T21:35:43.695Z&apos;[39m,
+    id: [32m&apos;row-1&apos;[39m
+  }
+
+  step 4 — upsert response: duration_ms= 0.1 rows= [33m1[39m
+  step 5 — saved row (normalized): [1mnull[22m
+
+            </system-out>
+            <system-err>
+  [applyPaymentSettings] تم تجاهل التحديث: data فارغ [90mundefined[39m
+
+  step 5 — savedRow is null/undefined despite non-empty data array
+
+            </system-err>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/SubscriberHome.test.tsx" timestamp="2026-04-26T21:35:45.299Z" hostname="sandbox-pool-59d469576c-m498r" tests="5" failures="0" errors="0" skipped="0" time="0.27919415">
+        <testcase classname="src/pages/SubscriberHome.test.tsx" name="SubscriberHome — verify button resilience &gt; re-enables the verify button when the network request rejects" time="0.130959286">
+            <system-err>
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/SubscriberHome.test.tsx" name="SubscriberHome — verify button resilience &gt; re-enables the verify button after the 10s safety timeout fires" time="0.043591905">
+        </testcase>
+        <testcase classname="src/pages/SubscriberHome.test.tsx" name="SubscriberHome — verify button resilience &gt; cancel button aborts an in-flight check and re-enables verify" time="0.033932609">
+        </testcase>
+        <testcase classname="src/pages/SubscriberHome.test.tsx" name="SubscriberHome — user switch invalidates in-flight verify &gt; ignores a late successful response when the user switched accounts mid-flight" time="0.037472636">
+        </testcase>
+        <testcase classname="src/pages/SubscriberHome.test.tsx" name="SubscriberHome — user switch invalidates in-flight verify &gt; ignores a late error response after the user signed out / switched" time="0.030510144">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/chatMessageInsertPolicy.test.ts" timestamp="2026-04-26T21:35:45.302Z" hostname="sandbox-pool-59d469576c-m498r" tests="5" failures="0" errors="0" skipped="0" time="0.005054356">
+        <testcase classname="src/test/chatMessageInsertPolicy.test.ts" name="chat_messages INSERT policy (conversation ownership) &gt; allows a user to insert into their own conversation" time="0.001793213">
+        </testcase>
+        <testcase classname="src/test/chatMessageInsertPolicy.test.ts" name="chat_messages INSERT policy (conversation ownership) &gt; REJECTS inserting a message into another user&apos;s conversation" time="0.000451604">
+        </testcase>
+        <testcase classname="src/test/chatMessageInsertPolicy.test.ts" name="chat_messages INSERT policy (conversation ownership) &gt; rejects spoofing user_id to match the conversation owner" time="0.000245333">
+        </testcase>
+        <testcase classname="src/test/chatMessageInsertPolicy.test.ts" name="chat_messages INSERT policy (conversation ownership) &gt; rejects unauthenticated inserts" time="0.000310744">
+        </testcase>
+        <testcase classname="src/test/chatMessageInsertPolicy.test.ts" name="chat_messages INSERT policy (conversation ownership) &gt; rejects inserts referencing a non-existent conversation" time="0.000174914">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/example.test.ts" timestamp="2026-04-26T21:35:45.305Z" hostname="sandbox-pool-59d469576c-m498r" tests="1" failures="0" errors="0" skipped="0" time="0.003501343">
+        <testcase classname="src/test/example.test.ts" name="example &gt; should pass" time="0.00184142">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/moderatorUpdatePolicy.test.ts" timestamp="2026-04-26T21:35:45.306Z" hostname="sandbox-pool-59d469576c-m498r" tests="8" failures="0" errors="0" skipped="0" time="0.005661505">
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; allows updating only moderator_action / moderator_action_at / moderator_id" time="0.002510732">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing status" time="0.000413543">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing admin_notes" time="0.000151668">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing reviewed_by / reviewed_at" time="0.000176212">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing receipt_url or PII fields" time="0.000199414">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing ai_verification_result or ai_fraud_detected" time="0.000237531">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS changing user_id, package_id, service_type, countries" time="0.00022585">
+        </testcase>
+        <testcase classname="src/test/moderatorUpdatePolicy.test.ts" name="subscription_requests moderator UPDATE policy &gt; REJECTS update from non-moderator users" time="0.000103853">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/moderatorWriteBoundaries.test.ts" timestamp="2026-04-26T21:35:45.309Z" hostname="sandbox-pool-59d469576c-m498r" tests="44" failures="0" errors="0" skipped="0" time="0.013156647">
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; payment_settings &gt; BLOCKS moderator INSERT" time="0.002750846">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; payment_settings &gt; BLOCKS moderator UPDATE" time="0.000265394">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; payment_settings &gt; BLOCKS moderator DELETE" time="0.000173317">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; payment_settings &gt; BLOCKS regular user writes" time="0.00035194">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; payment_settings &gt; BLOCKS anonymous writes" time="0.000321264">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; site_settings &gt; BLOCKS moderator INSERT" time="0.000202155">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; site_settings &gt; BLOCKS moderator UPDATE" time="0.000099935">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; site_settings &gt; BLOCKS moderator DELETE" time="0.000073043">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; site_settings &gt; BLOCKS regular user writes" time="0.000614534">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; site_settings &gt; BLOCKS anonymous writes" time="0.000201263">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; user_roles &gt; BLOCKS moderator INSERT" time="0.000220599">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; user_roles &gt; BLOCKS moderator UPDATE" time="0.000068507">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; user_roles &gt; BLOCKS moderator DELETE" time="0.000062884">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; user_roles &gt; BLOCKS regular user writes" time="0.000118124">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; user_roles &gt; BLOCKS anonymous writes" time="0.000098428">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscriptions &gt; BLOCKS moderator INSERT" time="0.000060751">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscriptions &gt; BLOCKS moderator UPDATE" time="0.000052198">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscriptions &gt; BLOCKS moderator DELETE" time="0.00005186">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscriptions &gt; BLOCKS regular user writes" time="0.0001129">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscriptions &gt; BLOCKS anonymous writes" time="0.000101904">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; email_notifications &gt; BLOCKS moderator INSERT" time="0.000064371">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; email_notifications &gt; BLOCKS moderator UPDATE" time="0.000056708">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; email_notifications &gt; BLOCKS moderator DELETE" time="0.000056026">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; email_notifications &gt; BLOCKS regular user writes" time="0.000097574">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; email_notifications &gt; BLOCKS anonymous writes" time="0.000106654">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_notifications &gt; BLOCKS moderator INSERT" time="0.000061405">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_notifications &gt; BLOCKS moderator UPDATE" time="0.000055841">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_notifications &gt; BLOCKS moderator DELETE" time="0.000069154">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_notifications &gt; BLOCKS regular user writes" time="0.000133138">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_notifications &gt; BLOCKS anonymous writes" time="0.000105112">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_monitor_checks &gt; BLOCKS moderator INSERT" time="0.000062293">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_monitor_checks &gt; BLOCKS moderator UPDATE" time="0.000057291">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_monitor_checks &gt; BLOCKS moderator DELETE" time="0.000056077">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_monitor_checks &gt; BLOCKS regular user writes" time="0.00010205">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; visa_monitor_checks &gt; BLOCKS anonymous writes" time="0.000102646">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscription_requests (moderator UPDATE allowed, others blocked) &gt; ALLOWS moderator UPDATE (column-restricted; see moderatorUpdatePolicy.test.ts)" time="0.000118537">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscription_requests (moderator UPDATE allowed, others blocked) &gt; BLOCKS moderator INSERT" time="0.000075434">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; subscription_requests (moderator UPDATE allowed, others blocked) &gt; BLOCKS moderator DELETE" time="0.000081842">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; settings_audit_log (append-only) &gt; BLOCKS UPDATE for everyone including admin" time="0.000111185">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; settings_audit_log (append-only) &gt; BLOCKS DELETE for everyone including admin" time="0.000098966">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; settings_audit_log (append-only) &gt; ALLOWS admin INSERT only" time="0.000096327">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; Privilege matrix invariants &gt; admin always &gt;= moderator on every (table, op)" time="0.000263459">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; Privilege matrix invariants &gt; anonymous never gets more privilege than authenticated user" time="0.000168478">
+        </testcase>
+        <testcase classname="src/test/moderatorWriteBoundaries.test.ts" name="Moderator write boundaries across admin-managed tables &gt; Privilege matrix invariants &gt; moderator has EXACTLY ONE write grant beyond regular users (subscription_requests UPDATE)" time="0.001133358">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/paymentSettingsAdminWrite.test.ts" timestamp="2026-04-26T21:35:45.324Z" hostname="sandbox-pool-59d469576c-m498r" tests="6" failures="0" errors="0" skipped="0" time="0.008306817">
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; admin UPDATE returns the affected row" time="0.00213098">
+        </testcase>
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; admin INSERT (no existing row) creates a fresh row" time="0.001667011">
+        </testcase>
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; REJECTS write when no auth session is present" time="0.000343516">
+        </testcase>
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; REJECTS write from a non-admin user (RLS denied)" time="0.001402078">
+        </testcase>
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; preserves untouched fields on partial UPDATE" time="0.000382841">
+        </testcase>
+        <testcase classname="src/test/paymentSettingsAdminWrite.test.ts" name="payment_settings admin write — no silent failures &gt; treats empty result rows as a failure (silent-success guard)" time="0.000289761">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/userRolesReadPolicy.test.ts" timestamp="2026-04-26T21:35:45.327Z" hostname="sandbox-pool-59d469576c-m498r" tests="8" failures="0" errors="0" skipped="0" time="0.005896666">
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; a regular user sees ONLY their own row" time="0.002287381">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; a regular user CANNOT read another user&apos;s row" time="0.0003129">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; a regular user CANNOT read an admin&apos;s row (no privilege escalation discovery)" time="0.000158526">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; a moderator (non-admin) sees ONLY their own row, not others" time="0.000340471">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; an admin sees ALL rows" time="0.000207662">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; an admin can read another user&apos;s row" time="0.000165223">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; an unauthenticated caller sees NO rows" time="0.000325901">
+        </testcase>
+        <testcase classname="src/test/userRolesReadPolicy.test.ts" name="user_roles SELECT policy — non-admins cannot read other users&apos; rows &gt; the restrictive policy still blocks non-admins even if a permissive policy would otherwise leak" time="0.000270566">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test/userRolesWritePolicy.test.ts" timestamp="2026-04-26T21:35:45.331Z" hostname="sandbox-pool-59d469576c-m498r" tests="16" failures="0" errors="0" skipped="0" time="0.008505673">
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; admin CAN insert any role row" time="0.00198329">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; regular user CANNOT insert an admin row for themselves (privilege escalation blocked)" time="0.000341756">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; regular user CANNOT insert any row, even a &apos;user&apos; row for themselves" time="0.00024106">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; regular user CANNOT insert a row targeting another user" time="0.00027854">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; moderator (non-admin) CANNOT insert any row, including granting themselves admin" time="0.000210637">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; INSERT &gt; anonymous caller CANNOT insert" time="0.000302268">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; UPDATE &gt; admin CAN update any row" time="0.000256419">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; UPDATE &gt; regular user CANNOT promote their own row to admin" time="0.000174126">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; UPDATE &gt; regular user CANNOT update another user&apos;s row" time="0.00044975">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; UPDATE &gt; moderator (non-admin) CANNOT update any row" time="0.000327186">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; UPDATE &gt; anonymous caller CANNOT update" time="0.00033461">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; DELETE &gt; admin CAN delete any row" time="0.000258476">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; DELETE &gt; regular user CANNOT delete their own row (cannot self-revoke or tamper)" time="0.000149586">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; DELETE &gt; regular user CANNOT delete an admin&apos;s row to take over" time="0.000147985">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; DELETE &gt; moderator (non-admin) CANNOT delete any row" time="0.00015067">
+        </testcase>
+        <testcase classname="src/test/userRolesWritePolicy.test.ts" name="user_roles write policies — only admins can INSERT / UPDATE / DELETE &gt; DELETE &gt; anonymous caller CANNOT delete" time="0.000112276">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/receipt/ReceiptLightbox.test.tsx" timestamp="2026-04-26T21:35:45.338Z" hostname="sandbox-pool-59d469576c-m498r" tests="4" failures="0" errors="0" skipped="0" time="0.870280386">
+        <testcase classname="src/components/receipt/ReceiptLightbox.test.tsx" name="ReceiptLightbox - shortcuts help dialog &gt; renders the desktop &apos;دليل كامل&apos; help button" time="0.322573435">
+            <system-err>
+Warning: [object Object]: `ref` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://reactjs.org/link/special-props)
+    at TransformComponent (/dev-server/node_modules/.bun/react-zoom-pan-pinch@4.0.3+6dbf9a050bc9aadb/node_modules/react-zoom-pan-pinch/dist/index.cjs.js:2381:23)
+    at div
+    at /dev-server/node_modules/.bun/react-zoom-pan-pinch@4.0.3+6dbf9a050bc9aadb/node_modules/react-zoom-pan-pinch/dist/index.cjs.js:2100:33
+    at div
+    at div
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-primitive@2.1.3+b41f8805ee63d2ff/node_modules/@radix-ui/react-primitive/dist/index.mjs:28:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-dismissable-layer@1.1.10+b41f8805ee63d2ff/node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs:24:7
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-slot@1.2.3+0e2fb8dbc083adda/node_modules/@radix-ui/react-slot/dist/index.mjs:33:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-slot@1.2.3+0e2fb8dbc083adda/node_modules/@radix-ui/react-slot/dist/index.mjs:9:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-primitive@2.1.3+b41f8805ee63d2ff/node_modules/@radix-ui/react-primitive/dist/index.mjs:28:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-focus-scope@1.1.7+b41f8805ee63d2ff/node_modules/@radix-ui/react-focus-scope/dist/index.mjs:15:5
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-dialog@1.1.14+b41f8805ee63d2ff/node_modules/@radix-ui/react-dialog/dist/index.mjs:206:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-dialog@1.1.14+b41f8805ee63d2ff/node_modules/@radix-ui/react-dialog/dist/index.mjs:132:58
+    at Presence (file:///dev-server/node_modules/.bun/@radix-ui+react-presence@1.1.4+b41f8805ee63d2ff/node_modules/@radix-ui/react-presence/dist/index.mjs:19:11)
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-dialog@1.1.14+b41f8805ee63d2ff/node_modules/@radix-ui/react-dialog/dist/index.mjs:123:64
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-slot@1.2.3+0e2fb8dbc083adda/node_modules/@radix-ui/react-slot/dist/index.mjs:33:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-slot@1.2.3+0e2fb8dbc083adda/node_modules/@radix-ui/react-slot/dist/index.mjs:9:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-primitive@2.1.3+b41f8805ee63d2ff/node_modules/@radix-ui/react-primitive/dist/index.mjs:28:13
+    at file:///dev-server/node_modules/.bun/@radix-ui+react-portal@1.1.9+b41f8805ee63d2ff/node_modules/@radix-ui/react-portal/dist/index.mjs:11:22
+    at Presence (file:///dev-server/node_modules/.bun/@radix-ui+react-presence@1.1.4+b41f8805ee63d2ff/node_modules/@radix-ui/react-presence/dist/index.mjs:19:11)
+    at Provider (file:///dev-server/node_modules/.bun/@radix-ui+react-context@1.1.2+0e2fb8dbc083adda/node_modules/@radix-ui/react-context/dist/index.mjs:27:15)
+    at DialogPortal (file:///dev-server/node_modules/.bun/@radix-ui+react-dialog@1.1.14+b41f8805ee63d2ff/node_modules/@radix-ui/react-dialog/dist/index.mjs:85:11)
+    at /dev-server/src/components/ui/dialog.tsx:25:73
+    at Provider (file:///dev-server/node_modules/.bun/@radix-ui+react-context@1.1.2+0e2fb8dbc083adda/node_modules/@radix-ui/react-context/dist/index.mjs:27:15)
+    at Dialog (file:///dev-server/node_modules/.bun/@radix-ui+react-dialog@1.1.14+b41f8805ee63d2ff/node_modules/@radix-ui/react-dialog/dist/index.mjs:25:5)
+    at ReceiptLightbox (/dev-server/src/components/receipt/ReceiptLightbox.tsx:19:28)
+    at Router (/dev-server/node_modules/.bun/react-router@6.30.1+f4eacebf2041cd4f/node_modules/react-router/dist/umd/react-router.development.js:1207:17)
+    at MemoryRouter (/dev-server/node_modules/.bun/react-router@6.30.1+f4eacebf2041cd4f/node_modules/react-router/dist/umd/react-router.development.js:1101:7)
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptLightbox.test.tsx" name="ReceiptLightbox - shortcuts help dialog &gt; renders the mobile help (?) button" time="0.130912755">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptLightbox.test.tsx" name="ReceiptLightbox - shortcuts help dialog &gt; opens the shortcuts dialog when the desktop help button is clicked" time="0.229630535">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptLightbox.test.tsx" name="ReceiptLightbox - shortcuts help dialog &gt; opens the shortcuts dialog when the mobile help (?) button is clicked" time="0.185008492">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/receipt/ReceiptThumbnail.test.tsx" timestamp="2026-04-26T21:35:45.341Z" hostname="sandbox-pool-59d469576c-m498r" tests="5" failures="0" errors="0" skipped="0" time="0.116775725">
+        <testcase classname="src/components/receipt/ReceiptThumbnail.test.tsx" name="ReceiptThumbnail &gt; forwards ref to the zoom button" time="0.055730511">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptThumbnail.test.tsx" name="ReceiptThumbnail &gt; allows focusing the button via the forwarded ref" time="0.011485731">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptThumbnail.test.tsx" name="ReceiptThumbnail &gt; calls onOpen when zoom button is clicked" time="0.025094745">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptThumbnail.test.tsx" name="ReceiptThumbnail &gt; calls onDownload when download button is clicked" time="0.012471249">
+        </testcase>
+        <testcase classname="src/components/receipt/ReceiptThumbnail.test.tsx" name="ReceiptThumbnail &gt; disables download button while downloading" time="0.009573646">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/help/Shortcuts.test.tsx" timestamp="2026-04-26T21:35:45.344Z" hostname="sandbox-pool-59d469576c-m498r" tests="7" failures="0" errors="0" skipped="0" time="0.803976853">
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; renders all categories by default (التنقل العام / عارض الوصل / إيماءات اللمس)" time="0.209075769">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; filters shortcuts by Arabic label substring" time="0.095947063">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; filters by key chip text (case-insensitive)" time="0.070211143">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; matches single-character key like &apos;/&apos; for global search shortcut" time="0.08154739">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; shows empty-state and a clear button when nothing matches" time="0.129066044">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; displays the result count in the live region" time="0.073882008">
+        </testcase>
+        <testcase classname="src/pages/help/Shortcuts.test.tsx" name="ShortcutsPage – search filtering &gt; clears the search query when Esc is pressed inside the input" time="0.141530497">
+        </testcase>
+    </testsuite>
+</testsuites>
