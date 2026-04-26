@@ -1,4 +1,5 @@
 import { Check, X, Crown } from "lucide-react";
+import { getPromoState } from "@/lib/promoUtils";
 
 interface Package {
   name_ar: string;
@@ -7,6 +8,9 @@ interface Package {
   is_golden: boolean;
   max_countries: number;
   service_type: string;
+  promo_price?: number | null;
+  promo_starts_at?: string | null;
+  promo_ends_at?: string | null;
 }
 
 interface Props {
@@ -15,7 +19,22 @@ interface Props {
 
 const features = [
   { label: "المدة", getValue: (p: Package) => `${p.duration_months} ${p.duration_months > 10 ? "شهر" : "أشهر"}` },
-  { label: "السعر", getValue: (p: Package) => p.price ? `${p.price.toLocaleString()} د.ج` : "—" },
+  {
+    label: "السعر",
+    getValue: (p: Package) => {
+      const promo = getPromoState({
+        price: p.price,
+        promo_price: p.promo_price ?? null,
+        promo_starts_at: p.promo_starts_at ?? null,
+        promo_ends_at: p.promo_ends_at ?? null,
+      });
+      if (!p.price) return "—";
+      if (promo.isPromo) {
+        return `${promo.effectivePrice!.toLocaleString()} د.ج (بدلاً من ${promo.originalPrice!.toLocaleString()})`;
+      }
+      return `${p.price.toLocaleString()} د.ج`;
+    },
+  },
   { label: "عدد الدول", getValue: (p: Package) => p.max_countries >= 99 ? "جميع الدول" : `${p.max_countries}` },
   { label: "تنبيهات الفيزا", check: (p: Package) => p.service_type !== "jobs" },
   { label: "عقود العمل", check: (p: Package) => p.service_type === "jobs" || p.service_type === "both" },

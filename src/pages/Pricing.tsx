@@ -283,6 +283,8 @@ export default function PricingPage() {
           {regularPackages.map((pkg, i) => {
             const features = getFeatures(pkg, serviceType);
             const action = getPackageAction(pkg);
+            const promo = getPromoState(pkg, now);
+            const remainingMs = promo.isPromo && promo.endsAt ? promo.endsAt.getTime() - now.getTime() : 0;
             return (
               <motion.div
                 key={pkg.id}
@@ -329,10 +331,30 @@ export default function PricingPage() {
 
                 <div className="mb-6">
                   {pkg.price ? (
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-heading text-3xl font-black text-foreground">{pkg.price}</span>
-                      <span className="text-sm text-muted-foreground">د.ج</span>
-                    </div>
+                    promo.isPromo ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground line-through tabular-nums">{promo.originalPrice}</span>
+                          <span className="text-[10px] font-black bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
+                            -{promo.discountPct}%
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-heading text-3xl font-black text-accent tabular-nums">{promo.effectivePrice}</span>
+                          <span className="text-sm text-muted-foreground">د.ج</span>
+                        </div>
+                        {remainingMs > 0 && (
+                          <p className="text-[10px] text-muted-foreground font-mono tabular-nums" aria-live="polite">
+                            ينتهي خلال {formatCountdown(remainingMs)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-heading text-3xl font-black text-foreground">{pkg.price}</span>
+                        <span className="text-sm text-muted-foreground">د.ج</span>
+                      </div>
+                    )
                   ) : (
                     <span className="font-heading text-2xl font-bold text-accent">قريباً</span>
                   )}
@@ -387,6 +409,8 @@ export default function PricingPage() {
         <section className="container pb-16">
           {(() => {
             const action = getPackageAction(goldenPackage);
+            const promo = getPromoState(goldenPackage, now);
+            const remainingMs = promo.isPromo && promo.endsAt ? promo.endsAt.getTime() - now.getTime() : 0;
             return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -413,10 +437,30 @@ export default function PricingPage() {
 
             <div className="mb-6">
               {goldenPackage.price ? (
-                <div className="flex items-baseline gap-1">
-                  <span className="font-heading text-4xl font-black text-foreground">{goldenPackage.price}</span>
-                  <span className="text-sm text-muted-foreground">د.ج</span>
-                </div>
+                promo.isPromo ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base text-muted-foreground line-through tabular-nums">{promo.originalPrice}</span>
+                      <span className="text-xs font-black bg-accent text-accent-foreground px-2 py-0.5 rounded">
+                        -{promo.discountPct}%
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-heading text-4xl font-black text-accent tabular-nums">{promo.effectivePrice}</span>
+                      <span className="text-sm text-muted-foreground">د.ج</span>
+                    </div>
+                    {remainingMs > 0 && (
+                      <p className="text-xs text-muted-foreground font-mono tabular-nums" aria-live="polite">
+                        ينتهي خلال {formatCountdown(remainingMs)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-heading text-4xl font-black text-foreground">{goldenPackage.price}</span>
+                    <span className="text-sm text-muted-foreground">د.ج</span>
+                  </div>
+                )
               ) : (
                 <span className="font-heading text-2xl font-bold text-accent">قريباً</span>
               )}
