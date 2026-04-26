@@ -497,10 +497,73 @@ export default function ManagePackages() {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-accent" />
                 <Label className="text-sm font-bold text-foreground">العرض الترويجي (اختياري)</Label>
+                {form.promo_price > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ms-auto h-7 text-[11px] text-destructive hover:text-destructive"
+                    onClick={() => setForm({ ...form, promo_price: 0, promo_starts_at: "", promo_ends_at: "" })}
+                  >
+                    إلغاء العرض
+                  </Button>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                اضبط سعراً مخفّضاً ثابتاً ومدة زمنية. يُطبَّق تلقائياً عند بداية المدة ويعود السعر الأصلي بعد انتهائها.
+                اضبط نسبة الخصم أو السعر المخفّض ومدة العرض. يُطبَّق تلقائياً عند بداية المدة ويعود السعر الأصلي بعد انتهائها.
               </p>
+
+              {/* Quick percentage shortcuts */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">نسبة سريعة:</span>
+                {[10, 20, 30, 40, 50].map((pct) => (
+                  <Button
+                    key={pct}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] tabular-nums"
+                    disabled={!form.price || form.price <= 0}
+                    onClick={() => {
+                      const newPrice = Math.round((form.price * (100 - pct)) / 100);
+                      setForm({ ...form, promo_price: newPrice });
+                    }}
+                  >
+                    -{pct}%
+                  </Button>
+                ))}
+              </div>
+
+              {/* Quick duration shortcuts */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">مدّة سريعة:</span>
+                {[
+                  { label: "٣ أيام", days: 3 },
+                  { label: "٧ أيام", days: 7 },
+                  { label: "١٤ يوم", days: 14 },
+                  { label: "٣٠ يوم", days: 30 },
+                ].map((opt) => (
+                  <Button
+                    key={opt.days}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px]"
+                    onClick={() => {
+                      const start = new Date();
+                      const end = new Date(start.getTime() + opt.days * 86400_000);
+                      setForm({
+                        ...form,
+                        promo_starts_at: dateToLocalInput(start),
+                        promo_ends_at: dateToLocalInput(end),
+                      });
+                    }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
