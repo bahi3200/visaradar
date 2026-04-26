@@ -7,7 +7,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import {
   Plus, Edit2, Trash2, Crown, Package as PackageIcon,
-  Eye, EyeOff, Save, X, Loader2, Calendar, Globe
+  Eye, EyeOff, Save, X, Loader2, Calendar, Globe, Sparkles
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -33,6 +33,9 @@ type Package = {
   service_type: string;
   sort_order: number;
   features_ar: string[] | null;
+  promo_price: number | null;
+  promo_starts_at: string | null;
+  promo_ends_at: string | null;
 };
 
 const packageSchema = z.object({
@@ -46,7 +49,23 @@ const packageSchema = z.object({
   is_golden: z.boolean(),
   is_active: z.boolean(),
   features_text: z.string().max(2000, "الميزات طويلة جداً"),
-});
+  promo_price: z.coerce.number().min(0).max(1000000).nullable(),
+  promo_starts_at: z.string(),
+  promo_ends_at: z.string(),
+}).refine(
+  (d) => {
+    if (d.promo_price === null || d.promo_price === 0) return true;
+    if (d.price === null || d.price === 0) return false;
+    return d.promo_price < d.price;
+  },
+  { message: "السعر الترويجي يجب أن يكون أقل من السعر الأصلي", path: ["promo_price"] },
+).refine(
+  (d) => {
+    if (!d.promo_starts_at || !d.promo_ends_at) return true;
+    return new Date(d.promo_starts_at) < new Date(d.promo_ends_at);
+  },
+  { message: "تاريخ نهاية العرض يجب أن يكون بعد تاريخ البداية", path: ["promo_ends_at"] },
+);
 
 const emptyForm = {
   name_ar: "",
@@ -59,6 +78,9 @@ const emptyForm = {
   is_golden: false,
   is_active: true,
   features_text: "",
+  promo_price: 0,
+  promo_starts_at: "",
+  promo_ends_at: "",
 };
 
 export default function ManagePackages() {
@@ -101,6 +123,9 @@ export default function ManagePackages() {
       is_golden: pkg.is_golden,
       is_active: pkg.is_active,
       features_text: (pkg.features_ar || []).join("\n"),
+      promo_price: pkg.promo_price ?? 0,
+      promo_starts_at: pkg.promo_starts_at ? toLocalInput(pkg.promo_starts_at) : "",
+      promo_ends_at: pkg.promo_ends_at ? toLocalInput(pkg.promo_ends_at) : "",
     });
     setDialogOpen(true);
   };
@@ -131,6 +156,9 @@ export default function ManagePackages() {
         is_golden: parsed.data.is_golden,
         is_active: parsed.data.is_active,
         features_ar,
+        promo_price: parsed.data.promo_price && parsed.data.promo_price > 0 ? parsed.data.promo_price : null,
+        promo_starts_at: parsed.data.promo_starts_at ? new Date(parsed.data.promo_starts_at).toISOString() : null,
+        promo_ends_at: parsed.data.promo_ends_at ? new Date(parsed.data.promo_ends_at).toISOString() : null,
       };
 
       if (editing) {
