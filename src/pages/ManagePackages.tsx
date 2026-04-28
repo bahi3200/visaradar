@@ -571,7 +571,37 @@ export default function ManagePackages() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="promo_discount_pct">نسبة الخصم (%)</Label>
+                  <Input
+                    id="promo_discount_pct"
+                    type="number"
+                    min={0}
+                    max={99}
+                    step={1}
+                    value={
+                      form.promo_price > 0 && form.price > 0 && form.promo_price < form.price
+                        ? Math.round(((form.price - form.promo_price) / form.price) * 100)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        setForm({ ...form, promo_price: 0 });
+                        return;
+                      }
+                      const pct = Math.max(0, Math.min(99, Number(raw)));
+                      if (!form.price || form.price <= 0) {
+                        toast.error("حدّد السعر الأصلي أولاً");
+                        return;
+                      }
+                      const newPrice = Math.round((form.price * (100 - pct)) / 100);
+                      setForm({ ...form, promo_price: newPrice });
+                    }}
+                    placeholder="مثال: 20"
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
                   <Input
@@ -602,6 +632,9 @@ export default function ManagePackages() {
                   />
                 </div>
               </div>
+              <p className="text-[10px] text-muted-foreground">
+                الحقلان مرتبطان: تعديل أحدهما يُحدِّث الآخر تلقائياً وفق السعر الأصلي.
+              </p>
               {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price && (
                 <p className="text-[11px] text-accent font-medium">
                   معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
