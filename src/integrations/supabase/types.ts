@@ -241,6 +241,48 @@ export type Database = {
         }
         Relationships: []
       }
+      package_promo_audit_log: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_ends_at: string | null
+          new_promo_price: number | null
+          new_starts_at: string | null
+          old_ends_at: string | null
+          old_promo_price: number | null
+          old_starts_at: string | null
+          package_id: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_ends_at?: string | null
+          new_promo_price?: number | null
+          new_starts_at?: string | null
+          old_ends_at?: string | null
+          old_promo_price?: number | null
+          old_starts_at?: string | null
+          package_id: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_ends_at?: string | null
+          new_promo_price?: number | null
+          new_starts_at?: string | null
+          old_ends_at?: string | null
+          old_promo_price?: number | null
+          old_starts_at?: string | null
+          package_id?: string
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           created_at: string
