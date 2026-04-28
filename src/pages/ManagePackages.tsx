@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PromoAuditLog from "@/components/pricing/PromoAuditLog";
+import PromoStatusBadge from "@/components/pricing/PromoStatusBadge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -289,6 +290,11 @@ export default function ManagePackages() {
                 >
                   {pkg.is_active ? "نشطة" : "موقوفة"}
                 </span>
+              </div>
+
+              {/* Live promo status — active / scheduled / expired / none */}
+              <div className="mb-3">
+                <PromoStatusBadge pkg={pkg} compact />
               </div>
 
               <div className="space-y-1.5 text-xs text-muted-foreground mb-4">
@@ -601,6 +607,16 @@ export default function ManagePackages() {
                   معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
                 </p>
               )}
+
+              {/* Live status preview — reflects the form fields in real time */}
+              <PromoStatusBadge
+                pkg={{
+                  price: form.price || null,
+                  promo_price: form.promo_price && form.promo_price > 0 ? form.promo_price : null,
+                  promo_starts_at: form.promo_starts_at ? new Date(form.promo_starts_at).toISOString() : null,
+                  promo_ends_at: form.promo_ends_at ? new Date(form.promo_ends_at).toISOString() : null,
+                }}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
