@@ -8,6 +8,7 @@ import VisaTips from "@/components/subscriber/VisaTips";
 import RecentAlerts from "@/components/subscriber/RecentAlerts";
 import AdminStats from "@/components/subscriber/AdminStats";
 import SocialMediaSection from "@/components/home/SocialMediaSection";
+import PersonalPromoBanner from "@/components/pricing/PersonalPromoBanner";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Rocket, ArrowUpCircle, RefreshCw, AlertTriangle, BellOff, Bell, Zap, Send, CheckCircle2, X } from "lucide-react";
 import { motion } from "framer-motion";
@@ -169,6 +170,15 @@ export default function SubscriberHome({ subscription, fullName, isAdmin, isLoad
 
       {/* Admin stats - overlapping hero */}
       {isAdmin && <AdminStats />}
+
+      {/* Personal welcome promo — only visible for logged-in users that
+          NEVER subscribed, during their personal 7-day window. Reminder
+          only — no real discount is applied. */}
+      {!isSubscribed && !isAdmin && (
+        <section className="container pt-4">
+          <PersonalPromoBanner />
+        </section>
+      )}
 
       {/* Visa Alert Banner — shows when there are recent open appointments */}
       {(isSubscribed || isAdmin) && (

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";
 import PromoBanner from "@/components/pricing/PromoBanner";
+import PersonalPromoBanner from "@/components/pricing/PersonalPromoBanner";
 import { getPromoState, formatCountdown } from "@/lib/promoUtils";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -176,6 +177,9 @@ export default function PricingPage() {
   return (
     <Layout>
       {packages && packages.length > 0 && <PromoBanner packages={packages} />}
+      <section className="container pt-4">
+        <PersonalPromoBanner hideCta />
+      </section>
       {/* Hero */}
       <section className="gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
