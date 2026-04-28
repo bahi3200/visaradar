@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PromoAuditLog from "@/components/pricing/PromoAuditLog";
+import PromoStatusBadge from "@/components/pricing/PromoStatusBadge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -289,6 +290,11 @@ export default function ManagePackages() {
                 >
                   {pkg.is_active ? "نشطة" : "موقوفة"}
                 </span>
+              </div>
+
+              {/* Live promo status — active / scheduled / expired / none */}
+              <div className="mb-3">
+                <PromoStatusBadge pkg={pkg} compact />
               </div>
 
               <div className="space-y-1.5 text-xs text-muted-foreground mb-4">
