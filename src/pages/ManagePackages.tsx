@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PromoAuditLog from "@/components/pricing/PromoAuditLog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -627,6 +628,9 @@ export default function ManagePackages() {
               </div>
             </div>
           </div>
+
+          {/* Promo change history — only visible when editing an existing package */}
+          {editing && <PromoAuditLog packageId={editing.id} />}
 
           <DialogFooter className="gap-2 sm:gap-2">
             <button
