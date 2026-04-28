@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Check, Crown, Zap, Shield, ArrowLeft, Star, Send, Bell, Briefcase, Layers, Table2, ShieldCheck } from "lucide-react";
 import PackageComparisonTable from "@/components/pricing/PackageComparisonTable";
 import PromoBanner from "@/components/pricing/PromoBanner";
+import PersonalPromoBanner from "@/components/pricing/PersonalPromoBanner";
 import { getPromoState, formatCountdown } from "@/lib/promoUtils";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
