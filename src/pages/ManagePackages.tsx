@@ -629,6 +629,9 @@ export default function ManagePackages() {
             </div>
           </div>
 
+          {/* Promo change history — only visible when editing an existing package */}
+          {editing && <PromoAuditLog packageId={editing.id} />}
+
           <DialogFooter className="gap-2 sm:gap-2">
             <button
               type="button"
