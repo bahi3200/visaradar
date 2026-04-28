@@ -177,6 +177,9 @@ export default function PricingPage() {
   return (
     <Layout>
       {packages && packages.length > 0 && <PromoBanner packages={packages} />}
+      <section className="container pt-4">
+        <PersonalPromoBanner hideCta />
+      </section>
       {/* Hero */}
       <section className="gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
