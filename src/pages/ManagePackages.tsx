@@ -654,9 +654,11 @@ export default function ManagePackages() {
                         return;
                       }
                       if (rawPct >= 100) {
+                        setRejectedPct(rawPct);
                         toast.error("نسبة الخصم يجب أن تكون أقل من 100% — لا يمكن أن يكون السعر مجانيًا");
                         return;
                       }
+                      setRejectedPct(null);
                       const pct = Math.max(0, Math.min(99, rawPct));
                       const newPrice = Math.round((form.price * (100 - pct)) / 100);
                       setForm({ ...form, promo_price: newPrice });
