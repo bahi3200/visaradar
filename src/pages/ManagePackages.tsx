@@ -106,6 +106,8 @@ export default function ManagePackages() {
   const [deleteTarget, setDeleteTarget] = useState<Package | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  // Which field drives the promo: "pct" updates promo_price, "price" updates pct (read-only).
+  const [promoInputMode, setPromoInputMode] = useState<"pct" | "price">("pct");
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
@@ -573,19 +575,34 @@ export default function ManagePackages() {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="promo_discount_pct">نسبة الخصم (%)</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="promo_discount_pct">نسبة الخصم (%)</Label>
+                    <button
+                      type="button"
+                      onClick={() => setPromoInputMode("pct")}
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+                        promoInputMode === "pct"
+                          ? "bg-accent text-accent-foreground border-accent"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {promoInputMode === "pct" ? "نشط" : "استخدم"}
+                    </button>
+                  </div>
                   <Input
                     id="promo_discount_pct"
                     type="number"
                     min={0}
                     max={99}
                     step={1}
+                    readOnly={promoInputMode !== "pct"}
                     value={
                       form.promo_price > 0 && form.price > 0 && form.promo_price < form.price
                         ? Math.round(((form.price - form.promo_price) / form.price) * 100)
                         : ""
                     }
                     onChange={(e) => {
+                      if (promoInputMode !== "pct") return;
                       const raw = e.target.value;
                       if (raw === "") {
                         setForm({ ...form, promo_price: 0 });
@@ -600,17 +617,36 @@ export default function ManagePackages() {
                       setForm({ ...form, promo_price: newPrice });
                     }}
                     placeholder="مثال: 20"
+                    className={promoInputMode !== "pct" ? "bg-muted/40 cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
+                    <button
+                      type="button"
+                      onClick={() => setPromoInputMode("price")}
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+                        promoInputMode === "price"
+                          ? "bg-accent text-accent-foreground border-accent"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {promoInputMode === "price" ? "نشط" : "استخدم"}
+                    </button>
+                  </div>
                   <Input
                     id="promo_price"
                     type="number"
                     min={0}
+                    readOnly={promoInputMode !== "price"}
                     value={form.promo_price ?? 0}
-                    onChange={(e) => setForm({ ...form, promo_price: Number(e.target.value) })}
+                    onChange={(e) => {
+                      if (promoInputMode !== "price") return;
+                      setForm({ ...form, promo_price: Number(e.target.value) });
+                    }}
                     placeholder="0 = بلا عرض"
+                    className={promoInputMode !== "price" ? "bg-muted/40 cursor-not-allowed" : ""}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -633,7 +669,7 @@ export default function ManagePackages() {
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                الحقلان مرتبطان: تعديل أحدهما يُحدِّث الآخر تلقائياً وفق السعر الأصلي.
+                وضع الإدخال الحالي: <span className="font-semibold text-foreground">{promoInputMode === "pct" ? "نسبة الخصم (%)" : "السعر الترويجي مباشرةً"}</span> — الحقل الآخر يُحسب تلقائياً للقراءة فقط.
               </p>
               {/* Extend current promo by N days (preserves start date) */}
               <div className="flex flex-wrap items-center gap-2">
