@@ -160,6 +160,7 @@ export default function ManagePackages() {
       promo_starts_at: pkg.promo_starts_at ? toLocalInput(pkg.promo_starts_at) : "",
       promo_ends_at: pkg.promo_ends_at ? toLocalInput(pkg.promo_ends_at) : "",
     });
+    setRejectedPct(null);
     setDialogOpen(true);
   };
 
