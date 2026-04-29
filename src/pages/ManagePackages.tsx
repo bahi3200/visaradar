@@ -139,6 +139,7 @@ export default function ManagePackages() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setRejectedPct(null);
     setDialogOpen(true);
   };
 
