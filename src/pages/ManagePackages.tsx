@@ -120,6 +120,8 @@ export default function ManagePackages() {
   const [saving, setSaving] = useState(false);
   // Which field drives the promo: "pct" updates promo_price, "price" updates pct (read-only).
   const [promoInputMode, setPromoInputMode] = useState<"pct" | "price">("pct");
+  // Last rejected percentage attempt (≥ 100). Cleared when admin types a valid value.
+  const [rejectedPct, setRejectedPct] = useState<number | null>(null);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
