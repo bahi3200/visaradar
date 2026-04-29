@@ -77,8 +77,20 @@ const packageSchema = z.object({
   { message: "السعر الترويجي يجب أن يكون أقل من السعر الأصلي", path: ["promo_price"] },
 ).refine(
   (d) => {
+    // Skip date validation when no promo price is set.
+    if (d.promo_price === null || d.promo_price === 0) return true;
+    // When promo is set, both dates must be filled.
+    if (!d.promo_starts_at || !d.promo_ends_at) return false;
+    return true;
+  },
+  { message: "يجب تحديد تاريخ البداية وتاريخ النهاية للعرض الترويجي", path: ["promo_starts_at"] },
+).refine(
+  (d) => {
     if (!d.promo_starts_at || !d.promo_ends_at) return true;
-    return new Date(d.promo_starts_at) < new Date(d.promo_ends_at);
+    const start = new Date(d.promo_starts_at);
+    const end = new Date(d.promo_ends_at);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    return start < end;
   },
   { message: "تاريخ نهاية العرض يجب أن يكون بعد تاريخ البداية", path: ["promo_ends_at"] },
 );
