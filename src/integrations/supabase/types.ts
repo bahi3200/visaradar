@@ -247,6 +247,7 @@ export type Database = {
           changed_by: string | null
           created_at: string
           id: string
+          input_method: string | null
           new_ends_at: string | null
           new_promo_price: number | null
           new_starts_at: string | null
@@ -260,6 +261,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          input_method?: string | null
           new_ends_at?: string | null
           new_promo_price?: number | null
           new_starts_at?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          input_method?: string | null
           new_ends_at?: string | null
           new_promo_price?: number | null
           new_starts_at?: string | null
@@ -1237,6 +1240,17 @@ export type Database = {
       is_device_allowed: {
         Args: { _fingerprint: string; _user_id: string }
         Returns: boolean
+      }
+      set_promo_input_method: { Args: { _method: string }; Returns: undefined }
+      update_package_promo: {
+        Args: {
+          _input_method: string
+          _package_id: string
+          _promo_ends_at: string
+          _promo_price: number
+          _promo_starts_at: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

@@ -192,14 +192,40 @@ export default function ManagePackages() {
       };
 
       if (editing) {
+        // Detect whether promo fields changed and decide which input method to record
+        const promoChanged =
+          (editing.promo_price ?? null) !== payload.promo_price ||
+          (editing.promo_starts_at ?? null) !== payload.promo_starts_at ||
+          (editing.promo_ends_at ?? null) !== payload.promo_ends_at;
+        const priceOnlyChanged =
+          (editing.promo_price ?? null) !== payload.promo_price;
+        const datesChanged =
+          (editing.promo_starts_at ?? null) !== payload.promo_starts_at ||
+          (editing.promo_ends_at ?? null) !== payload.promo_ends_at;
+        const inputMethod = !priceOnlyChanged && datesChanged ? "date" : promoInputMode;
+
+        // Update non-promo fields directly
+        const { promo_price, promo_starts_at, promo_ends_at, ...nonPromo } = payload;
         const { data, error } = await supabase
           .from("packages")
-          .update(payload)
+          .update(nonPromo)
           .eq("id", editing.id)
           .select();
         if (error) throw error;
         if (!data || data.length === 0) {
           throw new Error("لم يتم تطبيق التحديث — تحقق من صلاحياتك");
+        }
+
+        // Update promo fields via RPC so the audit trigger captures the input method
+        if (promoChanged) {
+          const { error: rpcErr } = await supabase.rpc("update_package_promo", {
+            _package_id: editing.id,
+            _promo_price: promo_price,
+            _promo_starts_at: promo_starts_at,
+            _promo_ends_at: promo_ends_at,
+            _input_method: inputMethod,
+          });
+          if (rpcErr) throw rpcErr;
         }
         toast.success("تم تحديث الباقة بنجاح");
       } else {

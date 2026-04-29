@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { History, Sparkles, XCircle, Clock, RefreshCw } from "lucide-react";
+import { History, Sparkles, XCircle, Clock, RefreshCw, Percent, Tag, Calendar, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
@@ -10,6 +10,7 @@ type AuditRow = {
   id: string;
   action: string;
   changed_by: string | null;
+  input_method: string | null;
   old_promo_price: number | null;
   new_promo_price: number | null;
   old_starts_at: string | null;
@@ -39,6 +40,29 @@ const ACTION_META: Record<string, { label: string; cls: string; icon: React.Reac
     label: "تحديث",
     cls: "bg-accent/15 text-accent border-accent/30",
     icon: <RefreshCw className="w-3 h-3" />,
+  },
+};
+
+const METHOD_META: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+  pct: {
+    label: "عبر النسبة %",
+    cls: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    icon: <Percent className="w-3 h-3" />,
+  },
+  price: {
+    label: "عبر السعر مباشرةً",
+    cls: "bg-violet-500/15 text-violet-400 border-violet-500/30",
+    icon: <Tag className="w-3 h-3" />,
+  },
+  date: {
+    label: "تعديل التواريخ",
+    cls: "bg-sky-500/15 text-sky-400 border-sky-500/30",
+    icon: <Calendar className="w-3 h-3" />,
+  },
+  unknown: {
+    label: "غير محدد",
+    cls: "bg-muted text-muted-foreground border-border",
+    icon: <HelpCircle className="w-3 h-3" />,
   },
 };
 
@@ -127,12 +151,23 @@ export default function PromoAuditLog({ packageId }: Props) {
                 className="rounded-lg border border-border/50 bg-card/50 p-3 text-xs"
               >
                 <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border font-bold text-[10px] ${meta.cls}`}
-                  >
-                    {meta.icon}
-                    {meta.label}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border font-bold text-[10px] ${meta.cls}`}
+                    >
+                      {meta.icon}
+                      {meta.label}
+                    </span>
+                    {r.input_method && METHOD_META[r.input_method] && (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] ${METHOD_META[r.input_method].cls}`}
+                        title="طريقة الإدخال"
+                      >
+                        {METHOD_META[r.input_method].icon}
+                        {METHOD_META[r.input_method].label}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] text-muted-foreground" dir="ltr">
                     {formatDate(r.created_at)}
                   </span>
