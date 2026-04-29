@@ -669,7 +669,7 @@ export default function ManagePackages() {
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                الحقلان مرتبطان: تعديل أحدهما يُحدِّث الآخر تلقائياً وفق السعر الأصلي.
+                وضع الإدخال الحالي: <span className="font-semibold text-foreground">{promoInputMode === "pct" ? "نسبة الخصم (%)" : "السعر الترويجي مباشرةً"}</span> — الحقل الآخر يُحسب تلقائياً للقراءة فقط.
               </p>
               {/* Extend current promo by N days (preserves start date) */}
               <div className="flex flex-wrap items-center gap-2">
