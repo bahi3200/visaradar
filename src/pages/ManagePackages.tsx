@@ -106,6 +106,8 @@ export default function ManagePackages() {
   const [deleteTarget, setDeleteTarget] = useState<Package | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  // Which field drives the promo: "pct" updates promo_price, "price" updates pct (read-only).
+  const [promoInputMode, setPromoInputMode] = useState<"pct" | "price">("pct");
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
