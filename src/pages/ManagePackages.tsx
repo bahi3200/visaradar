@@ -714,6 +714,24 @@ export default function ManagePackages() {
                   </Button>
                 ))}
               </div>
+              {/* Live validation alert — promo price must be strictly less than original */}
+              {form.promo_price > 0 && form.price > 0 && form.promo_price >= form.price && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-[12px] text-destructive"
+                >
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold">قيمة العرض الترويجي غير صالحة</p>
+                    <p className="text-[11px] opacity-90">
+                      السعر الترويجي ({form.promo_price.toLocaleString()} د.ج) يجب أن يكون
+                      <span className="font-bold"> أقل </span>
+                      من السعر الأصلي ({form.price.toLocaleString()} د.ج). نسبة الخصم لا يمكن أن تساوي أو تتجاوز 100%. لن يتم حفظ العرض حتى تصحيح القيمة.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Live promo price preview — updates as you type, before saving */}
               {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price ? (
                 (() => {
