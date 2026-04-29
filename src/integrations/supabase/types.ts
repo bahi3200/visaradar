@@ -1242,6 +1242,16 @@ export type Database = {
         Returns: boolean
       }
       set_promo_input_method: { Args: { _method: string }; Returns: undefined }
+      update_package_promo: {
+        Args: {
+          _input_method: string
+          _package_id: string
+          _promo_ends_at: string
+          _promo_price: number
+          _promo_starts_at: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
