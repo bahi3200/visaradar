@@ -7,7 +7,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import {
   Plus, Edit2, Trash2, Crown, Package as PackageIcon,
-  Eye, EyeOff, Save, X, Loader2, Calendar, Globe, Sparkles
+  Eye, EyeOff, Save, X, Loader2, Calendar, Globe, Sparkles, AlertTriangle
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -620,11 +620,16 @@ export default function ManagePackages() {
                         setForm({ ...form, promo_price: 0 });
                         return;
                       }
-                      const pct = Math.max(0, Math.min(99, Number(raw)));
+                      const rawPct = Number(raw);
                       if (!form.price || form.price <= 0) {
                         toast.error("حدّد السعر الأصلي أولاً");
                         return;
                       }
+                      if (rawPct >= 100) {
+                        toast.error("نسبة الخصم يجب أن تكون أقل من 100% — لا يمكن أن يكون السعر مجانيًا");
+                        return;
+                      }
+                      const pct = Math.max(0, Math.min(99, rawPct));
                       const newPrice = Math.round((form.price * (100 - pct)) / 100);
                       setForm({ ...form, promo_price: newPrice });
                     }}
@@ -709,6 +714,24 @@ export default function ManagePackages() {
                   </Button>
                 ))}
               </div>
+              {/* Live validation alert — promo price must be strictly less than original */}
+              {form.promo_price > 0 && form.price > 0 && form.promo_price >= form.price && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-[12px] text-destructive"
+                >
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold">قيمة العرض الترويجي غير صالحة</p>
+                    <p className="text-[11px] opacity-90">
+                      السعر الترويجي ({form.promo_price.toLocaleString()} د.ج) يجب أن يكون
+                      <span className="font-bold"> أقل </span>
+                      من السعر الأصلي ({form.price.toLocaleString()} د.ج). نسبة الخصم لا يمكن أن تساوي أو تتجاوز 100%. لن يتم حفظ العرض حتى تصحيح القيمة.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Live promo price preview — updates as you type, before saving */}
               {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price ? (
                 (() => {
