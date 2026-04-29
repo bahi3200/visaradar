@@ -635,6 +635,32 @@ export default function ManagePackages() {
               <p className="text-[10px] text-muted-foreground">
                 الحقلان مرتبطان: تعديل أحدهما يُحدِّث الآخر تلقائياً وفق السعر الأصلي.
               </p>
+              {/* Extend current promo by N days (preserves start date) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">تمديد العرض الحالي:</span>
+                {[1, 3, 7, 14, 30].map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-7 text-[11px]"
+                    onClick={() => {
+                      if (!form.promo_price || form.promo_price <= 0) {
+                        toast.error("لا يوجد عرض ترويجي حالي لتمديده");
+                        return;
+                      }
+                      const baseEnd = form.promo_ends_at ? new Date(form.promo_ends_at) : null;
+                      const anchor = baseEnd && baseEnd.getTime() > Date.now() ? baseEnd : new Date();
+                      const newEnd = new Date(anchor.getTime() + days * 86400_000);
+                      setForm({ ...form, promo_ends_at: dateToLocalInput(newEnd) });
+                      toast.success(`تم تمديد العرض ${days} يوم — لا تنسَ الحفظ`);
+                    }}
+                  >
+                    +{days} يوم
+                  </Button>
+                ))}
+              </div>
               {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price && (
                 <p className="text-[11px] text-accent font-medium">
                   معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
