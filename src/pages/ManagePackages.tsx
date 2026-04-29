@@ -709,10 +709,40 @@ export default function ManagePackages() {
                   </Button>
                 ))}
               </div>
-              {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price && (
-                <p className="text-[11px] text-accent font-medium">
-                  معاينة: خصم {Math.round(((form.price - form.promo_price) / form.price) * 100)}% — {form.promo_price.toLocaleString()} د.ج بدلاً من {form.price.toLocaleString()} د.ج
-                </p>
+              {/* Live promo price preview — updates as you type, before saving */}
+              {form.promo_price > 0 && form.price > 0 && form.promo_price < form.price ? (
+                (() => {
+                  const savings = form.price - form.promo_price;
+                  const pct = Math.round((savings / form.price) * 100);
+                  return (
+                    <div className="rounded-lg border border-accent/40 bg-accent/5 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-muted-foreground">معاينة السعر الترويجي</span>
+                        <span className="text-[10px] font-bold rounded-full bg-accent text-accent-foreground px-2 py-0.5">
+                          -{pct}%
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-lg font-black text-accent tabular-nums">
+                          {form.promo_price.toLocaleString()} د.ج
+                        </span>
+                        <span className="text-xs text-muted-foreground line-through tabular-nums">
+                          {form.price.toLocaleString()} د.ج
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-accent/20 pt-2">
+                        <span>توفير المشترك</span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {savings.toLocaleString()} د.ج ({pct}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-[11px] text-muted-foreground text-center">
+                  أدخل سعراً أصلياً وسعراً ترويجياً أقل منه لعرض المعاينة المباشرة
+                </div>
               )}
 
               {/* Live status preview — reflects the form fields in real time */}
