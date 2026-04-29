@@ -120,6 +120,8 @@ export default function ManagePackages() {
   const [saving, setSaving] = useState(false);
   // Which field drives the promo: "pct" updates promo_price, "price" updates pct (read-only).
   const [promoInputMode, setPromoInputMode] = useState<"pct" | "price">("pct");
+  // Last rejected percentage attempt (≥ 100). Cleared when admin types a valid value.
+  const [rejectedPct, setRejectedPct] = useState<number | null>(null);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
@@ -137,6 +139,7 @@ export default function ManagePackages() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setRejectedPct(null);
     setDialogOpen(true);
   };
 
@@ -157,6 +160,7 @@ export default function ManagePackages() {
       promo_starts_at: pkg.promo_starts_at ? toLocalInput(pkg.promo_starts_at) : "",
       promo_ends_at: pkg.promo_ends_at ? toLocalInput(pkg.promo_ends_at) : "",
     });
+    setRejectedPct(null);
     setDialogOpen(true);
   };
 
@@ -611,6 +615,33 @@ export default function ManagePackages() {
                 ))}
               </div>
 
+              {/* Inline alert above promo fields when admin entered a rejected discount ≥ 100% */}
+              {rejectedPct !== null && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-[12px] text-destructive animate-in fade-in slide-in-from-top-1"
+                >
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <p className="font-bold">
+                      تم رفض القيمة {rejectedPct}% — نسبة الخصم لا يمكن أن تساوي أو تتجاوز 100%
+                    </p>
+                    <p className="text-[11px] opacity-90">
+                      السبب: خصم 100% يعني أن العرض مجاني تمامًا، وأي قيمة أعلى تنتج سعرًا سالبًا.
+                      يُسمح فقط بالنسب من 0 إلى 99%. لم يتم تعديل السعر الترويجي.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRejectedPct(null)}
+                    className="text-destructive/70 hover:text-destructive"
+                    aria-label="إغلاق التنبيه"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
@@ -652,9 +683,11 @@ export default function ManagePackages() {
                         return;
                       }
                       if (rawPct >= 100) {
+                        setRejectedPct(rawPct);
                         toast.error("نسبة الخصم يجب أن تكون أقل من 100% — لا يمكن أن يكون السعر مجانيًا");
                         return;
                       }
+                      setRejectedPct(null);
                       const pct = Math.max(0, Math.min(99, rawPct));
                       const newPrice = Math.round((form.price * (100 - pct)) / 100);
                       setForm({ ...form, promo_price: newPrice });
