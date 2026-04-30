@@ -722,7 +722,14 @@ export default function ManagePackages() {
                     value={form.promo_price ?? 0}
                     onChange={(e) => {
                       if (promoInputMode !== "price") return;
-                      setForm({ ...form, promo_price: Number(e.target.value) });
+                      const raw = Number(e.target.value);
+                      if (form.price > 0 && raw >= form.price) {
+                        setRejectedPromoPrice(raw);
+                        toast.error("السعر الترويجي يجب أن يكون أقل من السعر الأصلي");
+                        return;
+                      }
+                      setRejectedPromoPrice(null);
+                      setForm({ ...form, promo_price: raw });
                     }}
                     placeholder="0 = بلا عرض"
                     className={promoInputMode !== "price" ? "bg-muted/40 cursor-not-allowed" : ""}
