@@ -759,8 +759,31 @@ export default function ManagePackages() {
                       setForm({ ...form, promo_price: raw });
                     }}
                     placeholder="0 = بلا عرض"
-                    className={promoInputMode !== "price" ? "bg-muted/40 cursor-not-allowed" : ""}
+                    className={[
+                      promoInputMode !== "price" ? "bg-muted/40 cursor-not-allowed" : "",
+                      form.promo_price > 0 && form.price > 0 && form.promo_price >= form.price
+                        ? "border-destructive focus-visible:ring-destructive"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-invalid={
+                      form.promo_price > 0 && form.price > 0 && form.promo_price >= form.price
+                    }
+                    aria-describedby="promo_price_error"
                   />
+                  {form.promo_price > 0 && form.price > 0 && form.promo_price >= form.price && (
+                    <p
+                      id="promo_price_error"
+                      role="alert"
+                      className="flex items-start gap-1 text-[11px] font-semibold text-destructive"
+                    >
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>
+                        يجب أن يكون أقل من السعر الأصلي ({form.price.toLocaleString()} د.ج). لن يتم حفظ العرض.
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="promo_starts_at">تاريخ البداية</Label>
