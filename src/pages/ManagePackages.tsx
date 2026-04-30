@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +123,18 @@ export default function ManagePackages() {
   // Last rejected percentage attempt (≥ 100). Cleared when admin types a valid value.
   const [rejectedPct, setRejectedPct] = useState<number | null>(null);
   const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+
+  // Auto-clear the rejected-promo-price alert as soon as the current state
+  // becomes valid (promo_price < price), without requiring the user to
+  // dismiss it manually. Covers both: editing promo_price downwards, and
+  // raising the original price so the previously-rejected value is no longer
+  // greater-or-equal.
+  useEffect(() => {
+    if (rejectedPromoPrice === null) return;
+    if (form.price > 0 && form.promo_price > 0 && form.promo_price < form.price) {
+      setRejectedPromoPrice(null);
+    }
+  }, [form.price, form.promo_price, rejectedPromoPrice]);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
