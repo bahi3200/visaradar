@@ -662,7 +662,7 @@ export default function ManagePackages() {
               )}
 
               {/* Inline alert above promo fields when admin entered a promo_price ≥ original price */}
-              {rejectedPromoPrice !== null && (
+              {rejectedPromoPrice !== null && promoInputMode === "price" && (
                 <div
                   role="alert"
                   className="flex items-start gap-2 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-[12px] text-destructive animate-in fade-in slide-in-from-top-1"
@@ -697,7 +697,10 @@ export default function ManagePackages() {
                     <Label htmlFor="promo_discount_pct">نسبة الخصم (%)</Label>
                     <button
                       type="button"
-                      onClick={() => setPromoInputMode("pct")}
+                       onClick={() => {
+                         setPromoInputMode("pct");
+                         setRejectedPromoPrice(null);
+                       }}
                       className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
                         promoInputMode === "pct"
                           ? "bg-accent text-accent-foreground border-accent"
@@ -750,7 +753,7 @@ export default function ManagePackages() {
                     <Label htmlFor="promo_price">السعر الترويجي (د.ج)</Label>
                     <button
                       type="button"
-                      onClick={() => setPromoInputMode("price")}
+                       onClick={() => setPromoInputMode("price")}
                       className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
                         promoInputMode === "price"
                           ? "bg-accent text-accent-foreground border-accent"
