@@ -168,6 +168,22 @@ export default function ManagePackages() {
   };
 
   const handleSave = async () => {
+    // Explicit guard — block save if promo_price >= original price, even if the
+    // value got into state by some path other than the input handler (e.g. price
+    // was lowered after promo_price was set, or browser autofill).
+    if (
+      form.promo_price &&
+      form.promo_price > 0 &&
+      form.price > 0 &&
+      form.promo_price >= form.price
+    ) {
+      setRejectedPromoPrice(form.promo_price);
+      toast.error(
+        `لا يمكن الحفظ: السعر الترويجي (${form.promo_price.toLocaleString()} د.ج) يجب أن يكون أقل من السعر الأصلي (${form.price.toLocaleString()} د.ج)`,
+      );
+      return;
+    }
+
     const parsed = packageSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.errors[0]?.message || "بيانات غير صحيحة");
