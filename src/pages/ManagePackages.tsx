@@ -662,7 +662,7 @@ export default function ManagePackages() {
               )}
 
               {/* Inline alert above promo fields when admin entered a promo_price ≥ original price */}
-              {rejectedPromoPrice !== null && (
+              {rejectedPromoPrice !== null && promoInputMode === "price" && (
                 <div
                   role="alert"
                   className="flex items-start gap-2 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-[12px] text-destructive animate-in fade-in slide-in-from-top-1"
