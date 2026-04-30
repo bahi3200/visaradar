@@ -654,11 +654,14 @@ export default function ManagePackages() {
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <div className="flex-1 space-y-1">
                     <p className="font-bold">
-                      تم رفض السعر الترويجي ({rejectedPromoPrice.toLocaleString()} د.ج) — يجب أن يكون أقل من السعر الأصلي ({form.price.toLocaleString()} د.ج)
+                      الشرط: السعر الترويجي &lt; السعر الأصلي
                     </p>
-                    <p className="text-[11px] opacity-90">
-                      السبب: السعر الترويجي يساوي أو يتجاوز السعر الأصلي، مما يلغي معنى العرض (لا يوجد خصم فعلي).
-                      أدخل قيمة أقل تمامًا من {form.price.toLocaleString()} د.ج. لم يتم تعديل السعر الترويجي.
+                    <p className="text-[11px] opacity-90 tabular-nums">
+                      المرفوض: <span className="font-bold">{rejectedPromoPrice.toLocaleString()} د.ج</span>
+                      {" • "}
+                      الأصلي: <span className="font-bold">{form.price.toLocaleString()} د.ج</span>
+                      {" • "}
+                      الفرق: <span className="font-bold">+{(rejectedPromoPrice - form.price).toLocaleString()} د.ج</span>
                     </p>
                   </div>
                   <button
