@@ -124,6 +124,18 @@ export default function ManagePackages() {
   const [rejectedPct, setRejectedPct] = useState<number | null>(null);
   const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
 
+  // Auto-clear the rejected-promo-price alert as soon as the current state
+  // becomes valid (promo_price < price), without requiring the user to
+  // dismiss it manually. Covers both: editing promo_price downwards, and
+  // raising the original price so the previously-rejected value is no longer
+  // greater-or-equal.
+  useEffect(() => {
+    if (rejectedPromoPrice === null) return;
+    if (form.price > 0 && form.promo_price > 0 && form.promo_price < form.price) {
+      setRejectedPromoPrice(null);
+    }
+  }, [form.price, form.promo_price, rejectedPromoPrice]);
+
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
     queryFn: async () => {
