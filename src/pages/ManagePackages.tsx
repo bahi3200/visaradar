@@ -645,6 +645,33 @@ export default function ManagePackages() {
                 </div>
               )}
 
+              {/* Inline alert above promo fields when admin entered a promo_price ≥ original price */}
+              {rejectedPromoPrice !== null && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-[12px] text-destructive animate-in fade-in slide-in-from-top-1"
+                >
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <p className="font-bold">
+                      تم رفض السعر الترويجي ({rejectedPromoPrice.toLocaleString()} د.ج) — يجب أن يكون أقل من السعر الأصلي ({form.price.toLocaleString()} د.ج)
+                    </p>
+                    <p className="text-[11px] opacity-90">
+                      السبب: السعر الترويجي يساوي أو يتجاوز السعر الأصلي، مما يلغي معنى العرض (لا يوجد خصم فعلي).
+                      أدخل قيمة أقل تمامًا من {form.price.toLocaleString()} د.ج. لم يتم تعديل السعر الترويجي.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRejectedPromoPrice(null)}
+                    className="text-destructive/70 hover:text-destructive"
+                    aria-label="إغلاق التنبيه"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
