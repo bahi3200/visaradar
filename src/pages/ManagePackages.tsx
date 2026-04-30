@@ -122,6 +122,7 @@ export default function ManagePackages() {
   const [promoInputMode, setPromoInputMode] = useState<"pct" | "price">("pct");
   // Last rejected percentage attempt (≥ 100). Cleared when admin types a valid value.
   const [rejectedPct, setRejectedPct] = useState<number | null>(null);
+  const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
@@ -140,6 +141,7 @@ export default function ManagePackages() {
     setEditing(null);
     setForm(emptyForm);
     setRejectedPct(null);
+    setRejectedPromoPrice(null);
     setDialogOpen(true);
   };
 
