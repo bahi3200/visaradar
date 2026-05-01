@@ -582,12 +582,12 @@ describe("Promo validation — debounced onChange side-effects", () => {
     fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
 
     // Before debounce window
-    vi.advanceTimersByTime(200);
+    act(() => { vi.advanceTimersByTime(200); });
     expect(toastError).not.toHaveBeenCalled();
     expect(screen.queryByTestId("banner")).toBeNull();
 
     // After debounce window
-    vi.advanceTimersByTime(200);
+    act(() => { vi.advanceTimersByTime(200); });
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("banner")).toBeTruthy();
   });
@@ -598,20 +598,20 @@ describe("Promo validation — debounced onChange side-effects", () => {
 
     // Simulate fast typing: 1 → 10 → 100 → 1000 → 1500 within the window
     fireEvent.change(input, { target: { value: "1" } });
-    vi.advanceTimersByTime(50);
+    act(() => { vi.advanceTimersByTime(50); });
     fireEvent.change(input, { target: { value: "10" } });
-    vi.advanceTimersByTime(50);
+    act(() => { vi.advanceTimersByTime(50); });
     fireEvent.change(input, { target: { value: "100" } });
-    vi.advanceTimersByTime(50);
+    act(() => { vi.advanceTimersByTime(50); });
     fireEvent.change(input, { target: { value: "1000" } });
-    vi.advanceTimersByTime(50);
+    act(() => { vi.advanceTimersByTime(50); });
     fireEvent.change(input, { target: { value: "1500" } });
 
     // Still inside debounce window — no toasts yet
     expect(toastError).not.toHaveBeenCalled();
 
     // Let the final timer fire
-    vi.advanceTimersByTime(400);
+    act(() => { vi.advanceTimersByTime(400); });
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("rejected").textContent).toBe("1500");
   });
@@ -622,9 +622,9 @@ describe("Promo validation — debounced onChange side-effects", () => {
 
     // Type an invalid value, then correct it before the timer fires
     fireEvent.change(input, { target: { value: "1500" } });
-    vi.advanceTimersByTime(200);
+    act(() => { vi.advanceTimersByTime(200); });
     fireEvent.change(input, { target: { value: "800" } });
-    vi.advanceTimersByTime(400);
+    act(() => { vi.advanceTimersByTime(400); });
 
     expect(toastError).not.toHaveBeenCalled();
     expect(screen.queryByTestId("banner")).toBeNull();
