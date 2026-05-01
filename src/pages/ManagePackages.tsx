@@ -149,6 +149,29 @@ export default function ManagePackages() {
     }
   }, [form.price, form.promo_price, rejectedPromoPrice, promoInputMode]);
 
+  /**
+   * Debounced promo_price validation side-effects.
+   *
+   * The input itself updates `form.promo_price` synchronously so typing stays
+   * responsive and the inline (derived) error stays in sync without flicker.
+   * Side-effects that DO flicker noisily on every keystroke — the banner
+   * `rejectedPromoPrice` state and the toast — are deferred by 350ms, so
+   * intermediate values during fast typing (e.g. "1" → "10" → "100" → "1000")
+   * don't fire a toast-storm or repeatedly toggle the banner.
+   */
+  useEffect(() => {
+    if (promoInputMode !== "price") return;
+    const promo = form.promo_price;
+    const price = form.price;
+    const handle = setTimeout(() => {
+      if (promo > 0 && price > 0 && promo >= price) {
+        setRejectedPromoPrice(promo);
+        toast.error(PROMO_PRICE_INVALID_MSG);
+      }
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [form.promo_price, form.price, promoInputMode]);
+
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
     queryFn: async () => {
@@ -798,12 +821,9 @@ export default function ManagePackages() {
                     onChange={(e) => {
                       if (promoInputMode !== "price") return;
                       const raw = Number(e.target.value);
-                      if (form.price > 0 && raw >= form.price) {
-                        setRejectedPromoPrice(raw);
-                        toast.error(PROMO_PRICE_INVALID_MSG);
-                        return;
-                      }
-                      setRejectedPromoPrice(null);
+                      // Always commit the value immediately so typing stays
+                      // smooth. The debounced effect above will surface the
+                      // toast + banner once the user pauses (350ms).
                       setForm({ ...form, promo_price: raw });
                     }}
                     placeholder="0 = بلا عرض"

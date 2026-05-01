@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 
 const toastError = vi.fn();
 vi.mock("sonner", () => ({
@@ -521,5 +521,121 @@ describe("Promo validation — Save-time guard & message unification", () => {
 
     expect(onSaved).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith(buildPromoPriceSaveError(1500, 1500));
+  });
+});
+
+/**
+ * Mirrors the production debounced validation effect in ManagePackages.tsx:
+ *
+ *   useEffect(() => {
+ *     if (promoInputMode !== "price") return;
+ *     const handle = setTimeout(() => {
+ *       if (promo > 0 && price > 0 && promo >= price) {
+ *         setRejectedPromoPrice(promo);
+ *         toast.error(PROMO_PRICE_INVALID_MSG);
+ *       }
+ *     }, 350);
+ *     return () => clearTimeout(handle);
+ *   }, [promo_price, price, promoInputMode]);
+ */
+function DebouncedHarness({ price = 1000, delay = 350 }: { price?: number; delay?: number }) {
+  const [promoPrice, setPromoPrice] = useState(0);
+  const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (promoPrice > 0 && price > 0 && promoPrice >= price) {
+        setRejectedPromoPrice(promoPrice);
+        toast.error(PROMO_PRICE_INVALID_MSG);
+      }
+    }, delay);
+    return () => clearTimeout(handle);
+  }, [promoPrice, price, delay]);
+
+  return (
+    <div>
+      <span data-testid="promo-price">{promoPrice}</span>
+      <span data-testid="rejected">{rejectedPromoPrice === null ? "null" : String(rejectedPromoPrice)}</span>
+      {rejectedPromoPrice !== null && (
+        <div role="alert" data-testid="banner">rejected:{rejectedPromoPrice}</div>
+      )}
+      <input
+        aria-label="promo-price-input"
+        value={promoPrice}
+        onChange={(e) => setPromoPrice(Number(e.target.value))}
+      />
+    </div>
+  );
+}
+
+describe("Promo validation — debounced onChange side-effects", () => {
+  beforeEach(() => {
+    toastError.mockClear();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does not fire toast or banner before the debounce elapses", () => {
+    render(<DebouncedHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
+
+    // Before debounce window
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(toastError).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("banner")).toBeNull();
+
+    // After debounce window
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("banner")).toBeTruthy();
+  });
+
+  it("rapid typing fires only ONE toast for the final value", () => {
+    render(<DebouncedHarness price={1000} />);
+    const input = screen.getByLabelText("promo-price-input");
+
+    // Simulate fast typing: 1 → 10 → 100 → 1000 → 1500 within the window
+    fireEvent.change(input, { target: { value: "1" } });
+    act(() => { vi.advanceTimersByTime(50); });
+    fireEvent.change(input, { target: { value: "10" } });
+    act(() => { vi.advanceTimersByTime(50); });
+    fireEvent.change(input, { target: { value: "100" } });
+    act(() => { vi.advanceTimersByTime(50); });
+    fireEvent.change(input, { target: { value: "1000" } });
+    act(() => { vi.advanceTimersByTime(50); });
+    fireEvent.change(input, { target: { value: "1500" } });
+
+    // Still inside debounce window — no toasts yet
+    expect(toastError).not.toHaveBeenCalled();
+
+    // Let the final timer fire
+    act(() => { vi.advanceTimersByTime(400); });
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("rejected").textContent).toBe("1500");
+  });
+
+  it("does not surface a toast for a transient invalid value the user corrects in time", () => {
+    render(<DebouncedHarness price={1000} />);
+    const input = screen.getByLabelText("promo-price-input");
+
+    // Type an invalid value, then correct it before the timer fires
+    fireEvent.change(input, { target: { value: "1500" } });
+    act(() => { vi.advanceTimersByTime(200); });
+    fireEvent.change(input, { target: { value: "800" } });
+    act(() => { vi.advanceTimersByTime(400); });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("banner")).toBeNull();
+    expect(screen.getByTestId("promo-price").textContent).toBe("800");
+  });
+
+  it("commits the input value synchronously (no debounce on the value itself)", () => {
+    render(<DebouncedHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
+    // Value is visible immediately, only the toast/banner are deferred
+    expect(screen.getByTestId("promo-price").textContent).toBe("1500");
+    expect(toastError).not.toHaveBeenCalled();
   });
 });
