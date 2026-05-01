@@ -249,3 +249,78 @@ describe("Promo validation — rejectedPromoPrice auto-clear", () => {
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
   });
 });
+
+describe("Promo validation — edge cases (decimals, empty, zero, NaN)", () => {
+  beforeEach(() => toastError.mockClear());
+
+  it("rejects exact decimal equality (1000.50 vs 1000.50)", () => {
+    render(<PromoValidationHarness price={1000.5} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1000.50" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    expect(screen.getByTestId("promo-price").textContent).toBe("0");
+  });
+
+  it("accepts a value just below by a fraction (999.99 vs 1000)", () => {
+    render(<PromoValidationHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "999.99" } });
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+    expect(screen.getByTestId("promo-price").textContent).toBe("999.99");
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("rejects a value just above by a fraction (1000.01 vs 1000)", () => {
+    render(<PromoValidationHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1000.01" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    expect(screen.getByTestId("promo-price").textContent).toBe("0");
+  });
+
+  it("treats empty input as 0 — no rejection alert and no toast", () => {
+    render(<PromoValidationHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "" } });
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+    expect(screen.queryByTestId("inline-error")).toBeNull();
+    expect(screen.getByTestId("promo-price").textContent).toBe("0");
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("does not flag promo_price = 0 even when price is set", () => {
+    render(<PromoValidationHarness price={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "0" } });
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+    expect(screen.queryByTestId("inline-error")).toBeNull();
+    expect(screen.getByTestId("promo-price").textContent).toBe("0");
+  });
+
+  it("clears alert auto-clear with decimal boundary (799.99 < 800)", () => {
+    render(<AutoClearHarness initialPrice={800} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "799.99" } });
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+  });
+
+  it("keeps alert visible at decimal equality in auto-clear (800.00 = 800)", () => {
+    render(<AutoClearHarness initialPrice={800} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800.00" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+
+  it("does not auto-clear when promo_price is empty (NaN) even if previously rejected", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    // Empty string -> Number("") === 0, mirroring production form input behavior
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    expect(screen.getByTestId("rejected").textContent).toBe("1500");
+  });
+
+  it("does not auto-clear when original price is 0", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "500" } });
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "0" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+});
