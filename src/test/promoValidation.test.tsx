@@ -9,6 +9,14 @@ vi.mock("sonner", () => ({
 
 import { toast } from "sonner";
 
+/**
+ * Mirror of canonical messages defined in src/pages/ManagePackages.tsx.
+ * Kept in sync to assert the same wording is used in onChange and Save-time.
+ */
+const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceSaveError = (promo: number, price: number) =>
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+
 function PromoValidationHarness({ price = 1000 }: { price?: number }) {
   const [promoPrice, setPromoPrice] = useState(0);
   const [rejectedPct, setRejectedPct] = useState<number | null>(null);
