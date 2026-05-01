@@ -147,23 +147,32 @@ describe("Promo validation — promo_price >= original price", () => {
  * This harness lets the user freely set promoPrice (no input-handler guard),
  * then asserts the alert clears reactively when the value becomes valid.
  */
-function AutoClearHarness({ initialPrice = 1000 }: { initialPrice?: number }) {
+function AutoClearHarness({
+  initialPrice = 1000,
+  initialMode = "price",
+}: {
+  initialPrice?: number;
+  initialMode?: "price" | "pct";
+}) {
   const [price, setPrice] = useState(initialPrice);
   const [promoPrice, setPromoPrice] = useState(0);
   const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+  const [promoInputMode, setPromoInputMode] = useState<"price" | "pct">(initialMode);
 
   useEffect(() => {
     if (rejectedPromoPrice === null) return;
+    if (promoInputMode !== "price") return;
     if (price > 0 && promoPrice > 0 && promoPrice < price) {
       setRejectedPromoPrice(null);
     }
-  }, [price, promoPrice, rejectedPromoPrice]);
+  }, [price, promoPrice, rejectedPromoPrice, promoInputMode]);
 
   return (
     <div>
       <span data-testid="price">{price}</span>
       <span data-testid="promo-price">{promoPrice}</span>
       <span data-testid="rejected">{rejectedPromoPrice === null ? "null" : String(rejectedPromoPrice)}</span>
+      <span data-testid="mode">{promoInputMode}</span>
       {rejectedPromoPrice !== null && (
         <div role="alert" data-testid="promo-price-alert">
           تم رفض السعر الترويجي ({rejectedPromoPrice} د.ج)
@@ -184,6 +193,12 @@ function AutoClearHarness({ initialPrice = 1000 }: { initialPrice?: number }) {
         onClick={() => setRejectedPromoPrice(1500)}
       >
         seed
+      </button>
+      <button data-testid="mode-pct" onClick={() => setPromoInputMode("pct")}>
+        pct
+      </button>
+      <button data-testid="mode-price" onClick={() => setPromoInputMode("price")}>
+        price
       </button>
     </div>
   );
@@ -323,6 +338,57 @@ describe("Promo validation — edge cases (decimals, empty, zero, NaN)", () => {
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
     // Drop original price to 0 — guard requires price > 0, so alert stays
     fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "0" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+});
+
+describe("Promo validation — auto-clear gated by promoInputMode", () => {
+  it("does NOT auto-clear when mode is 'pct' even if promo_price becomes valid", () => {
+    render(<AutoClearHarness initialPrice={1000} initialMode="pct" />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+
+    // Alert must persist because we're not in "price" mode.
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    expect(screen.getByTestId("rejected").textContent).toBe("1500");
+  });
+
+  it("does NOT auto-clear in 'pct' mode when original price is raised", () => {
+    render(<AutoClearHarness initialPrice={500} initialMode="pct" />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "2000" } });
+
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+
+  it("auto-clears immediately after switching from 'pct' back to 'price' if value is valid", () => {
+    render(<AutoClearHarness initialPrice={1000} initialMode="pct" />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("mode-price"));
+
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+    expect(screen.getByTestId("rejected").textContent).toBe("null");
+  });
+
+  it("preserves alert when toggling 'price' -> 'pct' with valid value (no clear in pct)", () => {
+    render(<AutoClearHarness initialPrice={1000} initialMode="price" />);
+    // Seed while invalid so the alert sticks before we switch
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("mode-pct"));
+    // Even if promo becomes valid in pct mode, alert must stay
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "700" } });
+
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
   });
 });
