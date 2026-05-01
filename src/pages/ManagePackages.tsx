@@ -800,7 +800,7 @@ export default function ManagePackages() {
                       const raw = Number(e.target.value);
                       if (form.price > 0 && raw >= form.price) {
                         setRejectedPromoPrice(raw);
-                        toast.error("السعر الترويجي يجب أن يكون أقل من السعر الأصلي");
+                        toast.error(PROMO_PRICE_INVALID_MSG);
                         return;
                       }
                       setRejectedPromoPrice(null);
