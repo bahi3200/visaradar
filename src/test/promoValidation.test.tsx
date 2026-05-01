@@ -147,23 +147,32 @@ describe("Promo validation — promo_price >= original price", () => {
  * This harness lets the user freely set promoPrice (no input-handler guard),
  * then asserts the alert clears reactively when the value becomes valid.
  */
-function AutoClearHarness({ initialPrice = 1000 }: { initialPrice?: number }) {
+function AutoClearHarness({
+  initialPrice = 1000,
+  initialMode = "price",
+}: {
+  initialPrice?: number;
+  initialMode?: "price" | "pct";
+}) {
   const [price, setPrice] = useState(initialPrice);
   const [promoPrice, setPromoPrice] = useState(0);
   const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+  const [promoInputMode, setPromoInputMode] = useState<"price" | "pct">(initialMode);
 
   useEffect(() => {
     if (rejectedPromoPrice === null) return;
+    if (promoInputMode !== "price") return;
     if (price > 0 && promoPrice > 0 && promoPrice < price) {
       setRejectedPromoPrice(null);
     }
-  }, [price, promoPrice, rejectedPromoPrice]);
+  }, [price, promoPrice, rejectedPromoPrice, promoInputMode]);
 
   return (
     <div>
       <span data-testid="price">{price}</span>
       <span data-testid="promo-price">{promoPrice}</span>
       <span data-testid="rejected">{rejectedPromoPrice === null ? "null" : String(rejectedPromoPrice)}</span>
+      <span data-testid="mode">{promoInputMode}</span>
       {rejectedPromoPrice !== null && (
         <div role="alert" data-testid="promo-price-alert">
           تم رفض السعر الترويجي ({rejectedPromoPrice} د.ج)
@@ -184,6 +193,12 @@ function AutoClearHarness({ initialPrice = 1000 }: { initialPrice?: number }) {
         onClick={() => setRejectedPromoPrice(1500)}
       >
         seed
+      </button>
+      <button data-testid="mode-pct" onClick={() => setPromoInputMode("pct")}>
+        pct
+      </button>
+      <button data-testid="mode-price" onClick={() => setPromoInputMode("price")}>
+        price
       </button>
     </div>
   );
