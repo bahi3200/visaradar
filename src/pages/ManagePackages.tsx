@@ -54,6 +54,15 @@ type Package = {
   promo_ends_at: string | null;
 };
 
+/**
+ * Canonical validation messages for promo pricing.
+ * Used in: zod schema, onChange input handler, and the Save-time guard,
+ * so the user sees the same wording everywhere.
+ */
+const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceSaveError = (promo: number, price: number) =>
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+
 const packageSchema = z.object({
   name_ar: z.string().trim().min(1, "الاسم بالعربية مطلوب").max(100, "الحد الأقصى 100 حرف"),
   name_en: z.string().trim().min(1, "الاسم بالإنجليزية مطلوب").max(100, "الحد الأقصى 100 حرف"),
@@ -74,7 +83,7 @@ const packageSchema = z.object({
     if (d.price === null || d.price === 0) return false;
     return d.promo_price < d.price;
   },
-  { message: "السعر الترويجي يجب أن يكون أقل من السعر الأصلي", path: ["promo_price"] },
+  { message: PROMO_PRICE_INVALID_MSG, path: ["promo_price"] },
 ).refine(
   (d) => {
     // Skip date validation when no promo price is set.
@@ -184,20 +193,21 @@ export default function ManagePackages() {
   };
 
   const handleSave = async () => {
-    // Explicit guard — block save if promo_price >= original price, even if the
-    // value got into state by some path other than the input handler (e.g. price
-    // was lowered after promo_price was set, or browser autofill).
-    if (
-      form.promo_price &&
-      form.promo_price > 0 &&
-      form.price > 0 &&
-      form.promo_price >= form.price
-    ) {
-      setRejectedPromoPrice(form.promo_price);
-      toast.error(
-        `لا يمكن الحفظ: السعر الترويجي (${form.promo_price.toLocaleString()} د.ج) يجب أن يكون أقل من السعر الأصلي (${form.price.toLocaleString()} د.ج)`,
-      );
-      return;
+    // Final save-time guard — block save if promo_price is invalid, even if
+    // state was reached via a path other than the input handler (e.g. price
+    // was lowered after promo was set, browser autofill, or percentage mode).
+    // Uses the same canonical message as the onChange validator and zod schema.
+    if (form.promo_price && form.promo_price > 0) {
+      if (!form.price || form.price <= 0) {
+        setRejectedPromoPrice(form.promo_price);
+        toast.error(PROMO_PRICE_INVALID_MSG);
+        return;
+      }
+      if (form.promo_price >= form.price) {
+        setRejectedPromoPrice(form.promo_price);
+        toast.error(buildPromoPriceSaveError(form.promo_price, form.price));
+        return;
+      }
     }
 
     const parsed = packageSchema.safeParse(form);
@@ -790,7 +800,7 @@ export default function ManagePackages() {
                       const raw = Number(e.target.value);
                       if (form.price > 0 && raw >= form.price) {
                         setRejectedPromoPrice(raw);
-                        toast.error("السعر الترويجي يجب أن يكون أقل من السعر الأصلي");
+                        toast.error(PROMO_PRICE_INVALID_MSG);
                         return;
                       }
                       setRejectedPromoPrice(null);

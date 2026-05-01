@@ -9,6 +9,14 @@ vi.mock("sonner", () => ({
 
 import { toast } from "sonner";
 
+/**
+ * Mirror of canonical messages defined in src/pages/ManagePackages.tsx.
+ * Kept in sync to assert the same wording is used in onChange and Save-time.
+ */
+const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceSaveError = (promo: number, price: number) =>
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+
 function PromoValidationHarness({ price = 1000 }: { price?: number }) {
   const [promoPrice, setPromoPrice] = useState(0);
   const [rejectedPct, setRejectedPct] = useState<number | null>(null);
@@ -390,5 +398,128 @@ describe("Promo validation — auto-clear gated by promoInputMode", () => {
     fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "700" } });
 
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+});
+
+/**
+ * Mirrors the production handleSave guard in ManagePackages.tsx.
+ * Asserts that:
+ *  - Save is blocked when promo_price >= price (or price is missing).
+ *  - The toast wording matches the canonical onChange message + save-detail.
+ *  - Valid input proceeds to the save callback.
+ */
+function SaveGuardHarness({
+  initialPrice,
+  initialPromo,
+  onSaved,
+}: {
+  initialPrice: number;
+  initialPromo: number;
+  onSaved: () => void;
+}) {
+  const [price, setPrice] = useState(initialPrice);
+  const [promoPrice, setPromoPrice] = useState(initialPromo);
+  const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+
+  const handleSave = () => {
+    if (promoPrice && promoPrice > 0) {
+      if (!price || price <= 0) {
+        setRejectedPromoPrice(promoPrice);
+        toast.error(PROMO_PRICE_INVALID_MSG);
+        return;
+      }
+      if (promoPrice >= price) {
+        setRejectedPromoPrice(promoPrice);
+        toast.error(buildPromoPriceSaveError(promoPrice, price));
+        return;
+      }
+    }
+    onSaved();
+  };
+
+  return (
+    <div>
+      <input
+        aria-label="price-input"
+        value={price}
+        onChange={(e) => setPrice(Number(e.target.value))}
+      />
+      <input
+        aria-label="promo-price-input"
+        value={promoPrice}
+        onChange={(e) => setPromoPrice(Number(e.target.value))}
+      />
+      <button onClick={handleSave}>Save</button>
+      {rejectedPromoPrice !== null && (
+        <div role="alert" data-testid="save-alert">
+          rejected:{rejectedPromoPrice}
+        </div>
+      )}
+    </div>
+  );
+}
+
+describe("Promo validation — Save-time guard & message unification", () => {
+  beforeEach(() => toastError.mockClear());
+
+  it("blocks save when promo_price > price and toast starts with the canonical message", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={1000} initialPromo={1500} onSaved={onSaved} />);
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(buildPromoPriceSaveError(1500, 1000));
+    // Toast must START with the same wording the onChange validator uses
+    const msg = toastError.mock.calls[0][0] as string;
+    expect(msg.startsWith(PROMO_PRICE_INVALID_MSG)).toBe(true);
+    expect(screen.getByTestId("save-alert")).toBeTruthy();
+  });
+
+  it("blocks save at exact equality (promo_price === price)", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={1000} initialPromo={1000} onSaved={onSaved} />);
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(buildPromoPriceSaveError(1000, 1000));
+  });
+
+  it("blocks save when promo set but price missing — falls back to canonical message", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={0} initialPromo={500} onSaved={onSaved} />);
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(PROMO_PRICE_INVALID_MSG);
+  });
+
+  it("allows save when promo_price < price", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={1000} initialPromo={800} onSaved={onSaved} />);
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("save-alert")).toBeNull();
+  });
+
+  it("allows save when no promo is set (promo = 0) regardless of price", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={1000} initialPromo={0} onSaved={onSaved} />);
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("blocks save when price is lowered below promo after the fact", () => {
+    const onSaved = vi.fn();
+    render(<SaveGuardHarness initialPrice={2000} initialPromo={1500} onSaved={onSaved} />);
+    // Lower the original price so the previously-valid promo becomes invalid
+    fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "1500" } });
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(buildPromoPriceSaveError(1500, 1500));
   });
 });
