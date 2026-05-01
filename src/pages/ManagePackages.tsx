@@ -821,12 +821,9 @@ export default function ManagePackages() {
                     onChange={(e) => {
                       if (promoInputMode !== "price") return;
                       const raw = Number(e.target.value);
-                      if (form.price > 0 && raw >= form.price) {
-                        setRejectedPromoPrice(raw);
-                        toast.error(PROMO_PRICE_INVALID_MSG);
-                        return;
-                      }
-                      setRejectedPromoPrice(null);
+                      // Always commit the value immediately so typing stays
+                      // smooth. The debounced effect above will surface the
+                      // toast + banner once the user pauses (350ms).
                       setForm({ ...form, promo_price: raw });
                     }}
                     placeholder="0 = بلا عرض"
