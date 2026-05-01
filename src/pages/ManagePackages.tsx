@@ -131,10 +131,14 @@ export default function ManagePackages() {
   // greater-or-equal.
   useEffect(() => {
     if (rejectedPromoPrice === null) return;
+    // Only auto-clear while the user is editing the fixed-price field.
+    // In percentage or date modes, the rejection (which is bound to the
+    // price-input flow) must not be silently dismissed by unrelated changes.
+    if (promoInputMode !== "price") return;
     if (form.price > 0 && form.promo_price > 0 && form.promo_price < form.price) {
       setRejectedPromoPrice(null);
     }
-  }, [form.price, form.promo_price, rejectedPromoPrice]);
+  }, [form.price, form.promo_price, rejectedPromoPrice, promoInputMode]);
 
   const { data: packages, isLoading } = useQuery({
     queryKey: ["admin-packages"],
