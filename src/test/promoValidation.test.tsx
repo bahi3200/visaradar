@@ -243,6 +243,8 @@ describe("Promo validation — rejectedPromoPrice auto-clear", () => {
     fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
     expect(screen.queryByTestId("promo-price-alert")).toBeNull();
 
+    // Bump promo back to an invalid value, then re-seed: alert must persist.
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
     fireEvent.click(screen.getByTestId("seed-rejected"));
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
   });
