@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
@@ -131,6 +131,119 @@ describe("Promo validation — promo_price >= original price", () => {
     expect(screen.getByTestId("promo-price").textContent).toBe("900");
     fireEvent.change(input, { target: { value: "1000" } });
     expect(screen.getByTestId("promo-price").textContent).toBe("900");
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+});
+
+/**
+ * Mirrors the production auto-clear behavior in ManagePackages:
+ *   useEffect(() => {
+ *     if (rejectedPromoPrice === null) return;
+ *     if (price > 0 && promoPrice > 0 && promoPrice < price) {
+ *       setRejectedPromoPrice(null);
+ *     }
+ *   }, [price, promoPrice, rejectedPromoPrice]);
+ *
+ * This harness lets the user freely set promoPrice (no input-handler guard),
+ * then asserts the alert clears reactively when the value becomes valid.
+ */
+function AutoClearHarness({ initialPrice = 1000 }: { initialPrice?: number }) {
+  const [price, setPrice] = useState(initialPrice);
+  const [promoPrice, setPromoPrice] = useState(0);
+  const [rejectedPromoPrice, setRejectedPromoPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (rejectedPromoPrice === null) return;
+    if (price > 0 && promoPrice > 0 && promoPrice < price) {
+      setRejectedPromoPrice(null);
+    }
+  }, [price, promoPrice, rejectedPromoPrice]);
+
+  return (
+    <div>
+      <span data-testid="price">{price}</span>
+      <span data-testid="promo-price">{promoPrice}</span>
+      <span data-testid="rejected">{rejectedPromoPrice === null ? "null" : String(rejectedPromoPrice)}</span>
+      {rejectedPromoPrice !== null && (
+        <div role="alert" data-testid="promo-price-alert">
+          تم رفض السعر الترويجي ({rejectedPromoPrice} د.ج)
+        </div>
+      )}
+      <input
+        aria-label="price-input"
+        value={price}
+        onChange={(e) => setPrice(Number(e.target.value))}
+      />
+      <input
+        aria-label="promo-price-input"
+        value={promoPrice}
+        onChange={(e) => setPromoPrice(Number(e.target.value))}
+      />
+      <button
+        data-testid="seed-rejected"
+        onClick={() => setRejectedPromoPrice(1500)}
+      >
+        seed
+      </button>
+    </div>
+  );
+}
+
+describe("Promo validation — rejectedPromoPrice auto-clear", () => {
+  it("clears alert automatically when promo_price becomes < price", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+    expect(screen.getByTestId("rejected").textContent).toBe("null");
+  });
+
+  it("keeps alert visible when promo_price equals original price", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1000" } });
+
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    expect(screen.getByTestId("rejected").textContent).toBe("1500");
+  });
+
+  it("keeps alert visible when promo_price is greater than original price", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1200" } });
+
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+
+  it("keeps alert visible when promo_price is zero (not yet entered)", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "0" } });
+
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+  });
+
+  it("clears alert when original price is raised above promo_price", () => {
+    render(<AutoClearHarness initialPrice={500} />);
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "2000" } });
+
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+  });
+
+  it("re-shows alert if a fresh rejection happens after a previous auto-clear", () => {
+    render(<AutoClearHarness initialPrice={1000} />);
+    fireEvent.click(screen.getByTestId("seed-rejected"));
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "800" } });
+    expect(screen.queryByTestId("promo-price-alert")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("seed-rejected"));
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
   });
 });
