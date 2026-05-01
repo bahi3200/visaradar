@@ -193,20 +193,21 @@ export default function ManagePackages() {
   };
 
   const handleSave = async () => {
-    // Explicit guard — block save if promo_price >= original price, even if the
-    // value got into state by some path other than the input handler (e.g. price
-    // was lowered after promo_price was set, or browser autofill).
-    if (
-      form.promo_price &&
-      form.promo_price > 0 &&
-      form.price > 0 &&
-      form.promo_price >= form.price
-    ) {
-      setRejectedPromoPrice(form.promo_price);
-      toast.error(
-        `لا يمكن الحفظ: السعر الترويجي (${form.promo_price.toLocaleString()} د.ج) يجب أن يكون أقل من السعر الأصلي (${form.price.toLocaleString()} د.ج)`,
-      );
-      return;
+    // Final save-time guard — block save if promo_price is invalid, even if
+    // state was reached via a path other than the input handler (e.g. price
+    // was lowered after promo was set, browser autofill, or percentage mode).
+    // Uses the same canonical message as the onChange validator and zod schema.
+    if (form.promo_price && form.promo_price > 0) {
+      if (!form.price || form.price <= 0) {
+        setRejectedPromoPrice(form.promo_price);
+        toast.error(PROMO_PRICE_INVALID_MSG);
+        return;
+      }
+      if (form.promo_price >= form.price) {
+        setRejectedPromoPrice(form.promo_price);
+        toast.error(buildPromoPriceSaveError(form.promo_price, form.price));
+        return;
+      }
     }
 
     const parsed = packageSchema.safeParse(form);
