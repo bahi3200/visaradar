@@ -317,9 +317,11 @@ describe("Promo validation — edge cases (decimals, empty, zero, NaN)", () => {
 
   it("does not auto-clear when original price is 0", () => {
     render(<AutoClearHarness initialPrice={1000} />);
-    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "500" } });
+    // Set promo invalid first so auto-clear doesn't trigger when seeding
+    fireEvent.change(screen.getByLabelText("promo-price-input"), { target: { value: "1500" } });
     fireEvent.click(screen.getByTestId("seed-rejected"));
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
+    // Drop original price to 0 — guard requires price > 0, so alert stays
     fireEvent.change(screen.getByLabelText("price-input"), { target: { value: "0" } });
     expect(screen.getByTestId("promo-price-alert")).toBeTruthy();
   });
