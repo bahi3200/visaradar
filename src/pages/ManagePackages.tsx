@@ -74,7 +74,7 @@ const packageSchema = z.object({
     if (d.price === null || d.price === 0) return false;
     return d.promo_price < d.price;
   },
-  { message: "السعر الترويجي يجب أن يكون أقل من السعر الأصلي", path: ["promo_price"] },
+  { message: PROMO_PRICE_INVALID_MSG, path: ["promo_price"] },
 ).refine(
   (d) => {
     // Skip date validation when no promo price is set.
