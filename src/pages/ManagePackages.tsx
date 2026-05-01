@@ -54,6 +54,15 @@ type Package = {
   promo_ends_at: string | null;
 };
 
+/**
+ * Canonical validation messages for promo pricing.
+ * Used in: zod schema, onChange input handler, and the Save-time guard,
+ * so the user sees the same wording everywhere.
+ */
+const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceSaveError = (promo: number, price: number) =>
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+
 const packageSchema = z.object({
   name_ar: z.string().trim().min(1, "الاسم بالعربية مطلوب").max(100, "الحد الأقصى 100 حرف"),
   name_en: z.string().trim().min(1, "الاسم بالإنجليزية مطلوب").max(100, "الحد الأقصى 100 حرف"),
