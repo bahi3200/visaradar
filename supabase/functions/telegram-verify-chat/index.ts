@@ -79,6 +79,16 @@ Deno.serve(async (req) => {
     const tgData = await tgRes.json();
     if (!tgRes.ok) {
       console.error('Telegram error:', tgData);
+      // Log failed verification attempt for admin diagnostics
+      await supabase.from('telegram_link_log').insert({
+        user_id: user.id,
+        chat_id: cleaned,
+        username: null,
+        action: 'verify_failed',
+        status: 'failed',
+        error_message: tgData.description || `HTTP ${tgRes.status}`,
+        source: 'verify-chat',
+      });
       return new Response(JSON.stringify({
         error: tgData.description || 'فشل الإرسال. تأكد أنك بدأت محادثة مع البوت أولاً (/start).',
       }), {
@@ -94,6 +104,15 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id);
 
     if (updateErr) {
+      await supabase.from('telegram_link_log').insert({
+        user_id: user.id,
+        chat_id: cleaned,
+        username: null,
+        action: 'verify_failed',
+        status: 'failed',
+        error_message: `db_update_failed: ${updateErr.message}`,
+        source: 'verify-chat',
+      });
       return new Response(JSON.stringify({ error: updateErr.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
