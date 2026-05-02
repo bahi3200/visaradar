@@ -44,13 +44,31 @@ Deno.serve(async (req) => {
   );
 
   // Read offset
-  const { data: state, error: stateErr } = await supabase
+  let { data: state, error: stateErr } = await supabase
     .from("telegram_bot_state")
     .select("update_offset")
     .eq("id", 1)
     .single();
 
-  if (stateErr) {
+  // Auto-heal: create the singleton row if it's missing so polling never
+  // silently fails (this would prevent /start <token> from being processed
+  // and the user's telegram_id would never be saved).
+  if (stateErr && (stateErr.code === "PGRST116" || /no rows/i.test(stateErr.message))) {
+    const { data: seeded, error: seedErr } = await supabase
+      .from("telegram_bot_state")
+      .upsert({ id: 1, update_offset: 0, updated_at: new Date().toISOString() }, { onConflict: "id" })
+      .select("update_offset")
+      .single();
+    if (seedErr) {
+      return new Response(JSON.stringify({ error: `seed_failed: ${seedErr.message}` }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    state = seeded;
+    stateErr = null;
+  }
+
+  if (stateErr || !state) {
     return new Response(JSON.stringify({ error: stateErr.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
