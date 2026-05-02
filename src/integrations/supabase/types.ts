@@ -818,25 +818,34 @@ export type Database = {
       telegram_link_log: {
         Row: {
           action: string
-          chat_id: string
+          chat_id: string | null
           created_at: string
+          error_message: string | null
           id: string
+          source: string | null
+          status: string
           user_id: string
           username: string | null
         }
         Insert: {
           action: string
-          chat_id: string
+          chat_id?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
+          source?: string | null
+          status?: string
           user_id: string
           username?: string | null
         }
         Update: {
           action?: string
-          chat_id?: string
+          chat_id?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
+          source?: string | null
+          status?: string
           user_id?: string
           username?: string | null
         }

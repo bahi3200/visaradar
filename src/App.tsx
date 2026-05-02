@@ -46,6 +46,7 @@ import Backup from "./pages/Backup";
 import TelegramLink from "./pages/TelegramLink";
 import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
+import AdminTelegramLinkLog from "./pages/AdminTelegramLinkLog";
 import Install from "./pages/Install";
 import ManagePackages from "./pages/ManagePackages";
 import VisaProfile from "./pages/VisaProfile";
@@ -113,6 +114,7 @@ const App = () => (
       <Route path="/dashboard/backup" element={<AdminRoute adminOnly><Backup /></AdminRoute>} />
       <Route path="/dashboard/telegram-users" element={<AdminRoute adminOnly><AdminTelegramUsers /></AdminRoute>} />
       <Route path="/dashboard/telegram-broadcast" element={<AdminRoute adminOnly><AdminTelegramBroadcast /></AdminRoute>} />
+      <Route path="/dashboard/telegram-link-log" element={<AdminRoute adminOnly><AdminTelegramLinkLog /></AdminRoute>} />
       <Route path="/dashboard/packages" element={<AdminRoute adminOnly><ManagePackages /></AdminRoute>} />
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
