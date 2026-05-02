@@ -125,11 +125,21 @@ Deno.serve(async (req) => {
             chat_id: chatId,
             text: "❌ رمز الربط غير صالح. ارجع لتطبيق VisaRadar DZ واطلب رابطاً جديداً.",
           }, TOKEN);
+          // No user_id available (token didn't match) — skip log row to avoid NOT NULL violation
         } else if (profile.telegram_link_expires_at && new Date(profile.telegram_link_expires_at) < new Date()) {
           await tg("sendMessage", {
             chat_id: chatId,
             text: "⏰ انتهت صلاحية الرمز (15 دقيقة). اطلب رابطاً جديداً من ملفك الشخصي.",
           }, TOKEN);
+          await supabase.from("telegram_link_log").insert({
+            user_id: profile.user_id,
+            chat_id: chatId,
+            username,
+            action: "link_failed",
+            status: "failed",
+            error_message: "token_expired",
+            source: "bot-poll",
+          });
         } else {
           // Link!
           await supabase
