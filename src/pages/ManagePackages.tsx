@@ -728,14 +728,18 @@ export default function ManagePackages() {
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <div className="flex-1 space-y-1">
                     <p className="font-bold">
-                      الشرط: السعر الترويجي &lt; السعر الأصلي
+                      السعر الترويجي يجب أن يكون أقل من السعر الأصلي
                     </p>
                     <p className="text-[11px] opacity-90 tabular-nums">
-                      المرفوض: <span className="font-bold">{rejectedPromoPrice.toLocaleString()} د.ج</span>
+                      الترويجي المرفوض: <span className="font-bold">{rejectedPromoPrice.toLocaleString()} د.ج</span>
                       {" • "}
                       الأصلي: <span className="font-bold">{form.price.toLocaleString()} د.ج</span>
                       {" • "}
                       الفرق: <span className="font-bold">+{(rejectedPromoPrice - form.price).toLocaleString()} د.ج</span>
+                    </p>
+                    <p className="text-[11px] opacity-90 tabular-nums">
+                      الحد الأقصى المسموح للترويجي:{" "}
+                      <span className="font-bold">{Math.max(0, form.price - 1).toLocaleString()} د.ج</span>
                     </p>
                   </div>
                   <button
