@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info } from "lucide-react";
+import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info, RotateCw } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatLinkedSince, formatFullDateAr } from "@/lib/relativeTime";
+import { useTelegramLinkPolling } from "@/hooks/useTelegramLinkPolling";
 
 const BOT_USERNAME = "VisaRadar16_bot";
 const BOT_LINK = `https://t.me/${BOT_USERNAME}`;
@@ -33,6 +34,10 @@ const TelegramLink = () => {
   const [unlinking, setUnlinking] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnostic, setDiagnostic] = useState<DiagnosticState | null>(null);
+  const [restarting, setRestarting] = useState(false);
+  const [pollingActive, setPollingActive] = useState(false);
+  const [restartLink, setRestartLink] = useState<string | null>(null);
+  const [restartExpiresAt, setRestartExpiresAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -49,6 +54,79 @@ const TelegramLink = () => {
         }
       });
   }, [user]);
+
+  // Auto-detect when /start <token> succeeds in the bot and update UI.
+  useTelegramLinkPolling({
+    userId: user?.id,
+    enabled: pollingActive,
+    intervalMs: 5_000,
+    onLinked: () => {
+      setPollingActive(false);
+      setRestartLink(null);
+      setRestartExpiresAt(null);
+      // Refresh profile from DB so chat_id + linked_at appear.
+      if (user) {
+        supabase
+          .from("profiles")
+          .select("telegram_id, telegram_linked_at")
+          .eq("user_id", user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.telegram_id) {
+              setCurrentChatId(data.telegram_id);
+              setChatId(data.telegram_id);
+              setLinkedAt((data as any).telegram_linked_at || null);
+            }
+          });
+      }
+    },
+  });
+
+  const handleRestartLink = async () => {
+    if (!user) {
+      toast.error("سجّل الدخول أولاً");
+      return;
+    }
+    setRestarting(true);
+    try {
+      // 1) Unlink current binding (if any) so the new /start flow re-binds cleanly.
+      if (currentChatId) {
+        const { error: unlinkErr } = await supabase
+          .from("profiles")
+          .update({ telegram_id: null })
+          .eq("user_id", user.id);
+        if (unlinkErr) {
+          toast.error(`فشل فك الربط القديم: ${unlinkErr.message}`);
+          return;
+        }
+        setCurrentChatId(null);
+        setChatId("");
+        setLinkedAt(null);
+      }
+
+      // 2) Generate a fresh deep-link token.
+      const { data, error } = await supabase.functions.invoke("telegram-generate-link");
+      if (error || data?.error || !data?.link) {
+        toast.error(data?.error || error?.message || "فشل إنشاء رابط جديد");
+        return;
+      }
+
+      setRestartLink(data.link);
+      setRestartExpiresAt(data.expires_at || null);
+
+      // 3) Open the bot deep-link in a new tab so /start <token> is sent automatically.
+      window.open(data.link, "_blank", "noopener,noreferrer");
+
+      // 4) Start polling — useTelegramLinkPolling will fire onLinked when
+      //    telegram-poll saves telegram_id back to the profile.
+      setPollingActive(true);
+      toast.success("تم فتح البوت — أكمل بالضغط على Start وسنتحقق تلقائيًا.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطأ غير متوقع");
+    } finally {
+      setRestarting(false);
+    }
+  };
 
   const handleVerify = async () => {
     const cleaned = chatId.trim();
@@ -428,6 +506,77 @@ const TelegramLink = () => {
                 <li>غير مسجّل الدخول في الموقع.</li>
               </ul>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Restart linking — auto deep-link + auto-verify */}
+        <Card className="border-accent/40 bg-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center">
+                <RotateCw className="w-4 h-4" />
+              </Badge>
+              <CardTitle>إعادة تشغيل الربط (تلقائي)</CardTitle>
+            </div>
+            <CardDescription>
+              فك أي ربط سابق، أنشئ رابطًا جديدًا بنقرة واحدة، افتح البوت، وسنتحقق من الربط تلقائيًا فور ضغطك Start.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              onClick={handleRestartLink}
+              disabled={restarting || pollingActive}
+              className="w-full"
+              size="lg"
+            >
+              <RotateCw className={`w-4 h-4 ml-2 ${restarting ? "animate-spin" : ""}`} />
+              {restarting
+                ? "جارٍ إنشاء رابط جديد..."
+                : pollingActive
+                ? "بانتظار ضغطك Start في البوت..."
+                : "إعادة تشغيل الربط الآن"}
+            </Button>
+
+            {restartLink && (
+              <div className="rounded-lg border border-accent/30 bg-background/60 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  لم يُفتح البوت تلقائيًا؟ افتح الرابط يدويًا:
+                </p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={restartLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 truncate text-xs font-mono text-primary underline"
+                    dir="ltr"
+                  >
+                    {restartLink}
+                  </a>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(restartLink);
+                      toast.success("تم نسخ الرابط");
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                {restartExpiresAt && (
+                  <p className="text-[11px] text-muted-foreground/70">
+                    صالح حتى: {new Date(restartExpiresAt).toLocaleTimeString("ar-DZ")}
+                  </p>
+                )}
+                {pollingActive && (
+                  <div className="flex items-center gap-2 text-xs text-primary pt-1">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    نتحقق كل 5 ثوانٍ من اكتمال الربط...
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
