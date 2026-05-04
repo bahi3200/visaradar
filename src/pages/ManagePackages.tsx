@@ -60,8 +60,13 @@ type Package = {
  * so the user sees the same wording everywhere.
  */
 const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceHint = (promo: number, price: number) => {
+  const diff = promo - price;
+  const maxAllowed = Math.max(0, price - 1);
+  return `الترويجي ${promo.toLocaleString()} د.ج ${diff >= 0 ? "≥" : "<"} الأصلي ${price.toLocaleString()} د.ج (فرق ${diff >= 0 ? "+" : ""}${diff.toLocaleString()} د.ج). الحد الأقصى المسموح: ${maxAllowed.toLocaleString()} د.ج`;
+};
 const buildPromoPriceSaveError = (promo: number, price: number) =>
-  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${buildPromoPriceHint(promo, price)}`;
 
 const packageSchema = z.object({
   name_ar: z.string().trim().min(1, "الاسم بالعربية مطلوب").max(100, "الحد الأقصى 100 حرف"),
