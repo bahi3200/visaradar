@@ -60,8 +60,13 @@ type Package = {
  * so the user sees the same wording everywhere.
  */
 const PROMO_PRICE_INVALID_MSG = "السعر الترويجي يجب أن يكون أقل من السعر الأصلي";
+const buildPromoPriceHint = (promo: number, price: number) => {
+  const diff = promo - price;
+  const maxAllowed = Math.max(0, price - 1);
+  return `الترويجي ${promo.toLocaleString()} د.ج ${diff >= 0 ? "≥" : "<"} الأصلي ${price.toLocaleString()} د.ج (فرق ${diff >= 0 ? "+" : ""}${diff.toLocaleString()} د.ج). الحد الأقصى المسموح: ${maxAllowed.toLocaleString()} د.ج`;
+};
 const buildPromoPriceSaveError = (promo: number, price: number) =>
-  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${promo.toLocaleString()} د.ج ≥ ${price.toLocaleString()} د.ج`;
+  `${PROMO_PRICE_INVALID_MSG} — لا يمكن الحفظ: ${buildPromoPriceHint(promo, price)}`;
 
 const packageSchema = z.object({
   name_ar: z.string().trim().min(1, "الاسم بالعربية مطلوب").max(100, "الحد الأقصى 100 حرف"),
@@ -166,7 +171,9 @@ export default function ManagePackages() {
     const handle = setTimeout(() => {
       if (promo > 0 && price > 0 && promo >= price) {
         setRejectedPromoPrice(promo);
-        toast.error(PROMO_PRICE_INVALID_MSG);
+        toast.error(PROMO_PRICE_INVALID_MSG, {
+          description: buildPromoPriceHint(promo, price),
+        });
       }
     }, 350);
     return () => clearTimeout(handle);
@@ -223,7 +230,9 @@ export default function ManagePackages() {
     if (form.promo_price && form.promo_price > 0) {
       if (!form.price || form.price <= 0) {
         setRejectedPromoPrice(form.promo_price);
-        toast.error(PROMO_PRICE_INVALID_MSG);
+        toast.error(PROMO_PRICE_INVALID_MSG, {
+          description: "يجب تحديد سعر أصلي صالح قبل تعيين سعر ترويجي.",
+        });
         return;
       }
       if (form.promo_price >= form.price) {
@@ -719,14 +728,18 @@ export default function ManagePackages() {
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <div className="flex-1 space-y-1">
                     <p className="font-bold">
-                      الشرط: السعر الترويجي &lt; السعر الأصلي
+                      السعر الترويجي يجب أن يكون أقل من السعر الأصلي
                     </p>
                     <p className="text-[11px] opacity-90 tabular-nums">
-                      المرفوض: <span className="font-bold">{rejectedPromoPrice.toLocaleString()} د.ج</span>
+                      الترويجي المرفوض: <span className="font-bold">{rejectedPromoPrice.toLocaleString()} د.ج</span>
                       {" • "}
                       الأصلي: <span className="font-bold">{form.price.toLocaleString()} د.ج</span>
                       {" • "}
                       الفرق: <span className="font-bold">+{(rejectedPromoPrice - form.price).toLocaleString()} د.ج</span>
+                    </p>
+                    <p className="text-[11px] opacity-90 tabular-nums">
+                      الحد الأقصى المسموح للترويجي:{" "}
+                      <span className="font-bold">{Math.max(0, form.price - 1).toLocaleString()} د.ج</span>
                     </p>
                   </div>
                   <button
