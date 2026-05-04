@@ -32,13 +32,17 @@ export default function SubscriberHero({ fullName, packageName, daysLeft, expire
   const BadgeIcon = isAdmin ? Shield : isSubscribed ? Crown : User;
 
   return (
-    <section ref={sectionRef} className="relative h-[55vh] min-h-[380px] overflow-hidden">
+    <section
+      ref={sectionRef}
+      className="relative h-[55vh] min-h-[380px] overflow-hidden bg-gradient-to-br from-primary/30 via-background to-accent/20"
+    >
       <motion.video
         src={europeVideo.url}
         autoPlay
         muted
         loop
         playsInline
+        preload="metadata"
         style={reduced ? {} : { y: videoY, scale: videoScale }}
         className="absolute inset-0 w-full h-full object-cover"
       />
