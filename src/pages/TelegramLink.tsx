@@ -509,6 +509,77 @@ const TelegramLink = () => {
           </CardContent>
         </Card>
 
+        {/* Restart linking — auto deep-link + auto-verify */}
+        <Card className="border-accent/40 bg-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center">
+                <RotateCw className="w-4 h-4" />
+              </Badge>
+              <CardTitle>إعادة تشغيل الربط (تلقائي)</CardTitle>
+            </div>
+            <CardDescription>
+              فك أي ربط سابق، أنشئ رابطًا جديدًا بنقرة واحدة، افتح البوت، وسنتحقق من الربط تلقائيًا فور ضغطك Start.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              onClick={handleRestartLink}
+              disabled={restarting || pollingActive}
+              className="w-full"
+              size="lg"
+            >
+              <RotateCw className={`w-4 h-4 ml-2 ${restarting ? "animate-spin" : ""}`} />
+              {restarting
+                ? "جارٍ إنشاء رابط جديد..."
+                : pollingActive
+                ? "بانتظار ضغطك Start في البوت..."
+                : "إعادة تشغيل الربط الآن"}
+            </Button>
+
+            {restartLink && (
+              <div className="rounded-lg border border-accent/30 bg-background/60 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  لم يُفتح البوت تلقائيًا؟ افتح الرابط يدويًا:
+                </p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={restartLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 truncate text-xs font-mono text-primary underline"
+                    dir="ltr"
+                  >
+                    {restartLink}
+                  </a>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(restartLink);
+                      toast.success("تم نسخ الرابط");
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                {restartExpiresAt && (
+                  <p className="text-[11px] text-muted-foreground/70">
+                    صالح حتى: {new Date(restartExpiresAt).toLocaleTimeString("ar-DZ")}
+                  </p>
+                )}
+                {pollingActive && (
+                  <div className="flex items-center gap-2 text-xs text-primary pt-1">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    نتحقق كل 5 ثوانٍ من اكتمال الربط...
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="text-center">
           <Button variant="link" asChild>
             <Link to="/profile">العودة إلى الملف الشخصي</Link>
