@@ -171,7 +171,9 @@ export default function ManagePackages() {
     const handle = setTimeout(() => {
       if (promo > 0 && price > 0 && promo >= price) {
         setRejectedPromoPrice(promo);
-        toast.error(PROMO_PRICE_INVALID_MSG);
+        toast.error(PROMO_PRICE_INVALID_MSG, {
+          description: buildPromoPriceHint(promo, price),
+        });
       }
     }, 350);
     return () => clearTimeout(handle);
@@ -228,7 +230,9 @@ export default function ManagePackages() {
     if (form.promo_price && form.promo_price > 0) {
       if (!form.price || form.price <= 0) {
         setRejectedPromoPrice(form.promo_price);
-        toast.error(PROMO_PRICE_INVALID_MSG);
+        toast.error(PROMO_PRICE_INVALID_MSG, {
+          description: "يجب تحديد سعر أصلي صالح قبل تعيين سعر ترويجي.",
+        });
         return;
       }
       if (form.promo_price >= form.price) {
