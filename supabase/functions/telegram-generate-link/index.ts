@@ -43,16 +43,44 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
 
     const admin = createClient(supabaseUrl, serviceKey);
-    const { error: updErr } = await admin
+    const { data: existingProfile, error: profileErr } = await admin
       .from("profiles")
-      .update({
-        telegram_link_token: token,
-        telegram_link_expires_at: expiresAt,
-      })
-      .eq("user_id", user.id);
+      .select("user_id, full_name, avatar_url")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (updErr) {
-      return new Response(JSON.stringify({ error: updErr.message }), {
+    if (profileErr) {
+      return new Response(JSON.stringify({ error: profileErr.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const profilePayload = existingProfile
+      ? {
+          user_id: user.id,
+          full_name: existingProfile.full_name,
+          avatar_url: existingProfile.avatar_url,
+          telegram_link_token: token,
+          telegram_link_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || "",
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || "",
+          telegram_link_token: token,
+          telegram_link_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+        };
+
+    const { data: savedProfile, error: saveErr } = await admin
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "user_id" })
+      .select("user_id")
+      .maybeSingle();
+
+    if (saveErr || !savedProfile) {
+      return new Response(JSON.stringify({ error: saveErr?.message || "profile_not_saved" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

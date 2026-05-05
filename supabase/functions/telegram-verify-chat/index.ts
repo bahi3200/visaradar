@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, avatar_url')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -97,23 +97,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Save chat_id to profile
-    const { error: updateErr } = await supabase
-      .from('profiles')
-      .update({ telegram_id: cleaned, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id);
+    const baseProfile = {
+      user_id: user.id,
+      full_name: profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || '',
+      avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+      telegram_id: cleaned,
+      telegram_link_token: null,
+      telegram_link_expires_at: null,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (updateErr) {
+    // Save chat_id to profile; create the profile first if the signup trigger missed it.
+    const { data: savedProfile, error: updateErr } = await supabase
+      .from('profiles')
+      .upsert(baseProfile, { onConflict: 'user_id' })
+      .select('user_id, telegram_id')
+      .maybeSingle();
+
+    if (updateErr || !savedProfile?.telegram_id) {
       await supabase.from('telegram_link_log').insert({
         user_id: user.id,
         chat_id: cleaned,
         username: null,
         action: 'verify_failed',
         status: 'failed',
-        error_message: `db_update_failed: ${updateErr.message}`,
+        error_message: `db_update_failed: ${updateErr?.message || 'profile_not_saved'}`,
         source: 'verify-chat',
       });
-      return new Response(JSON.stringify({ error: updateErr.message }), {
+      return new Response(JSON.stringify({ error: updateErr?.message || 'لم يتم حفظ الربط في قاعدة البيانات' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
