@@ -23,6 +23,12 @@ interface DiagnosticState {
   matches: boolean;
   reason: string;
   severity: "success" | "warning" | "error" | "info";
+  lastLinkedAt?: string | null;
+  lastLogAction?: string | null;
+  lastLogStatus?: string | null;
+  lastLogError?: string | null;
+  lastLogAt?: string | null;
+  fixSteps?: string[];
 }
 
 const TelegramLink = () => {
@@ -193,20 +199,38 @@ const TelegramLink = () => {
         matches: false,
         reason: "لم يتم تسجيل الدخول. سجّل الدخول أولاً ثم أعد المحاولة.",
         severity: "error",
+        fixSteps: [
+          "افتح صفحة تسجيل الدخول وأدخل بياناتك.",
+          "ارجع إلى هذه الصفحة وأعد فحص الحالة.",
+        ],
       });
       return;
     }
     setDiagnosing(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("telegram_id, telegram_linked_at, telegram_username")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const [{ data, error }, { data: logData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("telegram_id, telegram_linked_at, telegram_username")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("telegram_link_log")
+          .select("action, status, error_message, created_at, source")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
       const formVal = chatId.trim();
       const dbVal = data?.telegram_id ?? null;
       const checkedAt = new Date().toISOString();
+      const lastLinkedAt = (data as any)?.telegram_linked_at ?? null;
+      const lastLogAction = logData?.action ?? null;
+      const lastLogStatus = logData?.status ?? null;
+      const lastLogError = logData?.error_message ?? null;
+      const lastLogAt = logData?.created_at ?? null;
 
       if (error) {
         setDiagnostic({
@@ -216,6 +240,16 @@ const TelegramLink = () => {
           matches: false,
           reason: `فشل قراءة الملف الشخصي من القاعدة: ${error.message}. تحقق من الاتصال أو الصلاحيات.`,
           severity: "error",
+          lastLinkedAt,
+          lastLogAction,
+          lastLogStatus,
+          lastLogError,
+          lastLogAt,
+          fixSteps: [
+            "تأكد أن لديك اتصال إنترنت مستقر.",
+            "سجّل خروج ثم دخول مجددًا لتجديد جلستك.",
+            "إن استمرت المشكلة، أبلغ الدعم بنص الخطأ المعروض.",
+          ],
         });
         return;
       }
@@ -228,6 +262,15 @@ const TelegramLink = () => {
           matches: false,
           reason: "لم يُعثر على ملف شخصي لهذا الحساب. اضغط على 'تحقق' لإنشائه أو راجع الدعم.",
           severity: "error",
+          lastLinkedAt,
+          lastLogAction,
+          lastLogStatus,
+          lastLogError,
+          lastLogAt,
+          fixSteps: [
+            "اضغط زر «إعادة تشغيل الربط الآن» في الأسفل لإنشاء ملف شخصي جديد تلقائيًا.",
+            "أو املأ chat_id واضغط «تحقق» وسننشئ الملف فورًا.",
+          ],
         });
         return;
       }
@@ -238,10 +281,23 @@ const TelegramLink = () => {
           dbTelegramId: null,
           formChatId: formVal,
           matches: false,
-          reason: formVal
+          reason: lastLogError
+            ? `آخر محاولة ربط فشلت: ${lastLogError}`
+            : formVal
             ? "أدخلت chat_id لكنه لم يُحفظ بعد. اضغط زر 'تحقق' لإكمال الربط. قد تكون الأسباب: لم تبدأ محادثة /start مع البوت، أو chat_id غير صحيح، أو فشل استدعاء الدالة."
             : "لم يتم حفظ أي chat_id بعد. اتبع الخطوات 1→4 وأدخل الرقم ثم اضغط 'تحقق'.",
           severity: "warning",
+          lastLinkedAt,
+          lastLogAction,
+          lastLogStatus,
+          lastLogError,
+          lastLogAt,
+          fixSteps: [
+            "افتح البوت وأرسل /start.",
+            "احصل على chat_id من @userinfobot أو من البوت بأمر /myid.",
+            "أدخل الرقم في الحقل أعلاه ثم اضغط «تحقق».",
+            "أو استخدم «إعادة تشغيل الربط الآن» لتنفيذ كل ذلك تلقائيًا.",
+          ],
         });
         return;
       }
@@ -256,6 +312,17 @@ const TelegramLink = () => {
           ? `✅ تم حفظ telegram_id بنجاح في القاعدة${data.telegram_username ? ` (المستخدم: @${data.telegram_username})` : ""}. ستصلك التنبيهات تلقائيًا عند فتح المواعيد.`
           : `chat_id المُدخل (${formVal}) لا يطابق المحفوظ (${dbVal}). إذا أردت تغييره، فك الربط أولاً ثم أعد التحقق.`,
         severity: matches ? "success" : "warning",
+        lastLinkedAt,
+        lastLogAction,
+        lastLogStatus,
+        lastLogError,
+        lastLogAt,
+        fixSteps: matches
+          ? undefined
+          : [
+              "اضغط «فك الربط» في الأعلى.",
+              "أدخل chat_id الجديد ثم اضغط «تحقق».",
+            ],
       });
     } catch (e) {
       setDiagnostic({
@@ -265,6 +332,11 @@ const TelegramLink = () => {
         matches: false,
         reason: e instanceof Error ? e.message : "خطأ غير متوقع أثناء التشخيص",
         severity: "error",
+        fixSteps: [
+          "أعد تحميل الصفحة وحاول مجددًا.",
+          "تحقق من اتصالك بالإنترنت.",
+          "إن تكرر الخطأ، أبلغ الدعم بالنص المعروض.",
+        ],
       });
     } finally {
       setDiagnosing(false);
