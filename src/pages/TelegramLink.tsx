@@ -562,6 +562,50 @@ const TelegramLink = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-background/60">
+                    <span className="text-muted-foreground">آخر وقت ربط مسجّل:</span>
+                    <span
+                      className="font-bold"
+                      title={diagnostic.lastLinkedAt ? formatFullDateAr(diagnostic.lastLinkedAt) : undefined}
+                    >
+                      {diagnostic.lastLinkedAt ? formatLinkedSince(diagnostic.lastLinkedAt) : "لا يوجد"}
+                    </span>
+                  </div>
+                  {(diagnostic.lastLogAction || diagnostic.lastLogError) && (
+                    <div className="p-2 rounded bg-background/60 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">آخر سجل عملية:</span>
+                        <span className="font-bold">
+                          {diagnostic.lastLogAction || "—"}
+                          {diagnostic.lastLogStatus ? ` · ${diagnostic.lastLogStatus}` : ""}
+                        </span>
+                      </div>
+                      {diagnostic.lastLogAt && (
+                        <p className="text-[11px] text-muted-foreground/70 text-left" dir="ltr">
+                          {new Date(diagnostic.lastLogAt).toLocaleString()}
+                        </p>
+                      )}
+                      {diagnostic.lastLogError && (
+                        <p className="text-xs text-destructive leading-relaxed">
+                          سبب الفشل: {diagnostic.lastLogError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {diagnostic.fixSteps && diagnostic.fixSteps.length > 0 && (
+                  <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <p className="text-xs font-bold text-foreground">خطوات الإصلاح:</p>
+                    <ol className="text-xs space-y-1 list-decimal pr-5 leading-relaxed">
+                      {diagnostic.fixSteps.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
                 <p className="text-[11px] text-muted-foreground/70 text-left" dir="ltr">
                   Checked at: {new Date(diagnostic.checkedAt).toLocaleString()}
                 </p>
