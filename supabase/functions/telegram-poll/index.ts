@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
           });
         } else {
           // Link!
-          await supabase
+          const { error: linkErr } = await supabase
             .from("profiles")
             .update({
               telegram_id: chatId,
@@ -151,6 +151,23 @@ Deno.serve(async (req) => {
               telegram_link_expires_at: null,
             })
             .eq("user_id", profile.user_id);
+
+          if (linkErr) {
+            await supabase.from("telegram_link_log").insert({
+              user_id: profile.user_id,
+              chat_id: chatId,
+              username,
+              action: "link_failed",
+              status: "failed",
+              error_message: `db_update_failed: ${linkErr.message}`,
+              source: "bot-poll",
+            });
+            await tg("sendMessage", {
+              chat_id: chatId,
+              text: "❌ تم استقبال طلب الربط لكن فشل حفظه في قاعدة البيانات. أعد المحاولة أو تواصل مع الدعم.",
+            }, TOKEN);
+            continue;
+          }
 
           // Note: telegram_link_log is now written automatically by DB trigger
           // (trg_log_telegram_link_change on profiles)
