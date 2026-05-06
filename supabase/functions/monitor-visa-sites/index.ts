@@ -803,6 +803,119 @@ Deno.serve(async (req) => {
 
     await supabase.from('visa_monitor_checks').insert(insertData);
 
+    // ──────────────────────────────────────────────
+    // Admin alerts: repeated failures or sudden response changes
+    // (focused on TLScontact provider but generic for any target)
+    // ──────────────────────────────────────────────
+    try {
+      // Fetch admin telegram chat ids
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      const adminIds = (adminRoles || []).map((r: any) => r.user_id);
+      let adminChatIds: string[] = [];
+      if (adminIds.length > 0) {
+        const { data: adminProfiles } = await supabase
+          .from('profiles')
+          .select('telegram_id')
+          .in('user_id', adminIds);
+        adminChatIds = (adminProfiles || [])
+          .map((p: any) => p.telegram_id)
+          .filter((x: any) => !!x);
+      }
+
+      const sendAdminAlert = async (text: string) => {
+        if (adminChatIds.length === 0) return;
+        await Promise.allSettled(
+          adminChatIds.map((chatId) =>
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true,
+              }),
+            }),
+          ),
+        );
+      };
+
+      const guessReason = (target: MonitorTarget, recent: any[], current: CheckResult): string => {
+        const errs = recent
+          .map((r) => (r.error_message || '').toLowerCase())
+          .filter(Boolean)
+          .join(' | ');
+        const cur = (current.error || '').toLowerCase();
+        const allErr = `${cur} ${errs}`.trim();
+        if (/dns|name or service not known|enotfound/.test(allErr))
+          return 'النطاق غير قابل للحلّ (DNS) — المزود قد يكون غيّر العنوان أو أوقف الخدمة';
+        if (/captcha|cf-browser|access denied|forbidden|blocked/.test(allErr) || current.detectionMethod === 'blocked')
+          return 'الموقع يحجب الطلبات الآلية (Anti-bot/CAPTCHA)';
+        if (/timeout|timed out|aborted/.test(allErr))
+          return 'استجابة بطيئة جداً أو انقطاع — قد يكون الموقع تحت ضغط أو في صيانة';
+        if (current.httpStatus && current.httpStatus >= 500)
+          return `خطأ في خادم المزود (HTTP ${current.httpStatus}) — صيانة أو عطل مؤقت`;
+        if (current.httpStatus === 403 || current.httpStatus === 401)
+          return 'حظر/منع وصول (HTTP 403/401) — ربما تغيّرت سياسة المزود';
+        if (current.httpStatus === 404)
+          return 'الصفحة غير موجودة (HTTP 404) — المزود غيّر بنية الموقع';
+        return 'سبب غير محدد — يُرجى مراجعة سجل الفحوصات';
+      };
+
+      for (const result of siteResults) {
+        const target = MONITOR_TARGETS[result.countryCode];
+        // Pull last 5 checks (excluding the row we just inserted)
+        const { data: history } = await supabase
+          .from('visa_monitor_checks')
+          .select('status, error_message, checked_at')
+          .eq('country_code', result.countryCode)
+          .order('checked_at', { ascending: false })
+          .limit(6);
+        const prior = (history || []).slice(1); // skip just-inserted row
+
+        // 1) Repeated failures: current + last 2 are 'error'
+        const recentErrors = [result, ...prior].slice(0, 3).filter((r: any) => r.status === 'error').length;
+        const isRepeatedFailure = result.status === 'error' && recentErrors >= 3;
+
+        // 2) Sudden response change: current differs from previous, and previous was stable
+        const prevStatus = prior[0]?.status || null;
+        const isSuddenChange =
+          prevStatus &&
+          prevStatus !== result.status &&
+          // ignore the "open" change which is already alerted to subscribers
+          !(result.status === 'open' && result.changed);
+
+        if (!isRepeatedFailure && !isSuddenChange) continue;
+
+        // Dedupe: skip if last check already triggered the same admin alert (notified flag reused)
+        const reason = guessReason(target, prior, result);
+        const header = isRepeatedFailure
+          ? `⚠️ <b>فشل متكرر في المراقبة</b>`
+          : `🔄 <b>تغيّر مفاجئ في الاستجابة</b>`;
+        const lines = [
+          header,
+          ``,
+          `${target.flag} <b>${target.nameAr}</b> — ${target.provider}`,
+          `📊 الحالة: <b>${result.status}</b>` + (prevStatus ? ` (سابقاً: ${prevStatus})` : ''),
+          result.httpStatus ? `🌐 HTTP: ${result.httpStatus}` : ``,
+          result.detectionMethod ? `🔍 طريقة الكشف: ${result.detectionMethod}` : ``,
+          result.error ? `❌ الخطأ: <code>${(result.error || '').substring(0, 200)}</code>` : ``,
+          ``,
+          `💡 <b>السبب المحتمل:</b> ${reason}`,
+          ``,
+          `🔗 <a href="${target.officialUrl}">رابط المزود</a>`,
+          `🤖 <i>تنبيه إداري تلقائي — VisaRadar</i>`,
+        ].filter(Boolean).join('\n');
+
+        await sendAdminAlert(lines);
+      }
+    } catch (alertErr) {
+      console.error('Admin alert error:', alertErr);
+    }
+
     // Send alerts for "open" changes
     const openAlerts = siteResults.filter((r) => r.status === 'open' && r.changed);
     let totalSent = 0;
