@@ -110,11 +110,11 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     name: 'France',
     nameAr: 'فرنسا',
     flag: '🇫🇷',
-    provider: 'Capago (TLScontact)',
-    checkUrl: 'https://fr.capago.net/rendez-vous/dz/',
-    officialUrl: 'https://fr.capago.net/rendez-vous/dz/',
+    provider: 'TLScontact',
+    checkUrl: 'https://visas-fr.tlscontact.com/country/dz',
+    officialUrl: 'https://visas-fr.tlscontact.com/',
     apiEndpoints: [
-      { url: 'https://fr.capago.net/api/rendez-vous/dz/slots', method: 'GET' },
+      { url: 'https://visas-fr.tlscontact.com/services/availability/fr/dz', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
