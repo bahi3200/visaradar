@@ -3,7 +3,7 @@ import { useJobs } from "@/hooks/useJobs";
 import type { Job } from "@/components/JobCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Plus, Pencil, Trash2, X, Save, Briefcase, Star, ArrowRight,
 } from "lucide-react";
@@ -42,11 +42,6 @@ export default function ManageJobsPage() {
   const [reqText, setReqText] = useState("");
   const [benText, setBenText] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("vr_auth");
-    if (!raw) navigate("/auth/login");
-  }, [navigate]);
 
   function openAdd() {
     setForm(emptyForm);
