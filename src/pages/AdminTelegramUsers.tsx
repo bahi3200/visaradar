@@ -224,6 +224,37 @@ const AdminTelegramUsers = () => {
     fetchUsers();
   }, []);
 
+  // Realtime: refresh the list whenever any user's telegram link state changes
+  // (link / unlink / re-link) so admins see status instantly.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => fetchUsers(), 800);
+    };
+    const channel = supabase
+      .channel("admin-telegram-users")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles" },
+        (payload) => {
+          const next: any = payload.new || {};
+          const prev: any = payload.old || {};
+          if (next.telegram_id !== prev.telegram_id) scheduleRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "telegram_link_log" },
+        () => scheduleRefresh(),
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const now = Date.now();

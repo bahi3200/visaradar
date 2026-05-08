@@ -61,6 +61,41 @@ const TelegramLink = () => {
       });
   }, [user]);
 
+  // Realtime: react instantly to any change on this user's profile row
+  // (link / unlink / re-link from any device) without page reload.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`telegram-link-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const next: any = payload.new || {};
+          const prev: any = payload.old || {};
+          if (next.telegram_id) {
+            setCurrentChatId(next.telegram_id);
+            setChatId(next.telegram_id);
+            setLinkedAt(next.telegram_linked_at || null);
+            if (!prev.telegram_id) {
+              setPollingActive(false);
+              setRestartLink(null);
+              setRestartExpiresAt(null);
+              toast.success("✅ تم ربط حسابك بـ Telegram بنجاح");
+            }
+          } else if (prev.telegram_id && !next.telegram_id) {
+            setCurrentChatId(null);
+            setChatId("");
+            setLinkedAt(null);
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Auto-detect when /start <token> succeeds in the bot and update UI.
   useTelegramLinkPolling({
     userId: user?.id,
