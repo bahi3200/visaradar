@@ -815,6 +815,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_failure_alerts: {
+        Row: {
+          alerted_at: string
+          failure_count: number
+          id: string
+          last_error: string | null
+          notified_admin_count: number
+          threshold: number
+          user_id: string
+          window_minutes: number
+        }
+        Insert: {
+          alerted_at?: string
+          failure_count: number
+          id?: string
+          last_error?: string | null
+          notified_admin_count?: number
+          threshold: number
+          user_id: string
+          window_minutes: number
+        }
+        Update: {
+          alerted_at?: string
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          notified_admin_count?: number
+          threshold?: number
+          user_id?: string
+          window_minutes?: number
+        }
+        Relationships: []
+      }
       telegram_link_log: {
         Row: {
           action: string
