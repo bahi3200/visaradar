@@ -1055,6 +1055,48 @@ export type Database = {
         }
         Relationships: []
       }
+      visa_open_events: {
+        Row: {
+          closed_at: string | null
+          country_code: string
+          created_at: string
+          detection_method: string | null
+          duration_minutes: number | null
+          id: string
+          opened_at: string
+          previous_status: string | null
+          provider: string
+          response_snippet: string | null
+          source_check_id: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          country_code: string
+          created_at?: string
+          detection_method?: string | null
+          duration_minutes?: number | null
+          id?: string
+          opened_at?: string
+          previous_status?: string | null
+          provider: string
+          response_snippet?: string | null
+          source_check_id?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          country_code?: string
+          created_at?: string
+          detection_method?: string | null
+          duration_minutes?: number | null
+          id?: string
+          opened_at?: string
+          previous_status?: string | null
+          provider?: string
+          response_snippet?: string | null
+          source_check_id?: string | null
+        }
+        Relationships: []
+      }
       visa_profiles: {
         Row: {
           address: string | null
