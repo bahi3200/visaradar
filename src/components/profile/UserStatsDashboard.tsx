@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { formatRelativeArabic, formatFullDateAr } from "@/lib/relativeTime";
 import {
   Bell,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   TrendingUp,
   Clock,
   Crown,
+  Radar,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -63,6 +65,8 @@ export default function UserStatsDashboard() {
   const [history, setHistory] = useState<CountryStatus[]>([]);
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [perCountryAlerts, setPerCountryAlerts] = useState<Record<string, number>>({});
+  const [lastOpenByCountry, setLastOpenByCountry] = useState<Record<string, string>>({});
+  const [openCountByCountry, setOpenCountByCountry] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -132,6 +136,25 @@ export default function UserStatsDashboard() {
       });
       setNotificationsCount(total);
       setPerCountryAlerts(perCountry);
+
+      // 4) Last open events per subscribed country (last 90 days) using new tracking table
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: opens } = await supabase
+        .from("visa_open_events" as any)
+        .select("country_code, opened_at")
+        .in("country_code", userCountries)
+        .gte("opened_at", ninetyDaysAgo)
+        .order("opened_at", { ascending: false })
+        .limit(500);
+
+      const lastMap: Record<string, string> = {};
+      const countMap: Record<string, number> = {};
+      (opens as any as { country_code: string; opened_at: string }[] | null)?.forEach((o) => {
+        countMap[o.country_code] = (countMap[o.country_code] || 0) + 1;
+        if (!lastMap[o.country_code]) lastMap[o.country_code] = o.opened_at;
+      });
+      setLastOpenByCountry(lastMap);
+      setOpenCountByCountry(countMap);
 
       setLoading(false);
     })();
@@ -288,32 +311,55 @@ export default function UserStatsDashboard() {
           {subscription.countries.map((code) => {
             const status = latestStatuses.find((s) => s.country_code === code);
             const isOpen = status?.status === "open";
+            const lastOpen = lastOpenByCountry[code];
+            const opens = openCountByCountry[code] || 0;
             return (
               <div
                 key={code}
-                className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5"
+                className="rounded-lg bg-muted/30 px-3 py-2.5 space-y-1.5"
               >
-                <div className="flex items-center gap-2">
-                  {isOpen ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  <span className="text-sm font-medium text-foreground">
-                    {getCountryName(code)}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isOpen ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm font-medium text-foreground">
+                      {getCountryName(code)}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      isOpen
+                        ? "bg-green-500/15 text-green-500"
+                        : status?.status === "closed"
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-yellow-500/15 text-yellow-500"
+                    }`}
+                  >
+                    {isOpen ? "مفتوح" : status?.status === "closed" ? "مغلق" : "غير معروف"}
                   </span>
                 </div>
-                <span
-                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    isOpen
-                      ? "bg-green-500/15 text-green-500"
-                      : status?.status === "closed"
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-yellow-500/15 text-yellow-500"
-                  }`}
-                >
-                  {isOpen ? "مفتوح" : status?.status === "closed" ? "مغلق" : "غير معروف"}
-                </span>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/30">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Radar className="w-3 h-3" />
+                    {lastOpen ? (
+                      <span>
+                        آخر فتح:{" "}
+                        <span className="text-foreground font-bold">
+                          {formatFullDateAr(lastOpen)}
+                        </span>{" "}
+                        <span className="text-muted-foreground">({formatRelativeArabic(lastOpen)})</span>
+                      </span>
+                    ) : (
+                      <span>لا توجد فتحات مسجلة آخر 90 يوماً</span>
+                    )}
+                  </div>
+                  {opens > 0 && (
+                    <span className="text-accent font-bold">{opens} فتحة</span>
+                  )}
+                </div>
               </div>
             );
           })}
