@@ -53,6 +53,7 @@ import VisaProfile from "./pages/VisaProfile";
 import ShortcutsHelp from "./pages/help/Shortcuts";
 import VisaCalendar from "./pages/VisaCalendar";
 import AdminVisaAppointments from "./pages/AdminVisaAppointments";
+import AdminVisaOpenings from "./pages/AdminVisaOpenings";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
 
 const queryClient = new QueryClient();
@@ -117,6 +118,7 @@ const App = () => (
       <Route path="/dashboard/telegram-link-log" element={<AdminRoute adminOnly><AdminTelegramLinkLog /></AdminRoute>} />
       <Route path="/dashboard/packages" element={<AdminRoute adminOnly><ManagePackages /></AdminRoute>} />
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
+      <Route path="/dashboard/visa-openings" element={<AdminRoute><AdminVisaOpenings /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
