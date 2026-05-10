@@ -55,6 +55,7 @@ import VisaCalendar from "./pages/VisaCalendar";
 import AdminVisaAppointments from "./pages/AdminVisaAppointments";
 import AdminVisaOpenings from "./pages/AdminVisaOpenings";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
+import VisaOpenAlertsBridge from "@/hooks/useVisaOpenAlerts";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const App = () => (
         <AuthProvider>
           <GlobalShortcuts />
           <NotificationPermissionBanner />
+          <VisaOpenAlertsBridge />
           <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
