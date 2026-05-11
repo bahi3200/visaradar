@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
+import CountryMonitorStats from "@/components/visa/CountryMonitorStats";
 import NotFound from "./NotFound";
 
 export default function CountryVisa() {
@@ -79,6 +80,9 @@ export default function CountryVisa() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Live monitoring stats for this country */}
+        <CountryMonitorStats countryCode={country.countryCode} countryNameAr={country.nameAr} />
 
         {/* Visa Types */}
         <section>
