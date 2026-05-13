@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/AdminLayout";
 import { motion } from "framer-motion";
-import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle, Power } from "lucide-react";
+import { Send, Bell, ArrowRight, ExternalLink, Globe, History, Activity, RefreshCw, CheckCircle2, XCircle, AlertTriangle, HelpCircle, Power, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +64,23 @@ export default function SendNotificationPage() {
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [togglingMonitor, setTogglingMonitor] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-admin-test-telegram");
+      if (error) {
+        const msg = (error as any)?.context?.error || error.message || "فشل إرسال الاختبار";
+        throw new Error(msg);
+      }
+      toast.success(`✅ تم إرسال رسالة الاختبار إلى Telegram (chat: ${data?.chatId})`);
+    } catch (err: any) {
+      toast.error(err.message || "فشل إرسال رسالة الاختبار");
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
 
   const { data: monitorEnabled, refetch: refetchMonitorStatus } = useQuery({
     queryKey: ["auto-monitor-enabled"],
@@ -196,6 +213,15 @@ export default function SendNotificationPage() {
                 المراقبة التلقائية
               </h2>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleTestTelegram}
+                  disabled={testingTelegram}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-sm font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-50 border border-blue-500/30"
+                  title="إرسال رسالة اختبار إلى Telegram الخاص بك"
+                >
+                  <MessageCircle className={`w-4 h-4 ${testingTelegram ? "animate-pulse" : ""}`} />
+                  {testingTelegram ? "جاري..." : "اختبار إرسال"}
+                </button>
                 <button
                   onClick={handleToggleMonitor}
                   disabled={togglingMonitor}
