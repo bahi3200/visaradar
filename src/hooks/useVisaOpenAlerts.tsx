@@ -65,6 +65,7 @@ export function useVisaOpenAlerts() {
       const countries: string[] = sub?.countries || [];
       if (countries.length === 0) return;
       countriesRef.current = countries;
+      const filter = `country_code=in.(${countries.join(",")})`;
 
       // Load preferences (browser notifications opt-in)
       const { data: prefs } = await supabase
@@ -78,7 +79,7 @@ export function useVisaOpenAlerts() {
         .channel(`visa-open-alerts-${user.id}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "visa_open_events" },
+          { event: "INSERT", schema: "public", table: "visa_open_events", filter },
           (payload: any) => {
             const row = payload.new as {
               country_code?: string;
@@ -87,7 +88,7 @@ export function useVisaOpenAlerts() {
               id?: string;
             };
             if (!row?.country_code) return;
-            if (!countriesRef.current.includes(row.country_code)) return;
+            if (!countriesRef.current.includes(row.country_code)) return; // belt + suspenders
 
             // Dedupe
             const key = `${row.country_code}|${row.opened_at || row.id}`;
