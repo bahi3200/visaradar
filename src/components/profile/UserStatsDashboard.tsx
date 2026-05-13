@@ -258,32 +258,52 @@ export default function UserStatsDashboard() {
   useEffect(() => {
     if (!user) return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = (countries: string[]) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchAll(countries), 600);
+    };
     (async () => {
       const countries = await fetchAll();
       if (!countries || countries.length === 0) return;
-      // Realtime: refresh on any new monitor check or open event for our countries
+      const inFilter = `country_code=in.(${countries.join(",")})`;
+      // Realtime: refresh only on meaningful events for subscribed countries
       channel = supabase
         .channel(`user-monitor-${user.id}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "visa_monitor_checks" },
+          { event: "INSERT", schema: "public", table: "visa_monitor_checks", filter: inFilter },
           (payload: any) => {
-            if (countries.includes(payload.new?.country_code)) {
-              fetchAll(countries);
-            }
+            const row = payload.new;
+            if (!row?.country_code || !countries.includes(row.country_code)) return;
+            // Only refetch on meaningful changes: status transitions or errors
+            const changed = row.previous_status && row.previous_status !== row.status;
+            const isError = row.status === "error";
+            if (!changed && !isError) return;
+            scheduleRefetch(countries);
           }
         )
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "visa_open_events" },
+          { event: "INSERT", schema: "public", table: "visa_open_events", filter: inFilter },
           (payload: any) => {
-            const code = payload.new?.country_code || payload.old?.country_code;
-            if (countries.includes(code)) fetchAll(countries);
+            const code = payload.new?.country_code;
+            if (code && countries.includes(code)) scheduleRefetch(countries);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "visa_open_events", filter: inFilter },
+          (payload: any) => {
+            const code = payload.new?.country_code;
+            const becameClosed = !payload.old?.closed_at && payload.new?.closed_at;
+            if (becameClosed && code && countries.includes(code)) scheduleRefetch(countries);
           }
         )
         .subscribe();
     })();
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (channel) supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
