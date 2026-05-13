@@ -22,6 +22,7 @@ type Check = {
 };
 
 type OpenEvent = {
+  id?: string;
   opened_at: string;
   closed_at: string | null;
   duration_minutes: number | null;
@@ -64,7 +65,7 @@ export default function CountryMonitorStats({ countryCode, countryNameAr }: Prop
         .limit(500),
       supabase
         .from("visa_open_events" as any)
-        .select("opened_at, closed_at, duration_minutes")
+        .select("id, opened_at, closed_at, duration_minutes")
         .eq("country_code", countryCode)
         .gte("opened_at", ninetyDaysAgo)
         .order("opened_at", { ascending: false })
@@ -78,17 +79,38 @@ export default function CountryMonitorStats({ countryCode, countryNameAr }: Prop
 
   useEffect(() => {
     fetchData();
+    const sevenDaysAgoMs = () => Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const ninetyDaysAgoMs = () => Date.now() - 90 * 24 * 60 * 60 * 1000;
     const channel = supabase
       .channel(`country-monitor-${countryCode}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "visa_monitor_checks", filter: `country_code=eq.${countryCode}` },
-        () => fetchData()
+        (payload: any) => {
+          const row = payload.new as Check | undefined;
+          if (!row?.id || !row.checked_at) return;
+          if (new Date(row.checked_at).getTime() < sevenDaysAgoMs()) return;
+          setChecks((prev) => (prev.some((c) => c.id === row.id) ? prev : [row, ...prev].slice(0, 500)));
+        }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "visa_open_events", filter: `country_code=eq.${countryCode}` },
-        () => fetchData()
+        { event: "INSERT", schema: "public", table: "visa_open_events", filter: `country_code=eq.${countryCode}` },
+        (payload: any) => {
+          const row = payload.new as OpenEvent | undefined;
+          if (!row?.opened_at) return;
+          if (new Date(row.opened_at).getTime() < ninetyDaysAgoMs()) return;
+          setOpens((prev) => (row.id && prev.some((o) => o.id === row.id) ? prev : [row, ...prev].slice(0, 200)));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "visa_open_events", filter: `country_code=eq.${countryCode}` },
+        (payload: any) => {
+          const row = payload.new as OpenEvent | undefined;
+          if (!row?.id) return;
+          setOpens((prev) => prev.map((o) => (o.id === row.id ? { ...o, ...row } : o)));
+        }
       )
       .subscribe();
     const id = setInterval(() => setTick((t) => t + 1), 30_000);
