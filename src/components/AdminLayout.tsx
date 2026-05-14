@@ -22,7 +22,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/users", label: "المستخدمين", icon: Users, adminOnly: true },
   { path: "/dashboard/jobs", label: "إدارة الوظائف", icon: Briefcase },
   { path: "/dashboard/packages", label: "إدارة الباقات", icon: Package, adminOnly: true },
-  { path: "/dashboard/notifications", label: "الإشعارات", icon: Bell },
+  { path: "/dashboard/notifications", label: "الإشعارات", icon: Bell, adminOnly: true },
   { path: "/dashboard/email-log", label: "سجل البريد", icon: Mail, adminOnly: true },
   { path: "/dashboard/reminder-log", label: "سجل التذكيرات", icon: Clock, adminOnly: true },
   { path: "/dashboard/chat-conversations", label: "محادثات المساعد", icon: Bot, adminOnly: true },
