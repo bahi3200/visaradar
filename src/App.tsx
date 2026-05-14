@@ -101,7 +101,7 @@ const App = () => (
       {/* Protected routes */}
       <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
       <Route path="/dashboard/jobs" element={<AdminRoute><ManageJobs /></AdminRoute>} />
-      <Route path="/dashboard/notifications" element={<AdminRoute><SendNotification /></AdminRoute>} />
+      <Route path="/dashboard/notifications" element={<AdminRoute adminOnly><SendNotification /></AdminRoute>} />
       <Route path="/dashboard/requests" element={<AdminRoute><AdminRequests /></AdminRoute>} />
       <Route path="/dashboard/users" element={<AdminRoute adminOnly><ManageUsers /></AdminRoute>} />
       <Route path="/dashboard/email-log" element={<AdminRoute adminOnly><EmailLog /></AdminRoute>} />
