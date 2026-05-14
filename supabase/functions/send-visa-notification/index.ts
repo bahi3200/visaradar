@@ -88,6 +88,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Admin-only: broadcasting notifications must be restricted
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: 'Forbidden: admin only' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Parse and validate body
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
