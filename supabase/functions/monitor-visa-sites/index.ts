@@ -409,11 +409,11 @@ async function probeApiEndpoints(
 
       // Skip non-success responses
       if (resp.status >= 400) {
-        // 403/404 from appointment API often means closed
-        if (resp.status === 403 || resp.status === 404 || resp.status === 422) {
-          closedScore += 2;
-          apiResults.push(`  → HTTP ${resp.status} interpreted as closed`);
-        }
+        // NOTE: 401/403/404/422 from these endpoints usually means
+        // auth-required / endpoint-moved / WAF-blocked — NOT "no slots".
+        // Treating them as "closed" was masking real openings, so we
+        // record the signal but do NOT add to closedScore here.
+        apiResults.push(`  → HTTP ${resp.status} ignored (likely auth/blocked, not closed)`);
         continue;
       }
 
@@ -677,7 +677,16 @@ async function checkSite(countryCode: string, target: MonitorTarget): Promise<Ch
       { name: 'http', ...httpResult },
     ];
 
-    const { status, totalOpen, totalClosed, detectionMethod } = determineStatus(layers);
+    let { status, totalOpen, totalClosed, detectionMethod } = determineStatus(layers);
+
+    // Safety net: if the page is an empty SPA shell (no readable body text)
+    // AND no layer produced any positive open signal, do NOT report "closed".
+    // Returning "unknown" prevents false negatives that hide real openings.
+    const hasReadableBody = bodyText.length >= 200;
+    if (!hasReadableBody && totalOpen === 0 && status !== 'open') {
+      status = 'unknown';
+      detectionMethod = `${detectionMethod} | spa-shell-no-signal`;
+    }
 
     console.log(`[${countryCode}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
     if (apiResult.apiResults.length > 0) {
