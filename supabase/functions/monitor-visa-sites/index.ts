@@ -409,11 +409,11 @@ async function probeApiEndpoints(
 
       // Skip non-success responses
       if (resp.status >= 400) {
-        // 403/404 from appointment API often means closed
-        if (resp.status === 403 || resp.status === 404 || resp.status === 422) {
-          closedScore += 2;
-          apiResults.push(`  → HTTP ${resp.status} interpreted as closed`);
-        }
+        // NOTE: 401/403/404/422 from these endpoints usually means
+        // auth-required / endpoint-moved / WAF-blocked — NOT "no slots".
+        // Treating them as "closed" was masking real openings, so we
+        // record the signal but do NOT add to closedScore here.
+        apiResults.push(`  → HTTP ${resp.status} ignored (likely auth/blocked, not closed)`);
         continue;
       }
 
