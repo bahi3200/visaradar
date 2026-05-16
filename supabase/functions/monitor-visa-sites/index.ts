@@ -291,7 +291,7 @@ type CheckResult = {
 // ──────────────────────────────────────────────
 type Indicator = { keyword: string; weight: number };
 
-function analyzeKeywords(
+export function analyzeKeywords(
   text: string,
   openIndicators: Indicator[],
   closedIndicators: Indicator[],
@@ -313,7 +313,7 @@ function analyzeKeywords(
 // ──────────────────────────────────────────────
 // Layer 2: Inline <script> / JSON state analysis
 // ──────────────────────────────────────────────
-function analyzeScriptData(
+export function analyzeScriptData(
   html: string,
   patterns: MonitorTarget['scriptDataPatterns'],
 ): { openScore: number; closedScore: number; detectedData: string[] } {
@@ -378,7 +378,7 @@ function analyzeScriptData(
 // ──────────────────────────────────────────────
 // Layer 3: API endpoint probing
 // ──────────────────────────────────────────────
-async function probeApiEndpoints(
+export async function probeApiEndpoints(
   endpoints: MonitorTarget['apiEndpoints'],
 ): Promise<{ openScore: number; closedScore: number; apiResults: string[] }> {
   if (!endpoints || endpoints.length === 0) return { openScore: 0, closedScore: 0, apiResults: [] };
@@ -555,7 +555,7 @@ function analyzeHttpResponse(
 // ──────────────────────────────────────────────
 // Combined multi-layer analysis
 // ──────────────────────────────────────────────
-function determineStatus(
+export function determineStatus(
   layers: { name: string; openScore: number; closedScore: number }[],
 ): { status: 'open' | 'closed' | 'unknown'; totalOpen: number; totalClosed: number; detectionMethod: string } {
   let totalOpen = 0;
@@ -628,7 +628,8 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
 // ──────────────────────────────────────────────
 // Check a single site (multi-layer)
 // ──────────────────────────────────────────────
-async function checkSite(countryCode: string, target: MonitorTarget): Promise<CheckResult> {
+export { MONITOR_TARGETS };
+export async function checkSite(countryCode: string, target: MonitorTarget): Promise<CheckResult> {
   try {
     // Layer 0: Fetch the HTML page
     const { response, durationMs } = await fetchWithRetry(target.checkUrl);
