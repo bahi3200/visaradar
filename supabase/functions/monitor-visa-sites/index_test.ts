@@ -307,3 +307,55 @@ Deno.test("checkSite IT: Nuxt SPA shell + API empty slots => closed", async () =
     restoreFetch();
   }
 });
+
+// ──────────────────────────────────────────────
+// Detection-trace tests: for each 4xx code, verify that
+//   1) detectionMethod records the `spa-shell-no-signal` branch
+//   2) apiResults records `HTTP <code> ignored` for EVERY probed endpoint
+//   3) status is `unknown` and both scores stay 0
+// ──────────────────────────────────────────────
+for (const code of [401, 403, 404, 422]) {
+  Deno.test(`detectionMethod trace: IT + API ${code} => spa-shell-no-signal + ignored entries`, async () => {
+    stubFetch(makeSpaShellHandler(code));
+    try {
+      const r = await checkSite("IT", MONITOR_TARGETS.IT);
+
+      // 1) safety-net branch recorded
+      assert(
+        r.detectionMethod.includes("spa-shell-no-signal"),
+        `detectionMethod must include 'spa-shell-no-signal' for ${code}, got '${r.detectionMethod}'`,
+      );
+      // and no false `api(...)` / `keywords(...)` layers should be attributed
+      assert(
+        r.detectionMethod.startsWith("none"),
+        `detectionMethod should start with 'none' (no layers fired) on ${code}, got '${r.detectionMethod}'`,
+      );
+
+      // 2) every endpoint logged the "HTTP <code> ignored" marker
+      const ignoredEntries = r.apiResults.filter((s) =>
+        s.includes(`HTTP ${code} ignored`)
+      );
+      const endpointCount = MONITOR_TARGETS.IT.apiEndpoints?.length ?? 0;
+      assert(endpointCount > 0, "IT must have at least one API endpoint configured");
+      assertEquals(
+        ignoredEntries.length,
+        endpointCount,
+        `expected ${endpointCount} 'HTTP ${code} ignored' entries, got ${ignoredEntries.length} in ${JSON.stringify(r.apiResults)}`,
+      );
+      // marker phrasing should make intent explicit
+      for (const entry of ignoredEntries) {
+        assert(
+          /auth|blocked|not closed/i.test(entry),
+          `ignored entry should explain rationale, got '${entry}'`,
+        );
+      }
+
+      // 3) final state stays neutral
+      assertEquals(r.status, "unknown");
+      assertEquals(r.openScore, 0);
+      assertEquals(r.closedScore, 0);
+    } finally {
+      restoreFetch();
+    }
+  });
+}
