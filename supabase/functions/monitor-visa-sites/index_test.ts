@@ -188,3 +188,122 @@ Deno.test("analyzeKeywords: closed keywords add closedScore", () => {
   );
   assert(r.closedScore >= 5, `expected >=5 closedScore, got ${r.closedScore}`);
 });
+
+// ──────────────────────────────────────────────
+// Unit: probeApiEndpoints with JSON available:false / empty slots
+// MUST add closedScore (real "no slots" signal), and NOT openScore.
+// ──────────────────────────────────────────────
+Deno.test("probeApiEndpoints: JSON 200 available:false => closedScore only", async () => {
+  stubFetch(() =>
+    new Response(JSON.stringify({ available: false }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  );
+  try {
+    const r = await probeApiEndpoints([VFS_ENDPOINTS[0]]);
+    assertEquals(r.openScore, 0, "openScore must stay 0 when available:false");
+    assert(r.closedScore > 0, `closedScore must be > 0 (got ${r.closedScore})`);
+    assert(
+      r.apiResults.some((s) => s.includes("available: false")),
+      "apiResults should record 'available: false'",
+    );
+  } finally {
+    restoreFetch();
+  }
+});
+
+Deno.test("probeApiEndpoints: JSON 200 empty slots array => closedScore only", async () => {
+  stubFetch(() =>
+    new Response(JSON.stringify({ slots: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  );
+  try {
+    const r = await probeApiEndpoints([VFS_ENDPOINTS[0]]);
+    assertEquals(r.openScore, 0);
+    assert(r.closedScore > 0, `closedScore must be > 0 on empty slots (got ${r.closedScore})`);
+    assert(
+      r.apiResults.some((s) => s.includes("slots: empty")),
+      "apiResults should record 'slots: empty'",
+    );
+  } finally {
+    restoreFetch();
+  }
+});
+
+Deno.test("probeApiEndpoints: JSON 200 available:false + empty slots => closedScore accumulates", async () => {
+  stubFetch(() =>
+    new Response(JSON.stringify({ available: false, slots: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  );
+  try {
+    const r = await probeApiEndpoints([VFS_ENDPOINTS[0]]);
+    assertEquals(r.openScore, 0);
+    // available:false (+6) + slots:[] (+3) = 9
+    assert(r.closedScore >= 9, `expected >=9 closedScore, got ${r.closedScore}`);
+  } finally {
+    restoreFetch();
+  }
+});
+
+// ──────────────────────────────────────────────
+// Integration: SPA shell HTML + API returning available:false
+// MUST be classified as 'closed' (real signal, not the 4xx safety-net case).
+// This guards that the SPA-shell safety net doesn't swallow legitimate closed signals.
+// ──────────────────────────────────────────────
+Deno.test("checkSite IT: Nuxt SPA shell + API available:false => closed", async () => {
+  stubFetch((url) => {
+    if (url.includes("lift-api") || url.includes("/api/")) {
+      return new Response(JSON.stringify({ available: false, slots: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(NUXT_SPA_SHELL, {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+  try {
+    const r = await checkSite("IT", MONITOR_TARGETS.IT);
+    assertEquals(
+      r.status,
+      "closed",
+      `expected closed on available:false even with SPA shell, got '${r.status}' (${r.detectionMethod})`,
+    );
+    assert(r.closedScore > 0, "closedScore should be > 0");
+    // Must NOT fall into the spa-shell-no-signal safety net here
+    assert(
+      !r.detectionMethod.includes("spa-shell-no-signal"),
+      `should not hit spa-shell safety net when API gives a real signal (got '${r.detectionMethod}')`,
+    );
+  } finally {
+    restoreFetch();
+  }
+});
+
+Deno.test("checkSite IT: Nuxt SPA shell + API empty slots => closed", async () => {
+  stubFetch((url) => {
+    if (url.includes("lift-api") || url.includes("/api/")) {
+      return new Response(JSON.stringify({ slots: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(NUXT_SPA_SHELL, { status: 200 });
+  });
+  try {
+    const r = await checkSite("IT", MONITOR_TARGETS.IT);
+    assertEquals(r.status, "closed", `expected closed, got '${r.status}' (${r.detectionMethod})`);
+    assert(
+      !r.detectionMethod.includes("spa-shell-no-signal"),
+      "real closed signal must take precedence over SPA safety net",
+    );
+  } finally {
+    restoreFetch();
+  }
+});
