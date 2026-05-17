@@ -307,3 +307,62 @@ Deno.test("checkSite IT: Nuxt SPA shell + API empty slots => closed", async () =
     restoreFetch();
   }
 });
+
+// ──────────────────────────────────────────────
+// Detection-trace tests: for each 4xx code, verify that
+//   1) detectionMethod records the `spa-shell-no-signal` branch
+//   2) apiResults records `HTTP <code> ignored` for EVERY probed endpoint
+//   3) status is `unknown` and both scores stay 0
+// ──────────────────────────────────────────────
+for (const code of [401, 403, 404, 422]) {
+  // Unit-level: probeApiEndpoints records one `HTTP <code> ignored` entry per endpoint
+  Deno.test(`probeApiEndpoints: HTTP ${code} logs ignored entry per endpoint`, async () => {
+    stubFetch(() => new Response("denied", { status: code }));
+    try {
+      const r = await probeApiEndpoints(VFS_ENDPOINTS);
+      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
+      assertEquals(
+        ignored.length,
+        VFS_ENDPOINTS.length,
+        `expected ${VFS_ENDPOINTS.length} ignored entries, got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
+      );
+      for (const entry of ignored) {
+        assert(
+          /auth|blocked|not closed/i.test(entry),
+          `ignored entry should explain rationale, got '${entry}'`,
+        );
+      }
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  // Integration-level: checkSite's detectionMethod records `spa-shell-no-signal`
+  // and no layer fires (state stays fully neutral) on each 4xx.
+  Deno.test(`checkSite IT: detectionMethod trace on API ${code} => spa-shell-no-signal, none`, async () => {
+    stubFetch(makeSpaShellHandler(code));
+    try {
+      const r = await checkSite("IT", MONITOR_TARGETS.IT);
+
+      assert(
+        r.detectionMethod.includes("spa-shell-no-signal"),
+        `detectionMethod must include 'spa-shell-no-signal' for ${code}, got '${r.detectionMethod}'`,
+      );
+      assert(
+        r.detectionMethod.startsWith("none"),
+        `detectionMethod should start with 'none' on ${code}, got '${r.detectionMethod}'`,
+      );
+      // no `api(...)` / `keywords(...)` / `script(...)` layer should be attributed
+      assert(
+        !/\b(api|keywords|script)\(/.test(r.detectionMethod),
+        `no layer should fire on ${code}, got '${r.detectionMethod}'`,
+      );
+
+      assertEquals(r.status, "unknown");
+      assertEquals(r.openScore, 0);
+      assertEquals(r.closedScore, 0);
+    } finally {
+      restoreFetch();
+    }
+  });
+}
