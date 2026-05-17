@@ -681,10 +681,12 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
     let { status, totalOpen, totalClosed, detectionMethod } = determineStatus(layers);
 
     // Safety net: if the page is an empty SPA shell (no readable body text)
-    // AND no layer produced any positive open signal, do NOT report "closed".
+    // AND no layer produced ANY signal (open or closed), do NOT report "closed".
     // Returning "unknown" prevents false negatives that hide real openings.
+    // NOTE: if an API layer produced a real closed signal (e.g. available:false,
+    // empty slots), we keep that — only pure no-signal SPA shells become 'unknown'.
     const hasReadableBody = bodyText.length >= 200;
-    if (!hasReadableBody && totalOpen === 0 && status !== 'open') {
+    if (!hasReadableBody && totalOpen === 0 && totalClosed === 0 && status !== 'open') {
       status = 'unknown';
       detectionMethod = `${detectionMethod} | spa-shell-no-signal`;
     }
