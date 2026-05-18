@@ -388,10 +388,9 @@ export async function probeApiEndpoints(
   const apiResults: string[] = [];
 
   for (const ep of endpoints) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
       const resp = await fetch(ep.url, {
         method: ep.method || 'GET',
         headers: {
@@ -402,8 +401,6 @@ export async function probeApiEndpoints(
         },
         signal: controller.signal,
       });
-      clearTimeout(timeout);
-
       const text = await resp.text();
       apiResults.push(`API ${ep.url} → HTTP ${resp.status}, ${text.length} bytes`);
 
@@ -473,6 +470,8 @@ export async function probeApiEndpoints(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       apiResults.push(`API ${ep.url} → Error: ${msg}`);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -590,12 +589,10 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       if (attempt > 0) await randomDelay(1500, 4000);
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-
       const start = Date.now();
       const response = await fetch(url, {
         headers: {
@@ -616,10 +613,11 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
         redirect: 'follow',
       });
       const durationMs = Date.now() - start;
-      clearTimeout(timeout);
       return { response, durationMs };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+    } finally {
+      clearTimeout(timeout);
     }
   }
   throw lastError!;
