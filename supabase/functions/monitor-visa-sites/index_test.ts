@@ -404,27 +404,9 @@ Deno.test("probeApiEndpoints: AbortError (timeout) keeps scores at 0", async () 
   }
 });
 
-Deno.test("probeApiEndpoints: respects AbortSignal from controller", async () => {
-  // Stub that actually waits for the signal and rejects with AbortError
-  globalThis.fetch = ((_input: any, init?: any) => {
-    return new Promise((_resolve, reject) => {
-      const signal = init?.signal as AbortSignal | undefined;
-      if (signal?.aborted) return reject(makeAbortError());
-      signal?.addEventListener("abort", () => reject(makeAbortError()));
-      // never resolves otherwise — but probe timeout (8s) will abort it.
-      // To keep the test fast, abort immediately on next microtask.
-      queueMicrotask(() => {
-        try { (init as any).signal?.dispatchEvent?.(new Event("abort")); } catch { /* ignore */ }
-      });
-    });
-  }) as typeof fetch;
+Deno.test("probeApiEndpoints: rejected promise (timeout) keeps scores at 0", async () => {
+  globalThis.fetch = (() => Promise.reject(makeAbortError())) as typeof fetch;
   try {
-    // Manually abort by passing our own controller through a wrapper:
-    // simplest: just rely on throwing path tested above. Here we ensure
-    // that an immediately-aborted signal also yields zero scores.
-    const controller = new AbortController();
-    controller.abort();
-    globalThis.fetch = ((_i: any, _init?: any) => Promise.reject(makeAbortError())) as typeof fetch;
     const r = await probeApiEndpoints([VFS_ENDPOINTS[0]]);
     assertEquals(r.openScore, 0);
     assertEquals(r.closedScore, 0);
@@ -452,7 +434,7 @@ Deno.test("checkSite IT: HTML fetch timeout => status 'error', not 'closed'", as
   } finally {
     restoreFetch();
   }
-}, /* slow because of fetchWithRetry retries with randomDelay */);
+});
 
 Deno.test("checkSite IT: SPA shell + ALL API endpoints timeout => 'unknown', not 'closed'", async () => {
   stubFetch((url) => {
