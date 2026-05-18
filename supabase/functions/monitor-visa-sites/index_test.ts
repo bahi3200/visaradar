@@ -132,6 +132,10 @@ for (const code of [401, 403, 404, 422]) {
         r.detectionMethod.includes("spa-shell-no-signal") || r.status === "unknown",
         `expected spa-shell-no-signal marker, got '${r.detectionMethod}'`,
       );
+      // The number of "HTTP <code> ignored" entries must equal exactly
+      // the number of configured API endpoints for IT — no more, no less.
+      // (Note: snippet/apiResults aren't on CheckResult; re-probe with the
+      // same stub to inspect the apiResults the function would have logged.)
     } finally {
       restoreFetch();
     }
@@ -332,6 +336,37 @@ for (const code of [401, 403, 404, 422]) {
           `ignored entry should explain rationale, got '${entry}'`,
         );
       }
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  // Same invariant against the REAL MONITOR_TARGETS.IT.apiEndpoints config:
+  // the count of "HTTP <code> ignored" lines must equal exactly the number
+  // of configured endpoints — guards against silent endpoint drift, double-
+  // logging, or skipped endpoints.
+  Deno.test(`probeApiEndpoints (MONITOR_TARGETS.IT): HTTP ${code} ignored count == configured endpoints`, async () => {
+    stubFetch(() => new Response("denied", { status: code }));
+    try {
+      const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
+      assert(endpoints.length > 0, "IT must have at least one configured API endpoint");
+      const r = await probeApiEndpoints(endpoints);
+      const ignored = r.apiResults.filter((s) => /HTTP \d+ ignored/.test(s));
+      assertEquals(
+        ignored.length,
+        endpoints.length,
+        `expected exactly ${endpoints.length} 'HTTP ignored' entries (one per IT endpoint), got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
+      );
+      // Every ignored entry must reference the queried HTTP code
+      const matching = ignored.filter((s) => s.includes(`HTTP ${code} ignored`));
+      assertEquals(
+        matching.length,
+        endpoints.length,
+        `all ignored entries must reference HTTP ${code}, got: ${JSON.stringify(ignored)}`,
+      );
+      // And scores must stay neutral
+      assertEquals(r.openScore, 0);
+      assertEquals(r.closedScore, 0);
     } finally {
       restoreFetch();
     }
