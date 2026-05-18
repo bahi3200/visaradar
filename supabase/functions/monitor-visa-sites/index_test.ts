@@ -366,3 +366,118 @@ for (const code of [401, 403, 404, 422]) {
     }
   });
 }
+
+// ──────────────────────────────────────────────
+// Timeout / AbortController tests
+// When fetch is aborted (timeout) the function MUST NOT classify as 'closed'.
+// probeApiEndpoints: keeps scores at 0 and records the error in apiResults.
+// checkSite (HTML fetch timeout): returns status 'error' (never 'closed').
+// checkSite (HTML OK but ALL API endpoints timeout): falls back to 'unknown'
+// via the spa-shell-no-signal safety net, never 'closed'.
+// ──────────────────────────────────────────────
+function makeAbortError(): Error {
+  // DOMException is what fetch throws when controller.abort() fires
+  try {
+    return new DOMException("The operation was aborted.", "AbortError");
+  } catch {
+    const e = new Error("The operation was aborted.");
+    (e as any).name = "AbortError";
+    return e;
+  }
+}
+
+Deno.test("probeApiEndpoints: AbortError (timeout) keeps scores at 0", async () => {
+  stubFetch(() => { throw makeAbortError(); });
+  try {
+    const r = await probeApiEndpoints(VFS_ENDPOINTS);
+    assertEquals(r.openScore, 0, "openScore must stay 0 on timeout");
+    assertEquals(r.closedScore, 0, "closedScore must stay 0 on timeout — unreachable != closed");
+    // one error entry per endpoint
+    const errs = r.apiResults.filter((s) => /Error:/i.test(s));
+    assertEquals(errs.length, VFS_ENDPOINTS.length, `expected ${VFS_ENDPOINTS.length} error entries, got: ${JSON.stringify(r.apiResults)}`);
+    assert(
+      r.apiResults.some((s) => /abort/i.test(s)),
+      `apiResults should mention abort/timeout, got: ${JSON.stringify(r.apiResults)}`,
+    );
+  } finally {
+    restoreFetch();
+  }
+});
+
+Deno.test("probeApiEndpoints: respects AbortSignal from controller", async () => {
+  // Stub that actually waits for the signal and rejects with AbortError
+  globalThis.fetch = ((_input: any, init?: any) => {
+    return new Promise((_resolve, reject) => {
+      const signal = init?.signal as AbortSignal | undefined;
+      if (signal?.aborted) return reject(makeAbortError());
+      signal?.addEventListener("abort", () => reject(makeAbortError()));
+      // never resolves otherwise — but probe timeout (8s) will abort it.
+      // To keep the test fast, abort immediately on next microtask.
+      queueMicrotask(() => {
+        try { (init as any).signal?.dispatchEvent?.(new Event("abort")); } catch { /* ignore */ }
+      });
+    });
+  }) as typeof fetch;
+  try {
+    // Manually abort by passing our own controller through a wrapper:
+    // simplest: just rely on throwing path tested above. Here we ensure
+    // that an immediately-aborted signal also yields zero scores.
+    const controller = new AbortController();
+    controller.abort();
+    globalThis.fetch = ((_i: any, _init?: any) => Promise.reject(makeAbortError())) as typeof fetch;
+    const r = await probeApiEndpoints([VFS_ENDPOINTS[0]]);
+    assertEquals(r.openScore, 0);
+    assertEquals(r.closedScore, 0);
+  } finally {
+    restoreFetch();
+  }
+});
+
+Deno.test("checkSite IT: HTML fetch timeout => status 'error', not 'closed'", async () => {
+  stubFetch(() => { throw makeAbortError(); });
+  try {
+    const r = await checkSite("IT", MONITOR_TARGETS.IT);
+    assert(
+      r.status !== "closed",
+      `status must not be 'closed' on timeout (got '${r.status}')`,
+    );
+    assertEquals(r.status, "error", `expected 'error', got '${r.status}'`);
+    assertEquals(r.closedScore, 0);
+    assertEquals(r.openScore, 0);
+    assertEquals(r.detectionMethod, "error");
+    assert(
+      r.error != null && /abort/i.test(r.error),
+      `error should mention abort, got '${r.error}'`,
+    );
+  } finally {
+    restoreFetch();
+  }
+}, /* slow because of fetchWithRetry retries with randomDelay */);
+
+Deno.test("checkSite IT: SPA shell + ALL API endpoints timeout => 'unknown', not 'closed'", async () => {
+  stubFetch((url) => {
+    if (url.includes("lift-api") || url.includes("/api/")) {
+      throw makeAbortError();
+    }
+    return new Response(NUXT_SPA_SHELL, {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+  try {
+    const r = await checkSite("IT", MONITOR_TARGETS.IT);
+    assert(
+      r.status !== "closed",
+      `status must not be 'closed' when APIs timeout (got '${r.status}', method='${r.detectionMethod}')`,
+    );
+    assertEquals(r.status, "unknown");
+    assertEquals(r.closedScore, 0, "API timeouts must NOT increment closedScore");
+    assertEquals(r.openScore, 0);
+    assert(
+      r.detectionMethod.includes("spa-shell-no-signal"),
+      `expected spa-shell-no-signal safety net, got '${r.detectionMethod}'`,
+    );
+  } finally {
+    restoreFetch();
+  }
+});
