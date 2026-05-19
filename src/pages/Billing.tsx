@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  History,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +23,18 @@ import { toast } from "@/components/ui/use-toast";
 import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
 type DerivedStatus = "active" | "expiring" | "expired" | "none";
+
+type PaymentEvent = {
+  id: string;
+  event_type: string;
+  status: string;
+  provider: string | null;
+  amount: number | null;
+  currency: string | null;
+  reference: string | null;
+  message: string | null;
+  created_at: string;
+};
 
 function deriveStatus(sub: SubscriptionWithPackage | null): {
   status: DerivedStatus;
@@ -98,6 +112,46 @@ export default function Billing() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["my-subscription", user.id] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
+  // Payment events list (latest 20 for current user)
+  const { data: events = [], isLoading: eventsLoading } = useQuery<PaymentEvent[]>({
+    queryKey: ["my-payment-events", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await (supabase as any)
+        .from("payment_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return (data as PaymentEvent[]) ?? [];
+    },
+    enabled: !!user,
+    refetchOnWindowFocus: true,
+  });
+
+  // Realtime: refresh events on insert
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`billing-events-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "payment_events",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["my-payment-events", user.id] });
         },
       )
       .subscribe();
