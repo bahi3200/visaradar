@@ -361,44 +361,190 @@ export default function Billing() {
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center pb-3 border-b border-border/20">
-                <span className="text-sm text-muted-foreground">الباقة</span>
-                <span className="text-sm font-bold text-foreground">
-                  {subscription.packages?.name_ar ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-3 border-b border-border/20">
-                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                  تاريخ البدء
-                </span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatDate(subscription.starts_at)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-3 border-b border-border/20">
-                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-destructive" />
-                  ينتهي في
-                </span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatDate(subscription.expires_at)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">الأيام المتبقية</span>
-                <span
-                  className={`text-sm font-bold ${
-                    status === "expiring" ? "text-accent" : "text-foreground"
+          ) : (() => {
+            const pkg = subscription.packages;
+            const totalDays = Math.max(
+              1,
+              Math.ceil(
+                (new Date(subscription.expires_at).getTime() -
+                  new Date(subscription.starts_at).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            );
+            const used = Math.max(0, totalDays - (daysLeft ?? 0));
+            const progress = Math.min(100, Math.max(0, (used / totalDays) * 100));
+            const price = pkg?.promo_price ?? pkg?.price ?? null;
+            // Auto-renewal is currently unavailable: provider not yet activated
+            const autoRenew = false;
+            return (
+              <div className="space-y-4">
+                {/* Plan hero */}
+                <div className="flex items-start justify-between gap-3 pb-4 border-b border-border/20">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="text-xl font-bold text-foreground">
+                        {pkg?.name_ar ?? "—"}
+                      </h3>
+                      {pkg?.is_golden && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+                          <Sparkles className="w-3 h-3" />
+                          GOLD
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {pkg?.duration_months
+                        ? `لمدة ${pkg.duration_months} ${pkg.duration_months === 1 ? "شهر" : "أشهر"}`
+                        : "—"}
+                      {subscription.service_type && ` · ${subscription.service_type}`}
+                    </p>
+                  </div>
+                  {price != null && (
+                    <div className="text-left shrink-0">
+                      <div className="text-lg font-bold text-foreground leading-none">
+                        {price.toLocaleString("ar-DZ")}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-1">دج</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Renewal date — highlighted */}
+                <div
+                  className={`rounded-lg p-4 border ${
+                    status === "expiring"
+                      ? "bg-accent/10 border-accent/30"
+                      : "bg-primary/5 border-primary/20"
                   }`}
                 >
-                  {daysLeft} يوم
-                </span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock
+                        className={`w-5 h-5 ${
+                          status === "expiring" ? "text-accent" : "text-primary"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">
+                          تاريخ التجديد القادم
+                        </p>
+                        <p className="text-sm font-bold text-foreground mt-0.5">
+                          {formatDate(subscription.expires_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                        status === "expiring"
+                          ? "bg-accent/20 text-accent"
+                          : "bg-primary/15 text-primary"
+                      }`}
+                    >
+                      متبقي {daysLeft} يوم
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-3">
+                    <div
+                      className="w-full h-1.5 rounded-full bg-muted overflow-hidden"
+                      role="progressbar"
+                      aria-valuenow={Math.round(progress)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <div
+                        className={`h-full transition-all ${
+                          status === "expiring" ? "bg-accent" : "bg-primary"
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground mt-1.5">
+                      <span>{formatDate(subscription.starts_at)}</span>
+                      <span>
+                        {used} / {totalDays} يوم
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Auto-renewal status */}
+                <div
+                  className={`flex items-start gap-3 rounded-lg p-3 border ${
+                    autoRenew
+                      ? "bg-primary/5 border-primary/20"
+                      : "bg-muted/40 border-border/30"
+                  }`}
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 mt-0.5 shrink-0 ${
+                      autoRenew ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-sm font-bold text-foreground">
+                        التجديد التلقائي
+                      </p>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          autoRenew
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {autoRenew ? "مُفعّل" : "غير مُفعّل"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                      {autoRenew
+                        ? "سيتم تجديد اشتراكك تلقائيًا في تاريخ التجديد القادم."
+                        : "التجديد يدوي حاليًا — مزوّد الدفع غير مفعّل بعد. سنذكّرك قبل انتهاء الاشتراك لتجديده يدويًا."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Extra details */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-background/40 border border-border/20">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground leading-none">
+                        بدأ في
+                      </p>
+                      <p className="text-xs font-medium text-foreground mt-1 truncate">
+                        {formatDate(subscription.starts_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-background/40 border border-border/20">
+                    <Globe2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground leading-none">
+                        الدول
+                      </p>
+                      <p className="text-xs font-medium text-foreground mt-1 truncate">
+                        {subscription.countries?.length
+                          ? `${subscription.countries.length} / ${pkg?.max_countries ?? "—"}`
+                          : `0 / ${pkg?.max_countries ?? "—"}`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {status === "expiring" && (
+                  <Link
+                    to="/pricing"
+                    className="inline-flex items-center justify-center gap-2 w-full bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold px-5 py-2.5 rounded-full transition-all"
+                  >
+                    جدّد الآن
+                    <ArrowLeft className="w-4 h-4" />
+                  </Link>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Actions */}
