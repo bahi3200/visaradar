@@ -173,19 +173,75 @@ export default function Billing() {
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
-  const notReady = (action: "update" | "cancel") => {
+  const logEvent = async (payload: {
+    event_type: string;
+    status: "info" | "warning" | "failed";
+    message: string;
+    metadata?: Record<string, unknown>;
+  }) => {
+    if (!user) return;
+    const { error } = await (supabase as any).from("payment_events").insert({
+      user_id: user.id,
+      subscription_id: subscription?.id ?? null,
+      event_type: payload.event_type,
+      status: payload.status,
+      provider: "simulation",
+      message: payload.message,
+      metadata: payload.metadata ?? {},
+    });
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to log payment event:", error);
+    }
+  };
+
+  const notReady = async (action: "update" | "cancel") => {
     setPendingAction(action);
-    // Simulate a brief loading state, then show the "coming soon" toast
-    window.setTimeout(() => {
-      setPendingAction(null);
-      toast({
-        title: "قريبًا",
-        description:
-          action === "update"
-            ? "تحديث طريقة الدفع الآلي قيد الإعداد. تواصل مع الدعم لتعديل وسيلة الدفع حاليًا."
-            : "إلغاء الاشتراك الذاتي قيد الإعداد. تواصل مع الدعم لإلغاء اشتراكك حاليًا.",
+    const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
+    const friendlyAction = action === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك";
+    try {
+      // Brief loading state to mimic provider round-trip
+      await new Promise((r) => setTimeout(r, 700));
+
+      // Guard: must have an active subscription
+      if (!subscription) {
+        throw new Error("لا يوجد اشتراك نشط مرتبط بحسابك حاليًا.");
+      }
+
+      // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
+      const errMsg =
+        action === "update"
+          ? "تعذّر فتح بوابة تحديث طريقة الدفع: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد."
+          : "تعذّر إلغاء الاشتراك تلقائيًا: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد.";
+
+      await logEvent({
+        event_type: eventType,
+        status: "failed",
+        message: errMsg,
+        metadata: { reason: "provider_not_configured", action },
       });
-    }, 700);
+
+      toast({
+        title: `فشل ${friendlyAction}`,
+        description: `${errMsg} تواصل مع الدعم لإجراء العملية يدويًا.`,
+        variant: "destructive",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع.";
+      await logEvent({
+        event_type: eventType,
+        status: "failed",
+        message,
+        metadata: { reason: "client_error", action },
+      });
+      toast({
+        title: `فشل ${friendlyAction}`,
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const formatDate = (d: string) =>
