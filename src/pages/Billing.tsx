@@ -53,6 +53,22 @@ type PaymentEvent = {
   created_at: string;
 };
 
+type InvoiceRow = {
+  id: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+  receipt_url: string | null;
+  admin_notes: string | null;
+  package_id: string;
+  packages: {
+    name_ar: string | null;
+    price: number | null;
+    promo_price: number | null;
+    duration_months: number | null;
+  } | null;
+};
+
 function deriveStatus(sub: SubscriptionWithPackage | null): {
   status: DerivedStatus;
   daysLeft: number | null;
