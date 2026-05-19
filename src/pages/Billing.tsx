@@ -321,6 +321,67 @@ export default function Billing() {
             تحتاج مساعدة؟ تواصل مع الدعم
           </Link>
         </div>
+
+        {/* Payment events log */}
+        <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+            <History className="w-5 h-5 text-primary" />
+            سجل أحداث الفوترة
+          </h2>
+          {eventsLoading ? (
+            <p className="text-sm text-muted-foreground">جاري التحميل...</p>
+          ) : events.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              لا توجد أحداث مسجّلة بعد.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {events.map((ev) => {
+                const tone =
+                  ev.status === "success"
+                    ? "bg-primary/15 text-primary"
+                    : ev.status === "failed"
+                    ? "bg-destructive/15 text-destructive"
+                    : ev.status === "warning"
+                    ? "bg-accent/15 text-accent"
+                    : "bg-muted text-muted-foreground";
+                return (
+                  <li
+                    key={ev.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-border/20 bg-background/40"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                      <Receipt className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap mb-0.5">
+                        <span className="text-sm font-bold text-foreground">{ev.event_type}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tone}`}>
+                          {ev.status}
+                        </span>
+                      </div>
+                      {ev.message && (
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-1">
+                          {ev.message}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+                        <span>{new Date(ev.created_at).toLocaleString("ar-DZ")}</span>
+                        {ev.amount != null && (
+                          <span>
+                            {ev.amount} {ev.currency ?? ""}
+                          </span>
+                        )}
+                        {ev.provider && <span>· {ev.provider}</span>}
+                        {ev.reference && <span className="font-mono">#{ev.reference}</span>}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </Layout>
   );
