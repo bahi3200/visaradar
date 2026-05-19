@@ -17,6 +17,9 @@ import {
   CalendarClock,
   Globe2,
   Sparkles,
+  FileText,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +51,22 @@ type PaymentEvent = {
   reference: string | null;
   message: string | null;
   created_at: string;
+};
+
+type InvoiceRow = {
+  id: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+  receipt_url: string | null;
+  admin_notes: string | null;
+  package_id: string;
+  packages: {
+    name_ar: string | null;
+    price: number | null;
+    promo_price: number | null;
+    duration_months: number | null;
+  } | null;
 };
 
 function deriveStatus(sub: SubscriptionWithPackage | null): {
@@ -176,6 +195,58 @@ export default function Billing() {
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Invoices / billing transactions (latest 10 subscription requests for this user)
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
+    queryKey: ["my-invoices", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("subscription_requests")
+        .select(
+          "id, status, created_at, reviewed_at, receipt_url, admin_notes, package_id, packages(name_ar, price, promo_price, duration_months)",
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return (data as unknown as InvoiceRow[]) ?? [];
+    },
+    enabled: !!user,
+    refetchOnWindowFocus: true,
+  });
+
+  const extractReceiptPath = (url: string): string | null => {
+    if (!url) return null;
+    // Already a storage path
+    if (!url.startsWith("http")) return url;
+    const marker = "/receipts/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.substring(idx + marker.length).split("?")[0]);
+  };
+
+  const downloadReceipt = async (invoice: InvoiceRow) => {
+    if (!invoice.receipt_url) return;
+    setDownloadingId(invoice.id);
+    try {
+      const path = extractReceiptPath(invoice.receipt_url);
+      let url = invoice.receipt_url;
+      if (path) {
+        const { data, error } = await supabase.storage
+          .from("receipts")
+          .createSignedUrl(path, 3600);
+        if (error || !data?.signedUrl) throw new Error(error?.message ?? "تعذر إنشاء رابط الوصل");
+        url = data.signedUrl;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "تعذر تحميل الوصل";
+      toast({ title: "فشل التحميل", description: message, variant: "destructive" });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const logEvent = async (payload: {
     event_type: string;
@@ -596,6 +667,127 @@ export default function Billing() {
           <Link to="/contact" className="text-xs text-primary hover:underline">
             تحتاج مساعدة؟ تواصل مع الدعم
           </Link>
+        </div>
+
+        {/* Invoices / Transactions */}
+        <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              الفواتير والمعاملات
+            </h2>
+            <Link
+              to="/my-requests"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              عرض الكل
+              <ArrowLeft className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {invoicesLoading ? (
+            <p className="text-sm text-muted-foreground">جاري التحميل...</p>
+          ) : invoices.length === 0 ? (
+            <div className="text-center py-6">
+              <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">لا توجد فواتير بعد.</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {invoices.map((inv) => {
+                const statusMap: Record<string, { label: string; tone: string }> = {
+                  approved: { label: "مدفوعة", tone: "bg-primary/15 text-primary" },
+                  pending: { label: "قيد المراجعة", tone: "bg-accent/15 text-accent" },
+                  rejected: { label: "مرفوضة", tone: "bg-destructive/15 text-destructive" },
+                  cancelled: { label: "ملغاة", tone: "bg-muted text-muted-foreground" },
+                };
+                const st = statusMap[inv.status] ?? {
+                  label: inv.status,
+                  tone: "bg-muted text-muted-foreground",
+                };
+                const amount = inv.packages?.promo_price ?? inv.packages?.price ?? null;
+                const isDownloading = downloadingId === inv.id;
+                const ref = `INV-${inv.id.slice(0, 8).toUpperCase()}`;
+                return (
+                  <li
+                    key={inv.id}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-border/20 bg-background/40"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Receipt className="w-4.5 h-4.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">
+                            {inv.packages?.name_ar ?? "اشتراك"}
+                            {inv.packages?.duration_months
+                              ? ` · ${inv.packages.duration_months} ${
+                                  inv.packages.duration_months === 1 ? "شهر" : "أشهر"
+                                }`
+                              : ""}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                            {ref}
+                          </p>
+                        </div>
+                        <div className="text-left shrink-0">
+                          {amount != null && (
+                            <p className="text-sm font-bold text-foreground leading-none">
+                              {amount.toLocaleString("ar-DZ")}{" "}
+                              <span className="text-[10px] text-muted-foreground">دج</span>
+                            </p>
+                          )}
+                          <span
+                            className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${st.tone}`}
+                          >
+                            {st.label}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          <span>{formatDate(inv.created_at)}</span>
+                          {inv.reviewed_at && (
+                            <>
+                              <span>·</span>
+                              <span>روجعت: {formatDate(inv.reviewed_at)}</span>
+                            </>
+                          )}
+                        </div>
+                        {inv.receipt_url ? (
+                          <button
+                            type="button"
+                            onClick={() => downloadReceipt(inv)}
+                            disabled={isDownloading}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isDownloading ? (
+                              <Clock className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Download className="w-3 h-3" />
+                            )}
+                            {isDownloading ? "جاري الفتح..." : "تحميل الإيصال"}
+                            {!isDownloading && <ExternalLink className="w-3 h-3" />}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            لا يوجد إيصال مرفق
+                          </span>
+                        )}
+                      </div>
+                      {inv.status === "rejected" && inv.admin_notes && (
+                        <p className="mt-2 text-[11px] text-destructive bg-destructive/10 rounded px-2 py-1 leading-relaxed">
+                          {inv.admin_notes}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         {/* Payment events log */}
