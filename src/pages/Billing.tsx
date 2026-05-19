@@ -1,19 +1,48 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { CreditCard, XCircle, Calendar, Crown, ArrowLeft, Info } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  CreditCard,
+  XCircle,
+  Calendar,
+  Crown,
+  ArrowLeft,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import BackButton from "@/components/BackButton";
 import { toast } from "@/components/ui/use-toast";
 import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
+type DerivedStatus = "active" | "expiring" | "expired" | "none";
+
+function deriveStatus(sub: SubscriptionWithPackage | null): {
+  status: DerivedStatus;
+  daysLeft: number | null;
+} {
+  if (!sub) return { status: "none", daysLeft: null };
+  const now = Date.now();
+  const end = new Date(sub.expires_at).getTime();
+  const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 0 || sub.status !== "active") return { status: "expired", daysLeft };
+  if (daysLeft <= 7) return { status: "expiring", daysLeft };
+  return { status: "active", daysLeft };
+}
+
 export default function Billing() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data: subscription, isLoading } = useQuery<SubscriptionWithPackage | null>({
+  const { data: subscription, isLoading, isFetching, refetch } = useQuery<
+    SubscriptionWithPackage | null
+  >({
     queryKey: ["my-subscription", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -21,12 +50,61 @@ export default function Billing() {
         .from("subscriptions")
         .select("*, packages(*)")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .order("expires_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       return (data as SubscriptionWithPackage | null) ?? null;
     },
     enabled: !!user,
+    refetchOnWindowFocus: true,
   });
+
+  // Handle ?payment=success — refresh and notify, then clean URL
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (!paymentStatus || !user) return;
+
+    if (paymentStatus === "success") {
+      toast({
+        title: "تم الدفع بنجاح ✓",
+        description: "جاري تحديث حالة اشتراكك...",
+      });
+      queryClient.invalidateQueries({ queryKey: ["my-subscription", user.id] });
+      refetch();
+    } else if (paymentStatus === "cancelled") {
+      toast({
+        title: "تم إلغاء العملية",
+        description: "لم يتم خصم أي مبلغ.",
+        variant: "destructive",
+      });
+    }
+    // strip query param
+    searchParams.delete("payment");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, user, queryClient, refetch, setSearchParams]);
+
+  // Realtime: auto-refresh when subscription row changes (e.g. webhook updates it)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`billing-sub-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subscriptions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["my-subscription", user.id] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   const notReady = () =>
     toast({
@@ -36,6 +114,33 @@ export default function Billing() {
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
+
+  const { status, daysLeft } = deriveStatus(subscription ?? null);
+
+  const statusBadge = () => {
+    if (status === "active")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-primary/15 text-primary">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          نشط
+        </span>
+      );
+    if (status === "expiring")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-accent/15 text-accent">
+          <AlertTriangle className="w-3.5 h-3.5" />
+          ينتهي قريبًا ({daysLeft} أيام)
+        </span>
+      );
+    if (status === "expired")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-destructive/15 text-destructive">
+          <XCircle className="w-3.5 h-3.5" />
+          منتهي
+        </span>
+      );
+    return null;
+  };
 
   return (
     <Layout>
@@ -58,21 +163,31 @@ export default function Billing() {
 
         {/* Current subscription */}
         <div className="gradient-card rounded-xl border border-border/30 p-5 mb-6">
-          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-            <Crown className="w-5 h-5 text-accent" />
-            اشتراكك الحالي
-          </h2>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Crown className="w-5 h-5 text-accent" />
+              اشتراكك الحالي
+              {isFetching && !isLoading && (
+                <Clock className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
+              )}
+            </h2>
+            {statusBadge()}
+          </div>
 
           {isLoading ? (
             <p className="text-sm text-muted-foreground">جاري التحميل...</p>
-          ) : !subscription ? (
+          ) : !subscription || status === "expired" ? (
             <div className="text-center py-6">
-              <p className="text-sm text-muted-foreground mb-4">لا يوجد اشتراك نشط حاليًا</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {status === "expired"
+                  ? "انتهى اشتراكك. جدّد للوصول الكامل."
+                  : "لا يوجد اشتراك نشط حاليًا"}
+              </p>
               <Link
                 to="/pricing"
                 className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold px-5 py-2.5 rounded-full transition-all"
               >
-                اشترك الآن
+                {status === "expired" ? "جدّد الآن" : "اشترك الآن"}
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </div>
@@ -93,7 +208,7 @@ export default function Billing() {
                   {formatDate(subscription.starts_at)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center pb-3 border-b border-border/20">
                 <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-destructive" />
                   ينتهي في
@@ -102,12 +217,22 @@ export default function Billing() {
                   {formatDate(subscription.expires_at)}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">الأيام المتبقية</span>
+                <span
+                  className={`text-sm font-bold ${
+                    status === "expiring" ? "text-accent" : "text-foreground"
+                  }`}
+                >
+                  {daysLeft} يوم
+                </span>
+              </div>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        {subscription && (
+        {subscription && status !== "expired" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={notReady}
