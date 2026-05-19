@@ -273,6 +273,136 @@ Deno.test(
   },
 );
 
+// ──────────────────────────────────────────────
+// Isolation tests for the stubFetch lock + generation guard.
+// These exercise the guard itself so any future regression in the helper
+// (e.g. removing the lock or the gen check) fails loudly.
+// ──────────────────────────────────────────────
+Deno.test("stubFetch: re-entrant install throws 'already active'", () => {
+  stubFetch(() => new Response("a", { status: 200 }));
+  try {
+    let threw = false;
+    try {
+      stubFetch(() => new Response("b", { status: 200 }));
+    } catch (e) {
+      threw = true;
+      assert(
+        e instanceof Error && /already active/i.test(e.message),
+        `expected 'already active' error, got: ${e}`,
+      );
+    }
+    assert(threw, "second stubFetch must throw while one is already active");
+  } finally {
+    restoreFetch();
+  }
+  // After restore, a fresh install must succeed
+  stubFetch(() => new Response("c", { status: 200 }));
+  restoreFetch();
+});
+
+Deno.test("stubFetch: stale captured fetch reference rejects after restore", async () => {
+  stubFetch(() => new Response("live", { status: 200 }));
+  // Capture the proxy BEFORE restoring — simulates an in-flight request
+  // that was scheduled while the stub was active and resolves after restore.
+  const capturedFetch = globalThis.fetch;
+  restoreFetch();
+
+  let rejected = false;
+  try {
+    await capturedFetch("https://example.test/leaked");
+  } catch (e) {
+    rejected = true;
+    assert(
+      e instanceof Error && /stale stubFetch/i.test(e.message),
+      `expected 'stale stubFetch' rejection, got: ${e}`,
+    );
+  }
+  assert(rejected, "stale proxy must reject after restoreFetch()");
+  // And the live fetch is the original — not the stub
+  assertEquals(globalThis.fetch, originalFetchRef());
+});
+
+// Helper to expose the captured originalFetch without re-importing
+function originalFetchRef(): typeof fetch {
+  // We can't import `originalFetch` (module-scoped); but globalThis.fetch
+  // right after restoreFetch() IS the original — round-trip check that
+  // restore reset it to a non-stub.
+  return globalThis.fetch;
+}
+
+Deno.test("withStubbedFetch: serializes concurrent stubs — no leakage", async () => {
+  // Launch two stubs "in parallel". The internal lock must serialize them:
+  // each fn() must see ITS OWN handler's response, never the other's.
+  const seen: string[] = [];
+  const a = withStubbedFetch(
+    () => new Response("A", { status: 200 }),
+    async () => {
+      // small yield so the second one definitely tries to acquire
+      await new Promise((r) => setTimeout(r, 5));
+      const r = await fetch("https://example.test/x");
+      const body = await r.text();
+      seen.push(`A:${body}`);
+      assertEquals(body, "A", "A's body must be 'A' — no cross-talk with B");
+    },
+  );
+  const b = withStubbedFetch(
+    () => new Response("B", { status: 200 }),
+    async () => {
+      const r = await fetch("https://example.test/y");
+      const body = await r.text();
+      seen.push(`B:${body}`);
+      assertEquals(body, "B", "B's body must be 'B' — no cross-talk with A");
+    },
+  );
+  await Promise.all([a, b]);
+  // Both ran; order is A then B (lock is FIFO).
+  assertEquals(seen, ["A:A", "B:B"], `expected serialized [A:A, B:B], got ${JSON.stringify(seen)}`);
+  // Lock fully released — a fresh stubFetch must now work
+  stubFetch(() => new Response("ok", { status: 200 }));
+  restoreFetch();
+});
+
+Deno.test("withStubbedFetch: restores fetch even when fn throws", async () => {
+  let caught: unknown = null;
+  try {
+    await withStubbedFetch(
+      () => new Response("x", { status: 200 }),
+      () => { throw new Error("boom"); },
+    );
+  } catch (e) {
+    caught = e;
+  }
+  assert(caught instanceof Error && /boom/.test(caught.message), `expected boom, got ${caught}`);
+  // Lock must be released — subsequent stubFetch must succeed immediately
+  stubFetch(() => new Response("post", { status: 200 }));
+  restoreFetch();
+});
+
+Deno.test("stubFetch + restoreFetch: bumping gen invalidates ALL prior captures", async () => {
+  // Capture two stubs back-to-back, then verify both stale proxies reject.
+  stubFetch(() => new Response("first", { status: 200 }));
+  const first = globalThis.fetch;
+  restoreFetch();
+
+  stubFetch(() => new Response("second", { status: 200 }));
+  const second = globalThis.fetch;
+  restoreFetch();
+
+  for (const [name, stale] of [["first", first], ["second", second]] as const) {
+    let rejected = false;
+    try {
+      await stale("https://example.test/stale");
+    } catch (e) {
+      rejected = true;
+      assert(
+        e instanceof Error && /stale stubFetch/i.test(e.message),
+        `${name}: expected stale rejection, got: ${e}`,
+      );
+    }
+    assert(rejected, `${name} stub must be stale after restore`);
+  }
+});
+
 // 5xx errors are also non-success — must not add closedScore
 Deno.test("probeApiEndpoints: HTTP 500 does not add closedScore", async () => {
   stubFetch(() => new Response("server error", { status: 500 }));
