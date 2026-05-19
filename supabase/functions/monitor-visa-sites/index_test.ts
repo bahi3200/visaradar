@@ -360,18 +360,7 @@ for (const code of [401, 403, 404, 422]) {
     stubFetch(() => new Response("denied", { status: code }));
     try {
       const r = await probeApiEndpoints(VFS_ENDPOINTS);
-      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
-      assertEquals(
-        ignored.length,
-        VFS_ENDPOINTS.length,
-        `expected ${VFS_ENDPOINTS.length} ignored entries, got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
-      );
-      for (const entry of ignored) {
-        assert(
-          /auth|blocked|not closed/i.test(entry),
-          `ignored entry should explain rationale, got '${entry}'`,
-        );
-      }
+      assertHttpIgnoredCount(r.apiResults, code, VFS_ENDPOINTS.length, `4xx trace ${code}`);
     } finally {
       restoreFetch();
     }
@@ -387,20 +376,7 @@ for (const code of [401, 403, 404, 422]) {
       const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
       assert(endpoints.length > 0, "IT must have at least one configured API endpoint");
       const r = await probeApiEndpoints(endpoints);
-      const ignored = r.apiResults.filter((s) => /HTTP \d+ ignored/.test(s));
-      assertEquals(
-        ignored.length,
-        endpoints.length,
-        `expected exactly ${endpoints.length} 'HTTP ignored' entries (one per IT endpoint), got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
-      );
-      // Every ignored entry must reference the queried HTTP code
-      const matching = ignored.filter((s) => s.includes(`HTTP ${code} ignored`));
-      assertEquals(
-        matching.length,
-        endpoints.length,
-        `all ignored entries must reference HTTP ${code}, got: ${JSON.stringify(ignored)}`,
-      );
-      // And scores must stay neutral
+      assertHttpIgnoredCount(r.apiResults, code, endpoints.length, `IT 4xx ${code}`);
       assertEquals(r.openScore, 0);
       assertEquals(r.closedScore, 0);
     } finally {
