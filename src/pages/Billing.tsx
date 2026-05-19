@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -160,11 +160,22 @@ export default function Billing() {
     };
   }, [user, queryClient]);
 
-  const notReady = () =>
-    toast({
-      title: "قريبًا",
-      description: "بوابة الدفع الآلية قيد الإعداد. تواصل مع الدعم لتعديل اشتراكك حاليًا.",
-    });
+  const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
+
+  const notReady = (action: "update" | "cancel") => {
+    setPendingAction(action);
+    // Simulate a brief loading state, then show the "coming soon" toast
+    window.setTimeout(() => {
+      setPendingAction(null);
+      toast({
+        title: "قريبًا",
+        description:
+          action === "update"
+            ? "تحديث طريقة الدفع الآلي قيد الإعداد. تواصل مع الدعم لتعديل وسيلة الدفع حاليًا."
+            : "إلغاء الاشتراك الذاتي قيد الإعداد. تواصل مع الدعم لإلغاء اشتراكك حاليًا.",
+      });
+    }, 700);
+  };
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
