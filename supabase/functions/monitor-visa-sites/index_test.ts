@@ -498,3 +498,82 @@ Deno.test("checkSite IT: SPA shell + ALL API endpoints timeout => 'unknown', not
     restoreFetch();
   }
 });
+
+// ──────────────────────────────────────────────
+// HTTP 5xx tests — server errors / provider downtime must behave like 4xx:
+//   • probeApiEndpoints records "HTTP <code> ignored" per endpoint
+//   • neither openScore nor closedScore changes
+//   • checkSite on SPA shell + 5xx returns status 'unknown' via
+//     the spa-shell-no-signal safety net (NEVER 'closed')
+// ──────────────────────────────────────────────
+for (const code of [500, 502, 503, 504]) {
+  Deno.test(`probeApiEndpoints: HTTP ${code} logs ignored entry per endpoint, scores stay 0`, async () => {
+    stubFetch(() => new Response("server error", { status: code }));
+    try {
+      const r = await probeApiEndpoints(VFS_ENDPOINTS);
+      assertEquals(r.openScore, 0, `openScore must stay 0 on ${code}`);
+      assertEquals(r.closedScore, 0, `closedScore must stay 0 on ${code} — server error != closed`);
+      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
+      assertEquals(
+        ignored.length,
+        VFS_ENDPOINTS.length,
+        `expected ${VFS_ENDPOINTS.length} 'HTTP ${code} ignored' entries, got: ${JSON.stringify(r.apiResults)}`,
+      );
+      for (const entry of ignored) {
+        assert(
+          /auth|blocked|not closed/i.test(entry),
+          `ignored entry should explain rationale, got '${entry}'`,
+        );
+      }
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  Deno.test(`probeApiEndpoints (MONITOR_TARGETS.IT): HTTP ${code} ignored count == configured endpoints`, async () => {
+    stubFetch(() => new Response("server error", { status: code }));
+    try {
+      const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
+      assert(endpoints.length > 0, "IT must have at least one configured API endpoint");
+      const r = await probeApiEndpoints(endpoints);
+      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
+      assertEquals(
+        ignored.length,
+        endpoints.length,
+        `expected exactly ${endpoints.length} 'HTTP ${code} ignored' entries, got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
+      );
+      assertEquals(r.openScore, 0);
+      assertEquals(r.closedScore, 0);
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  Deno.test(`checkSite IT: detectionMethod trace on API ${code} => spa-shell-no-signal, unknown`, async () => {
+    stubFetch(makeSpaShellHandler(code));
+    try {
+      const r = await checkSite("IT", MONITOR_TARGETS.IT);
+      assert(
+        r.status !== "closed",
+        `status must not be 'closed' on API ${code} (got '${r.status}', method='${r.detectionMethod}')`,
+      );
+      assertEquals(r.status, "unknown");
+      assertEquals(r.openScore, 0);
+      assertEquals(r.closedScore, 0, "5xx must NOT increment closedScore");
+      assert(
+        r.detectionMethod.includes("spa-shell-no-signal"),
+        `detectionMethod must include 'spa-shell-no-signal' for ${code}, got '${r.detectionMethod}'`,
+      );
+      assert(
+        r.detectionMethod.startsWith("none"),
+        `detectionMethod should start with 'none' on ${code}, got '${r.detectionMethod}'`,
+      );
+      assert(
+        !/\b(api|keywords|script)\(/.test(r.detectionMethod),
+        `no layer should fire on ${code}, got '${r.detectionMethod}'`,
+      );
+    } finally {
+      restoreFetch();
+    }
+  });
+}
