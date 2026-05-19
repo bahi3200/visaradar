@@ -84,6 +84,104 @@ for (const code of [401, 403, 404, 422]) {
   });
 }
 
+// ──────────────────────────────────────────────
+// Sequential / state-leakage guard:
+// Run probeApiEndpoints back-to-back for 401 → 403 → 404 → 422 inside a
+// SINGLE Deno.test and assert each iteration produces EXACTLY
+// VFS_ENDPOINTS.length "HTTP <code> ignored" entries — no fewer (skipped
+// endpoint), no more (cross-iteration leak), and no stray codes from a
+// previous iteration. Also re-asserts that scores stay 0 across all runs.
+// ──────────────────────────────────────────────
+Deno.test(
+  "probeApiEndpoints: sequential 401/403/404/422 — exact ignored count per run, no state leak",
+  async () => {
+    const codes = [401, 403, 404, 422] as const;
+    for (const code of codes) {
+      stubFetch(() => new Response("denied", { status: code }));
+      try {
+        const r = await probeApiEndpoints(VFS_ENDPOINTS);
+        // assertHttpIgnoredCount enforces:
+        //  • exactly VFS_ENDPOINTS.length matches for this code
+        //  • no leaked "HTTP <other> ignored" entries from prior iterations
+        assertHttpIgnoredCount(
+          r.apiResults,
+          code,
+          VFS_ENDPOINTS.length,
+          `sequential 4xx iter=${code}`,
+        );
+        assertEquals(r.openScore, 0, `openScore must stay 0 at iter ${code}`);
+        assertEquals(r.closedScore, 0, `closedScore must stay 0 at iter ${code}`);
+      } finally {
+        restoreFetch();
+      }
+    }
+  },
+);
+
+// Same guarantee against the REAL MONITOR_TARGETS.IT.apiEndpoints config —
+// the invariant must hold for the actual production endpoint list, not just
+// the synthetic VFS_ENDPOINTS fixture.
+Deno.test(
+  "probeApiEndpoints (MONITOR_TARGETS.IT): sequential 401/403/404/422 — exact ignored count per run",
+  async () => {
+    const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
+    assert(endpoints.length > 0, "IT must have at least one configured API endpoint");
+    const codes = [401, 403, 404, 422] as const;
+    for (const code of codes) {
+      stubFetch(() => new Response("denied", { status: code }));
+      try {
+        const r = await probeApiEndpoints(endpoints);
+        assertHttpIgnoredCount(
+          r.apiResults,
+          code,
+          endpoints.length,
+          `IT sequential iter=${code}`,
+        );
+        assertEquals(r.openScore, 0);
+        assertEquals(r.closedScore, 0);
+      } finally {
+        restoreFetch();
+      }
+    }
+  },
+);
+
+// Integration-level sequential guard: checkSite("IT", …) called four times
+// in a row — once per 4xx code — must yield status='unknown', scores 0,
+// detectionMethod with 'spa-shell-no-signal', and zero stray ignored codes.
+Deno.test(
+  "checkSite IT: sequential 401/403/404/422 — unknown + spa-shell-no-signal each time, no leak",
+  async () => {
+    const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
+    assert(endpoints.length > 0);
+    const codes = [401, 403, 404, 422] as const;
+    for (const code of codes) {
+      stubFetch(makeSpaShellHandler(code));
+      try {
+        const r = await checkSite("IT", MONITOR_TARGETS.IT);
+        assertEquals(r.status, "unknown", `iter ${code}: expected 'unknown', got '${r.status}'`);
+        assertEquals(r.openScore, 0, `iter ${code}: openScore must stay 0`);
+        assertEquals(r.closedScore, 0, `iter ${code}: closedScore must stay 0`);
+        assert(
+          r.detectionMethod.includes("spa-shell-no-signal"),
+          `iter ${code}: detectionMethod missing safety net, got '${r.detectionMethod}'`,
+        );
+        // Inline probe to mirror what checkSite saw — assert the ignored-count
+        // invariant on the production endpoint list this iteration.
+        const probe = await probeApiEndpoints(endpoints);
+        assertHttpIgnoredCount(
+          probe.apiResults,
+          code,
+          endpoints.length,
+          `IT checkSite sequential iter=${code}`,
+        );
+      } finally {
+        restoreFetch();
+      }
+    }
+  },
+);
+
 // 5xx errors are also non-success — must not add closedScore
 Deno.test("probeApiEndpoints: HTTP 500 does not add closedScore", async () => {
   stubFetch(() => new Response("server error", { status: 500 }));
