@@ -17,6 +17,9 @@ import {
   CalendarClock,
   Globe2,
   Sparkles,
+  FileText,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
