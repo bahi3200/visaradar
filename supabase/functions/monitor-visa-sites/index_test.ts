@@ -525,18 +525,7 @@ for (const code of [500, 502, 503, 504]) {
       const r = await probeApiEndpoints(VFS_ENDPOINTS);
       assertEquals(r.openScore, 0, `openScore must stay 0 on ${code}`);
       assertEquals(r.closedScore, 0, `closedScore must stay 0 on ${code} — server error != closed`);
-      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
-      assertEquals(
-        ignored.length,
-        VFS_ENDPOINTS.length,
-        `expected ${VFS_ENDPOINTS.length} 'HTTP ${code} ignored' entries, got: ${JSON.stringify(r.apiResults)}`,
-      );
-      for (const entry of ignored) {
-        assert(
-          /auth|blocked|not closed/i.test(entry),
-          `ignored entry should explain rationale, got '${entry}'`,
-        );
-      }
+      assertHttpIgnoredCount(r.apiResults, code, VFS_ENDPOINTS.length, `5xx unit ${code}`);
     } finally {
       restoreFetch();
     }
@@ -548,12 +537,7 @@ for (const code of [500, 502, 503, 504]) {
       const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
       assert(endpoints.length > 0, "IT must have at least one configured API endpoint");
       const r = await probeApiEndpoints(endpoints);
-      const ignored = r.apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
-      assertEquals(
-        ignored.length,
-        endpoints.length,
-        `expected exactly ${endpoints.length} 'HTTP ${code} ignored' entries, got ${ignored.length}: ${JSON.stringify(r.apiResults)}`,
-      );
+      assertHttpIgnoredCount(r.apiResults, code, endpoints.length, `IT 5xx ${code}`);
       assertEquals(r.openScore, 0);
       assertEquals(r.closedScore, 0);
     } finally {
