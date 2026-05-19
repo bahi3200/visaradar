@@ -623,7 +623,7 @@ export default function Billing() {
         {subscription && status !== "expired" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              onClick={() => notReady("update")}
+              onClick={() => setUpdateConfirmOpen(true)}
               disabled={pendingAction !== null}
               className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-primary/40 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
             >
