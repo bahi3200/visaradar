@@ -195,6 +195,58 @@ export default function Billing() {
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Invoices / billing transactions (latest 10 subscription requests for this user)
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
+    queryKey: ["my-invoices", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("subscription_requests")
+        .select(
+          "id, status, created_at, reviewed_at, receipt_url, admin_notes, package_id, packages(name_ar, price, promo_price, duration_months)",
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return (data as unknown as InvoiceRow[]) ?? [];
+    },
+    enabled: !!user,
+    refetchOnWindowFocus: true,
+  });
+
+  const extractReceiptPath = (url: string): string | null => {
+    if (!url) return null;
+    // Already a storage path
+    if (!url.startsWith("http")) return url;
+    const marker = "/receipts/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.substring(idx + marker.length).split("?")[0]);
+  };
+
+  const downloadReceipt = async (invoice: InvoiceRow) => {
+    if (!invoice.receipt_url) return;
+    setDownloadingId(invoice.id);
+    try {
+      const path = extractReceiptPath(invoice.receipt_url);
+      let url = invoice.receipt_url;
+      if (path) {
+        const { data, error } = await supabase.storage
+          .from("receipts")
+          .createSignedUrl(path, 3600);
+        if (error || !data?.signedUrl) throw new Error(error?.message ?? "تعذر إنشاء رابط الوصل");
+        url = data.signedUrl;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "تعذر تحميل الوصل";
+      toast({ title: "فشل التحميل", description: message, variant: "destructive" });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const logEvent = async (payload: {
     event_type: string;
