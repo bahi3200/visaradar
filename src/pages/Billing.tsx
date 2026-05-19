@@ -300,27 +300,41 @@ export default function Billing() {
         {subscription && status !== "expired" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              onClick={notReady}
-              className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-primary/40 transition-all group"
+              onClick={() => notReady("update")}
+              disabled={pendingAction !== null}
+              className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-primary/40 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-primary" />
+                  {pendingAction === "update" ? (
+                    <Clock className="w-5 h-5 text-primary animate-spin" />
+                  ) : (
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  )}
                 </div>
-                <h3 className="text-sm font-bold text-foreground">تحديث طريقة الدفع</h3>
+                <h3 className="text-sm font-bold text-foreground">
+                  {pendingAction === "update" ? "جاري الفتح..." : "تحديث طريقة الدفع"}
+                </h3>
               </div>
               <p className="text-xs text-muted-foreground">تغيير البطاقة أو وسيلة الدفع</p>
             </button>
 
             <button
-              onClick={notReady}
-              className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-destructive/40 transition-all group"
+              onClick={() => notReady("cancel")}
+              disabled={pendingAction !== null}
+              className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-destructive/40 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
-                  <XCircle className="w-5 h-5 text-destructive" />
+                  {pendingAction === "cancel" ? (
+                    <Clock className="w-5 h-5 text-destructive animate-spin" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-destructive" />
+                  )}
                 </div>
-                <h3 className="text-sm font-bold text-foreground">إلغاء الاشتراك</h3>
+                <h3 className="text-sm font-bold text-foreground">
+                  {pendingAction === "cancel" ? "جاري المعالجة..." : "إلغاء الاشتراك"}
+                </h3>
               </div>
               <p className="text-xs text-muted-foreground">إيقاف التجديد التلقائي للاشتراك</p>
             </button>
