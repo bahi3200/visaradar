@@ -9,17 +9,108 @@ import {
 
 // ──────────────────────────────────────────────
 // Helper: stub global fetch with a scripted handler
+//
+// Isolation model (prevents leakage across tests, even when Deno runs them
+// in parallel or when a test forgets to clean up):
+//
+//   • generation counter:
+//       Every install bumps `currentGen`. The installed fetch proxy captures
+//       its own generation. If fetch is invoked AFTER restore (e.g. a stale
+//       in-flight call or a forgotten await), the proxy throws a clear
+//       "stale stubFetch invoked" error instead of silently behaving like
+//       the OS fetch — which would let bugs hide.
+//
+//   • single-holder lock:
+//       `stubFetch()` refuses to install if another stub is already active,
+//       throwing "stubFetch already active". This catches concurrent /
+//       re-entrant misuse instead of silently overwriting the previous
+//       handler. `restoreFetch()` refuses to release a lock it does not own.
+//
+//   • `withStubbedFetch(handler, fn)`:
+//       Async helper that serializes via an internal Promise queue so two
+//       concurrent test bodies can safely request a stub at the same time —
+//       the second waits for the first to release. Use this for parallel
+//       tests; the legacy `stubFetch`/`restoreFetch` pair stays for the
+//       existing sequential tests.
 // ──────────────────────────────────────────────
 type FetchHandler = (url: string, init?: RequestInit) => Response | Promise<Response>;
 const originalFetch = globalThis.fetch;
-function stubFetch(handler: FetchHandler) {
+
+let currentGen = 0;
+let activeToken: symbol | null = null;
+// Promise queue for withStubbedFetch — each acquirer awaits the previous
+// release before installing its handler.
+let lockTail: Promise<void> = Promise.resolve();
+
+function installStub(handler: FetchHandler, token: symbol, gen: number) {
   globalThis.fetch = ((input: any, init?: any) => {
+    // Stale-stub guard: if the global has been restored (or replaced by a
+    // newer stub) since this proxy was installed, fail loudly instead of
+    // forwarding to the real network or to the wrong handler.
+    if (activeToken !== token || currentGen !== gen) {
+      return Promise.reject(
+        new Error(
+          `stale stubFetch invoked (gen=${gen}, currentGen=${currentGen}) — ` +
+            `a previous test leaked its stub`,
+        ),
+      );
+    }
     const url = typeof input === "string" ? input : input.url;
     return Promise.resolve(handler(url, init));
   }) as typeof fetch;
 }
+
+function stubFetch(handler: FetchHandler) {
+  if (activeToken !== null) {
+    throw new Error(
+      "stubFetch already active — another test installed a stub and did not " +
+        "call restoreFetch(). Use withStubbedFetch() if you need concurrent stubs.",
+    );
+  }
+  const token = Symbol("stubFetch");
+  const gen = ++currentGen;
+  activeToken = token;
+  installStub(handler, token, gen);
+}
+
 function restoreFetch() {
+  // Bump generation so any captured-but-stale proxy will fail its check.
+  currentGen++;
+  activeToken = null;
   globalThis.fetch = originalFetch;
+}
+
+/**
+ * Serialized, leak-proof variant. Awaits any in-flight stub, installs its
+ * own, runs `fn`, then ALWAYS restores — even on throw. Safe to call from
+ * multiple concurrent tests.
+ */
+async function withStubbedFetch<T>(
+  handler: FetchHandler,
+  fn: () => Promise<T> | T,
+): Promise<T> {
+  // Chain onto the existing lock so concurrent callers queue up.
+  let releaseLock!: () => void;
+  const waitFor = lockTail;
+  lockTail = new Promise<void>((res) => { releaseLock = res; });
+  await waitFor;
+
+  const token = Symbol("withStubbedFetch");
+  const gen = ++currentGen;
+  activeToken = token;
+  installStub(handler, token, gen);
+  try {
+    return await fn();
+  } finally {
+    // Only release if we still own it — defensive against a nested
+    // stubFetch() call having corrupted state.
+    if (activeToken === token) {
+      currentGen++;
+      activeToken = null;
+      globalThis.fetch = originalFetch;
+    }
+    releaseLock();
+  }
 }
 
 const VFS_ENDPOINTS = [
