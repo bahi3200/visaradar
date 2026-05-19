@@ -453,6 +453,39 @@ export default function Billing() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent dir="rtl" className="text-right">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 justify-start">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              تأكيد إلغاء الاشتراك
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right leading-relaxed">
+              سيتم إيقاف التجديد التلقائي لاشتراكك. ستبقى ميزات اشتراكك متاحة حتى تاريخ
+              الانتهاء الحالي
+              {subscription?.expires_at && (
+                <span className="font-bold text-foreground mx-1">
+                  ({new Date(subscription.expires_at).toLocaleDateString("ar-DZ")})
+                </span>
+              )}
+              ، وبعدها سيتم إيقاف التنبيهات. هل أنت متأكد؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogAction
+              onClick={() => {
+                setCancelConfirmOpen(false);
+                notReady("cancel");
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              نعم، إلغاء الاشتراك
+            </AlertDialogAction>
+            <AlertDialogCancel>تراجع</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }
