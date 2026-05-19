@@ -218,12 +218,46 @@ export default function Billing() {
           <p className="text-sm text-muted-foreground">عرض اشتراكك الحالي وإدارة طريقة الدفع</p>
         </div>
 
-        {/* Notice banner */}
-        <div className="gradient-card rounded-xl border border-accent/20 p-4 mb-6 flex items-start gap-3">
-          <Info className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-          <div className="text-xs text-muted-foreground leading-relaxed">
-            بوابة الفوترة الآلية (Paddle/Stripe) قيد الإعداد. حاليًا، يمكن إدارة الاشتراك يدويًا عبر فريق الدعم.
+        {/* Stripe failure + Paddle suggestion banner */}
+        <div className="gradient-card rounded-xl border border-destructive/30 p-4 mb-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <div className="text-xs text-muted-foreground leading-relaxed space-y-1">
+            <p className="text-sm font-bold text-foreground">تعذّر تفعيل Stripe</p>
+            <p>
+              السبب: الدولة المختارة (الجزائر) غير مدعومة من Stripe لإنشاء حساب بائع
+              <span className="font-mono text-[11px] mx-1">
+                (the selected country is not supported by Stripe)
+              </span>
+              .
+            </p>
           </div>
+        </div>
+
+        <div className="gradient-card rounded-xl border border-accent/30 p-4 mb-6">
+          <div className="flex items-start gap-3 mb-3">
+            <Info className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+            <div className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-sm font-bold text-foreground mb-1">الحل المقترح: تفعيل Paddle</p>
+              <p>
+                Paddle يدعم البائعين من الجزائر ومناسب لاشتراكاتك الرقمية. يتولّى الضرائب
+                والامتثال وإدارة الفوترة نيابةً عنك.
+              </p>
+            </div>
+          </div>
+          <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pr-5 mb-3">
+            <li>اطلب من المساعد: «فعّل Paddle».</li>
+            <li>املأ نموذج التفعيل (الاسم، البريد، اسم النشاط).</li>
+            <li>سيتم إنشاء بيئة اختبار (sandbox) فورًا لتجربة الدفع بدون أموال حقيقية.</li>
+            <li>لاحقًا: قدّم مستندات التحقق لتفعيل الدفع الحقيقي (قد يستغرق مراجعة إضافية).</li>
+            <li>بعدها سيتم ربط هذه الصفحة بـ Paddle Customer Portal تلقائيًا.</li>
+          </ol>
+          <Link
+            to="/contact"
+            className="inline-flex items-center gap-2 text-xs font-bold text-accent hover:underline"
+          >
+            تحتاج مساعدة؟ تواصل مع الدعم
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* Current subscription */}
