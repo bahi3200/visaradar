@@ -195,6 +195,7 @@ export default function Billing() {
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [updateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
