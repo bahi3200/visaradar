@@ -20,6 +20,16 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import BackButton from "@/components/BackButton";
 import { toast } from "@/components/ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
 type DerivedStatus = "active" | "expiring" | "expired" | "none";
@@ -161,6 +171,7 @@ export default function Billing() {
   }, [user, queryClient]);
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const notReady = (action: "update" | "cancel") => {
     setPendingAction(action);
@@ -354,7 +365,7 @@ export default function Billing() {
             </button>
 
             <button
-              onClick={() => notReady("cancel")}
+              onClick={() => setCancelConfirmOpen(true)}
               disabled={pendingAction !== null}
               className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-destructive/40 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
             >
