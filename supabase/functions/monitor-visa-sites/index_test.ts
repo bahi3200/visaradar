@@ -28,6 +28,45 @@ const VFS_ENDPOINTS = [
 ];
 
 // ──────────────────────────────────────────────
+// Assertion helper: enforces the single source of truth for the
+// "HTTP <code> ignored" invariant used by both unit and integration tests:
+//   • exactly `expectedCount` lines match `HTTP <code> ignored`
+//   • each matching line explains the rationale (auth/blocked/not closed)
+//   • optional: no other `HTTP <other> ignored` lines leak through
+//
+// Use this everywhere instead of re-implementing the filter+count logic.
+// ──────────────────────────────────────────────
+function assertHttpIgnoredCount(
+  apiResults: string[],
+  code: number,
+  expectedCount: number,
+  ctx = "",
+): void {
+  const label = ctx ? ` [${ctx}]` : "";
+  const matching = apiResults.filter((s) => s.includes(`HTTP ${code} ignored`));
+  assertEquals(
+    matching.length,
+    expectedCount,
+    `expected exactly ${expectedCount} 'HTTP ${code} ignored' entries${label}, got ${matching.length}: ${JSON.stringify(apiResults)}`,
+  );
+  for (const entry of matching) {
+    assert(
+      /auth|blocked|not closed/i.test(entry),
+      `ignored entry should explain rationale${label}, got '${entry}'`,
+    );
+  }
+  // Guard against silent drift: no other HTTP-ignored codes should appear
+  const stray = apiResults.filter(
+    (s) => /HTTP \d+ ignored/.test(s) && !s.includes(`HTTP ${code} ignored`),
+  );
+  assertEquals(
+    stray.length,
+    0,
+    `unexpected 'HTTP <other> ignored' entries${label}: ${JSON.stringify(stray)}`,
+  );
+}
+
+// ──────────────────────────────────────────────
 // Unit: probeApiEndpoints must NOT add closedScore for 401/403/404/422
 // (these mean auth/blocked/not-found, not "no slots")
 // ──────────────────────────────────────────────
@@ -38,10 +77,7 @@ for (const code of [401, 403, 404, 422]) {
       const r = await probeApiEndpoints(VFS_ENDPOINTS);
       assertEquals(r.openScore, 0, `openScore should stay 0 on ${code}`);
       assertEquals(r.closedScore, 0, `closedScore must NOT be incremented on ${code}`);
-      assert(
-        r.apiResults.some((s) => s.includes(`HTTP ${code} ignored`)),
-        `apiResults should record the ignored ${code} response`,
-      );
+      assertHttpIgnoredCount(r.apiResults, code, VFS_ENDPOINTS.length, `4xx unit ${code}`);
     } finally {
       restoreFetch();
     }
