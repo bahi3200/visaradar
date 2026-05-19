@@ -195,6 +195,7 @@ export default function Billing() {
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [updateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
@@ -622,7 +623,7 @@ export default function Billing() {
         {subscription && status !== "expired" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              onClick={() => notReady("update")}
+              onClick={() => setUpdateConfirmOpen(true)}
               disabled={pendingAction !== null}
               className="gradient-card rounded-xl border border-border/30 p-4 text-right hover:border-primary/40 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -851,6 +852,63 @@ export default function Billing() {
           )}
         </div>
       </div>
+
+      {(() => {
+        const lastPaid = invoices.find((i) => i.status === "approved") ?? invoices[0] ?? null;
+        const methodLabel = lastPaid?.receipt_url ? "CCP / BaridiMob (تحويل بنكي)" : "غير محدّدة";
+        const methodRef = lastPaid ? `INV-${lastPaid.id.slice(0, 8).toUpperCase()}` : null;
+        const methodDate = lastPaid ? formatDate(lastPaid.created_at) : null;
+        return (
+          <AlertDialog open={updateConfirmOpen} onOpenChange={setUpdateConfirmOpen}>
+            <AlertDialogContent dir="rtl" className="text-right">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 justify-start">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  تأكيد تحديث طريقة الدفع
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-right leading-relaxed">
+                  سيتم فتح بوابة آمنة لتحديث طريقة الدفع الخاصة بك. لن يتم خصم أي مبلغ
+                  الآن.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="rounded-lg border border-border/30 bg-background/40 p-3 my-2">
+                <p className="text-[11px] text-muted-foreground mb-2">آخر طريقة دفع مستخدمة</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground">{methodLabel}</p>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1 flex-wrap">
+                      {methodDate && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {methodDate}
+                        </span>
+                      )}
+                      {methodRef && <span className="font-mono">· {methodRef}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <AlertDialogFooter className="flex-row-reverse gap-2">
+                <AlertDialogAction
+                  onClick={() => {
+                    setUpdateConfirmOpen(false);
+                    notReady("update");
+                  }}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  نعم، تحديث الآن
+                </AlertDialogAction>
+                <AlertDialogCancel>تراجع</AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+      })()}
 
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <AlertDialogContent dir="rtl" className="text-right">
