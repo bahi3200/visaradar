@@ -13,6 +13,10 @@ import {
   Clock,
   History,
   Receipt,
+  RefreshCw,
+  CalendarClock,
+  Globe2,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
