@@ -403,6 +403,179 @@ Deno.test("stubFetch + restoreFetch: bumping gen invalidates ALL prior captures"
   }
 });
 
+// ──────────────────────────────────────────────
+// Order-independence: invariants must hold regardless of the order in
+// which the 4xx codes are exercised. We run several permutations + one
+// seeded-random shuffle, asserting that for EVERY iteration:
+//   • exactly N "HTTP <code> ignored" entries (assertHttpIgnoredCount)
+//   • no stray "HTTP <other> ignored" leaked from a previous iteration
+//   • scores stay 0
+//   • status='unknown', detectionMethod includes 'spa-shell-no-signal'
+// ──────────────────────────────────────────────
+const FOUR_XX_CODES = [401, 403, 404, 422] as const;
+type FourXx = typeof FOUR_XX_CODES[number];
+
+// All 24 permutations of [401, 403, 404, 422] (Heap's algorithm output —
+// hand-listed for readability and zero runtime cost).
+const PERMUTATIONS: ReadonlyArray<ReadonlyArray<FourXx>> = [
+  [401, 403, 404, 422],
+  [401, 403, 422, 404],
+  [401, 404, 403, 422],
+  [401, 404, 422, 403],
+  [401, 422, 403, 404],
+  [401, 422, 404, 403],
+  [403, 401, 404, 422],
+  [403, 401, 422, 404],
+  [403, 404, 401, 422],
+  [403, 404, 422, 401],
+  [403, 422, 401, 404],
+  [403, 422, 404, 401],
+  [404, 401, 403, 422],
+  [404, 401, 422, 403],
+  [404, 403, 401, 422],
+  [404, 403, 422, 401],
+  [404, 422, 401, 403],
+  [404, 422, 403, 401],
+  [422, 401, 403, 404],
+  [422, 401, 404, 403],
+  [422, 403, 401, 404],
+  [422, 403, 404, 401],
+  [422, 404, 401, 403],
+  [422, 404, 403, 401],
+];
+
+// Seeded PRNG (Mulberry32) — deterministic across runs so a failure can
+// always be reproduced from the seed stamped into the test name.
+function mulberry32(seed: number) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffle<T>(arr: readonly T[], rand: () => number): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Spot-check a representative subset of the 24 permutations (every 4th)
+// to keep the test fast while still covering varied starting codes.
+for (let i = 0; i < PERMUTATIONS.length; i += 4) {
+  const order = PERMUTATIONS[i];
+  const label = order.join("→");
+  Deno.test(`probeApiEndpoints: order-independence (${label}) — exact ignored count, no leak`, async () => {
+    for (const code of order) {
+      stubFetch(() => new Response("denied", { status: code }));
+      try {
+        const r = await probeApiEndpoints(VFS_ENDPOINTS);
+        assertHttpIgnoredCount(
+          r.apiResults,
+          code,
+          VFS_ENDPOINTS.length,
+          `perm=${label} iter=${code}`,
+        );
+        assertEquals(r.openScore, 0, `perm=${label} iter=${code}: openScore`);
+        assertEquals(r.closedScore, 0, `perm=${label} iter=${code}: closedScore`);
+      } finally {
+        restoreFetch();
+      }
+    }
+  });
+}
+
+// Cover ALL 24 permutations in a single fast loop (smaller endpoint set,
+// no integration overhead) — catches any order-sensitive bug a sampled
+// subset would miss.
+Deno.test("probeApiEndpoints: order-independence across ALL 24 permutations of {401,403,404,422}", async () => {
+  for (const order of PERMUTATIONS) {
+    for (const code of order) {
+      stubFetch(() => new Response("denied", { status: code }));
+      try {
+        const r = await probeApiEndpoints(VFS_ENDPOINTS);
+        assertHttpIgnoredCount(
+          r.apiResults,
+          code,
+          VFS_ENDPOINTS.length,
+          `perm=${order.join("→")} iter=${code}`,
+        );
+        assertEquals(r.openScore, 0);
+        assertEquals(r.closedScore, 0);
+      } finally {
+        restoreFetch();
+      }
+    }
+  }
+});
+
+// Randomized order with a fixed seed — same invariants must hold.
+// If this ever fails, the seed in the test name reproduces the exact order.
+for (const seed of [1, 7, 42, 1337]) {
+  Deno.test(`probeApiEndpoints: order-independence (seeded shuffle seed=${seed})`, async () => {
+    const rand = mulberry32(seed);
+    const order = shuffle(FOUR_XX_CODES, rand);
+    for (const code of order) {
+      stubFetch(() => new Response("denied", { status: code }));
+      try {
+        const r = await probeApiEndpoints(VFS_ENDPOINTS);
+        assertHttpIgnoredCount(
+          r.apiResults,
+          code,
+          VFS_ENDPOINTS.length,
+          `seed=${seed} order=${order.join("→")} iter=${code}`,
+        );
+        assertEquals(r.openScore, 0);
+        assertEquals(r.closedScore, 0);
+      } finally {
+        restoreFetch();
+      }
+    }
+  });
+
+  // Same seeded shuffle, but at the integration level against MONITOR_TARGETS.IT —
+  // catches order-sensitive bugs that only appear with the real endpoint list.
+  Deno.test(`checkSite IT: order-independence (seeded shuffle seed=${seed}) — unknown each iter`, async () => {
+    const endpoints = MONITOR_TARGETS.IT.apiEndpoints ?? [];
+    assert(endpoints.length > 0);
+    const rand = mulberry32(seed);
+    const order = shuffle(FOUR_XX_CODES, rand);
+    for (const code of order) {
+      stubFetch(makeSpaShellHandler(code));
+      try {
+        const r = await checkSite("IT", MONITOR_TARGETS.IT);
+        assertEquals(
+          r.status,
+          "unknown",
+          `seed=${seed} order=${order.join("→")} iter=${code}: expected unknown, got '${r.status}'`,
+        );
+        assertEquals(r.openScore, 0);
+        assertEquals(r.closedScore, 0);
+        assert(
+          r.detectionMethod.includes("spa-shell-no-signal"),
+          `seed=${seed} iter=${code}: missing spa-shell-no-signal, got '${r.detectionMethod}'`,
+        );
+        // Mirror probe to re-assert the ignored-count invariant on the
+        // production endpoint list under this random order.
+        const probe = await probeApiEndpoints(endpoints);
+        assertHttpIgnoredCount(
+          probe.apiResults,
+          code,
+          endpoints.length,
+          `IT seed=${seed} order=${order.join("→")} iter=${code}`,
+        );
+      } finally {
+        restoreFetch();
+      }
+    }
+  });
+}
+
 // 5xx errors are also non-success — must not add closedScore
 Deno.test("probeApiEndpoints: HTTP 500 does not add closedScore", async () => {
   stubFetch(() => new Response("server error", { status: 500 }));
