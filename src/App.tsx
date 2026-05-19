@@ -44,6 +44,7 @@ import ChatHistory from "./pages/ChatHistory";
 import AdminChatConversations from "./pages/AdminChatConversations";
 import Backup from "./pages/Backup";
 import TelegramLink from "./pages/TelegramLink";
+import Billing from "./pages/Billing";
 import AdminTelegramUsers from "./pages/AdminTelegramUsers";
 import AdminTelegramBroadcast from "./pages/AdminTelegramBroadcast";
 import AdminTelegramLinkLog from "./pages/AdminTelegramLinkLog";
@@ -129,6 +130,7 @@ const App = () => (
       <Route path="/profile/conversations" element={<ProtectedRoute><ChatHistory /></ProtectedRoute>} />
       <Route path="/notification-settings" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
       <Route path="/telegram-link" element={<ProtectedRoute><TelegramLink /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
