@@ -264,12 +264,9 @@ export default function ProfilePage() {
                       onClick={async () => {
                         if (!user) return;
                         if (!confirm("هل تريد فك الربط؟ لن تستلم تنبيهات Telegram بعدها.")) return;
-                        const { error } = await supabase
-                          .from("profiles")
-                          .update({ telegram_id: null, telegram_username: null })
-                          .eq("user_id", user.id);
-                        if (error) {
-                          toast.error("فشل فك الربط");
+                        const { data, error } = await supabase.functions.invoke("telegram-unlink");
+                        if (error || data?.error) {
+                          toast.error(data?.error || error?.message || "فشل فك الربط");
                         } else {
                           setTelegramId("");
                           setTelegramUsername(null);
