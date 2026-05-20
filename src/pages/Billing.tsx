@@ -157,6 +157,52 @@ function deriveStatus(sub: SubscriptionWithPackage | null): {
   return { status: "active", daysLeft };
 }
 
+function ProviderConnectInline({
+  connectingProvider,
+  onConnect,
+}: {
+  connectingProvider: null | "paddle" | "stripe";
+  onConnect: (p: "paddle" | "stripe") => void;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onConnect("paddle")}
+        disabled={connectingProvider !== null}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {connectingProvider === "paddle" ? (
+          <Clock className="w-3 h-3 animate-spin" />
+        ) : (
+          <RefreshCw className="w-3 h-3" />
+        )}
+        ربط Paddle
+      </button>
+      <button
+        type="button"
+        onClick={() => onConnect("stripe")}
+        disabled={connectingProvider !== null}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border border-border/40 bg-background/40 text-foreground hover:bg-background/70 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {connectingProvider === "stripe" ? (
+          <Clock className="w-3 h-3 animate-spin" />
+        ) : (
+          <CreditCard className="w-3 h-3" />
+        )}
+        ربط Stripe
+      </button>
+      <Link
+        to="/pricing"
+        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+      >
+        أو الدفع يدويًا
+        <ArrowLeft className="w-3 h-3" />
+      </Link>
+    </div>
+  );
+}
+
 export default function Billing() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
