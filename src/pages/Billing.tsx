@@ -353,6 +353,9 @@ export default function Billing() {
     cancel: 0,
   });
   const lastCancelMetaRef = useRef<Record<string, unknown>>({});
+  // Track which provider_not_configured banner instances have already been
+  // logged as "banner_shown" to avoid duplicate analytics events on re-render.
+  const loggedBannerShownRef = useRef<Set<string>>(new Set());
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
@@ -523,6 +526,19 @@ export default function Billing() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "تعذّر ربط المزوّد";
+      await logEvent({
+        event_type: "payment_provider.connect_failed",
+        status: "failed",
+        message: `فشل ربط ${provider === "paddle" ? "Paddle" : "Stripe"}: ${msg}`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          failed_at: new Date().toISOString(),
+          retry_after: retryAfter ?? null,
+          error: msg,
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
       toast({ title: "فشل ربط المزوّد", description: msg, variant: "destructive" });
     } finally {
       setConnectingProvider(null);
@@ -604,6 +620,45 @@ export default function Billing() {
       console.error("Failed to log payment event:", error);
     }
   };
+
+  // Analytics: log "banner_shown" once whenever a provider_not_configured
+  // outcome banner appears (for update or cancel). De-duplicated via ref.
+  useEffect(() => {
+    const channels: { channel: "update" | "cancel"; at: string }[] = [];
+    if (
+      updateOutcome?.errorReason === "provider_not_configured" &&
+      updateOutcome.at
+    ) {
+      channels.push({ channel: "update", at: updateOutcome.at });
+    }
+    if (
+      cancelOutcome?.errorReason === "provider_not_configured" &&
+      cancelOutcome.at
+    ) {
+      channels.push({ channel: "cancel", at: cancelOutcome.at });
+    }
+    for (const c of channels) {
+      const key = `${c.channel}:${c.at}`;
+      if (loggedBannerShownRef.current.has(key)) continue;
+      loggedBannerShownRef.current.add(key);
+      void logEvent({
+        event_type: "payment_provider.banner_shown",
+        status: "info",
+        message: `عُرض بانر provider_not_configured في تدفّق ${c.channel === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك"}.`,
+        metadata: {
+          channel: c.channel,
+          missing_providers: missingProviders,
+          provider_status: providerStatus,
+          shown_at: new Date().toISOString(),
+          outcome_at: c.at,
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
+    }
+    // logEvent / providerStatus / missingProviders are stable per render and
+    // only matter at the moment a new outcome appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateOutcome?.at, updateOutcome?.errorReason, cancelOutcome?.at, cancelOutcome?.errorReason]);
 
   const notReady = async (
     action: "update" | "cancel",
@@ -774,6 +829,25 @@ export default function Billing() {
           ...baseMeta,
         },
       });
+
+      // Distinct retry-failure event so analytics can tell first failures
+      // apart from failed auto-retries that happened after a connect attempt.
+      if (isRetry) {
+        await logEvent({
+          event_type: "payment_provider.retry_failed",
+          status: "failed",
+          message: `إعادة المحاولة بعد ربط مزوّد الدفع لم تنجح — لا يزال غير مفعّل (${missingProviders.join(", ") || "غير معروف"}).`,
+          metadata: {
+            reason: "provider_not_configured",
+            action,
+            attempt: attemptNumber,
+            max_attempts: MAX_ATTEMPTS,
+            missing_providers: missingProviders,
+            provider_status: providerStatus,
+            simulator_version: SIMULATOR_VERSION,
+          },
+        });
+      }
 
       setUpdateOutcome({
         status: "failed",
