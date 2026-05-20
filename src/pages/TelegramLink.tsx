@@ -134,12 +134,9 @@ const TelegramLink = () => {
     try {
       // 1) Unlink current binding (if any) so the new /start flow re-binds cleanly.
       if (currentChatId) {
-        const { error: unlinkErr } = await supabase
-          .from("profiles")
-          .update({ telegram_id: null })
-          .eq("user_id", user.id);
-        if (unlinkErr) {
-          toast.error(`فشل فك الربط القديم: ${unlinkErr.message}`);
+        const { data: unlinkData, error: unlinkErr } = await supabase.functions.invoke("telegram-unlink");
+        if (unlinkErr || unlinkData?.error) {
+          toast.error(`فشل فك الربط القديم: ${unlinkData?.error || unlinkErr?.message}`);
           return;
         }
         setCurrentChatId(null);
@@ -205,18 +202,17 @@ const TelegramLink = () => {
     if (!user) return;
     setUnlinking(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ telegram_id: null })
-        .eq("user_id", user.id);
-      if (error) {
-        toast.error(error.message);
+      const { data, error } = await supabase.functions.invoke("telegram-unlink");
+      if (error || data?.error) {
+        toast.error(data?.error || error?.message || "فشل فك الربط");
         return;
       }
       setCurrentChatId(null);
       setChatId("");
       setLinkedAt(null);
       toast.success("تم فك الربط");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل فك الربط");
     } finally {
       setUnlinking(false);
     }
