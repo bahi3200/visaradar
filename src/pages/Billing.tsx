@@ -733,6 +733,31 @@ export default function Billing() {
         return;
       }
 
+      // If a provider has been connected (e.g. via in-banner connect),
+      // simulate a successful update instead of failing.
+      if (action === "update" && (providerStatus.paddle || providerStatus.stripe)) {
+        const connected = providerStatus.paddle ? "Paddle" : "Stripe";
+        const successMsg = `تم فتح بوابة ${connected} لتحديث طريقة الدفع بنجاح.`;
+        await logEvent({
+          event_type: "payment_method.update_succeeded",
+          status: "info",
+          message: successMsg,
+          metadata: {
+            action,
+            provider: connected.toLowerCase(),
+            provider_status: providerStatus,
+            ...baseMeta,
+          },
+        });
+        setUpdateOutcome(null);
+        setAttempts((prev) => ({ ...prev, update: 0 }));
+        toast({
+          title: "تم تحديث طريقة الدفع ✓",
+          description: successMsg,
+        });
+        return;
+      }
+
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
       const providerInfo = ERROR_REASON_INFO.provider_not_configured;
       const errMsg = providerFailureDescription;
