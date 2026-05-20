@@ -206,6 +206,7 @@ function ProviderConnectInline({
 export default function Billing() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: subscription, isLoading, isFetching, refetch } = useQuery<
