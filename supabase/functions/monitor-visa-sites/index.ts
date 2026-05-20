@@ -1043,16 +1043,18 @@ Deno.serve(async (req) => {
 
       for (const alert of openResults) {
         const target = MONITOR_TARGETS[alert.countryCode];
+        const catInfo = VISA_CATEGORIES.find((c) => c.key === alert.category);
+        const catAr = catInfo ? `${catInfo.icon} ${catInfo.ar}` : 'مواعيد';
+        const catEn = catInfo ? `${catInfo.icon} ${catInfo.en}` : 'Appointments';
 
-        // Decide if we should notify now:
-        //   - status just changed to open  → always notify
-        //   - still open                   → notify only if last notification was >= 30 min ago
+        // Decide if we should notify now (per country+category):
         let shouldNotify = alert.changed;
         if (!shouldNotify) {
           const { data: lastNotif } = await supabase
             .from('visa_notifications')
             .select('created_at')
             .eq('country_code', alert.countryCode)
+            .eq('category', alert.category)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -1088,15 +1090,15 @@ Deno.serve(async (req) => {
               hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
             });
             const header = isRecheck
-              ? `🟢 <b>Appointments are still open</b>`
-              : `🚨 <b>Urgent — appointments just opened</b>`;
+              ? `🟢 <b>${catEn} appointments are still open</b>`
+              : `🚨 <b>Urgent — ${catEn} appointments just opened</b>`;
             const badge = isRecheck ? '🟢 Ongoing' : '🆕 New';
             const text = [
               header,
               `━━━━━━━━━━━━━━━━━━`,
               `${target.flag} <b>${nameEn}</b>`,
               ``,
-              `🛂 <b>Visa type:</b> 🏖️ Tourism • 🎓 Study • 💼 Work • 👨‍👩‍👧 Family`,
+              `🛂 <b>Visa category:</b> ${catEn}`,
               `🏢 <b>Provider:</b> <code>${target.provider}</code>`,
               `📌 <b>Status:</b> ${badge}`,
               `🕒 <b>Detected at:</b> ${nowStr}`,
@@ -1125,15 +1127,15 @@ Deno.serve(async (req) => {
             hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
           });
           const header = isRecheck
-            ? `🟢 <b>المواعيد لا تزال مفتوحة</b>`
-            : `🚨 <b>تنبيه عاجل — مواعيد مفتوحة الآن</b>`;
+            ? `🟢 <b>مواعيد ${catAr} لا تزال مفتوحة</b>`
+            : `🚨 <b>تنبيه عاجل — مواعيد ${catAr} مفتوحة الآن</b>`;
           const badge = isRecheck ? '🟢 مستمرة' : '🆕 جديدة';
           const text = [
             header,
             `━━━━━━━━━━━━━━━━━━`,
             `${target.flag} <b>${target.nameAr}</b>`,
             ``,
-            `🛂 <b>نوع التأشيرة:</b> 🏖️ سياحة • 🎓 دراسة • 💼 عمل • 👨‍👩‍👧 لمّ شمل`,
+            `🛂 <b>نوع التأشيرة:</b> ${catAr}`,
             `🏢 <b>المزود:</b> <code>${target.provider}</code>`,
             `📌 <b>الحالة:</b> ${badge}`,
             `🕒 <b>وقت الرصد:</b> ${nowStr}`,
@@ -1189,9 +1191,10 @@ Deno.serve(async (req) => {
 
         await supabase.from('visa_notifications').insert({
           country_code: alert.countryCode,
+          category: alert.category,
           message_ar: isRecheck
-            ? `تذكير تلقائي: مواعيد ${target.nameAr} لا تزال مفتوحة (${target.provider}) — يشمل سياحة/دراسة/عمل`
-            : `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} عبر ${target.provider} — يشمل سياحة/دراسة/عمل`,
+            ? `تذكير تلقائي: مواعيد ${target.nameAr} (${catAr}) لا تزال مفتوحة عبر ${target.provider}`
+            : `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} (${catAr}) عبر ${target.provider}`,
           sent_count: sentCount,
         });
 
@@ -1199,6 +1202,7 @@ Deno.serve(async (req) => {
           .from('visa_monitor_checks')
           .update({ notified: true })
           .eq('country_code', alert.countryCode)
+          .eq('category', alert.category)
           .order('checked_at', { ascending: false })
           .limit(1);
       }
