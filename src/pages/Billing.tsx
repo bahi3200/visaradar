@@ -472,7 +472,10 @@ export default function Billing() {
         ? "سبب الفشل: لم يتم ربط أي مزوّد دفع بعد — Paddle وStripe كلاهما غير مفعّل لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح."
         : `سبب الفشل: مزوّد الدفع ${missingProviders[0]} غير مربوط بعد لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح.`;
 
-  const requestProviderConnection = async (provider: "paddle" | "stripe") => {
+  const requestProviderConnection = async (
+    provider: "paddle" | "stripe",
+    retryAfter?: "update" | "cancel",
+  ) => {
     if (connectingProvider) return;
     setConnectingProvider(provider);
     try {
@@ -485,18 +488,42 @@ export default function Billing() {
           subscription_id: subscription?.id ?? null,
           requested_at: new Date().toISOString(),
           simulator_version: SIMULATOR_VERSION,
+          retry_after: retryAfter ?? null,
+        },
+      });
+      // Simulate provider handshake (sandbox connect).
+      await new Promise((r) => setTimeout(r, 800));
+      // Mark provider as connected for this session and emit a decisive event
+      // so providerStatus / autoRenew derivations flip immediately.
+      setProviderOverride((prev) => ({ ...prev, [provider]: true }));
+      await logEvent({
+        event_type: "payment_provider.connected",
+        status: "info",
+        message: `تم ربط ${provider === "paddle" ? "Paddle" : "Stripe"} بنجاح وتفعيل التجديد التلقائي`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          connected_at: new Date().toISOString(),
+          simulator_version: SIMULATOR_VERSION,
         },
       });
       toast({
-        title: "تم تسجيل طلبك",
-        description:
-          provider === "paddle"
-            ? "سنفعّل بوابة Paddle للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها."
-            : "سنفعّل بوابة Stripe للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها.",
+        title: `تم ربط ${provider === "paddle" ? "Paddle" : "Stripe"} ✓`,
+        description: retryAfter
+          ? "جاري إعادة محاولة العملية تلقائيًا..."
+          : "تم تفعيل التجديد التلقائي لهذا الحساب.",
       });
+      if (retryAfter) {
+        // Reset attempt counter so the auto-retry has a clean budget,
+        // then defer slightly to ensure state has propagated.
+        setAttempts((prev) => ({ ...prev, [retryAfter]: 0 }));
+        setTimeout(() => {
+          retryAction(retryAfter);
+        }, 150);
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "تعذّر تسجيل الطلب";
-      toast({ title: "فشل تسجيل الطلب", description: msg, variant: "destructive" });
+      const msg = err instanceof Error ? err.message : "تعذّر ربط المزوّد";
+      toast({ title: "فشل ربط المزوّد", description: msg, variant: "destructive" });
     } finally {
       setConnectingProvider(null);
     }
