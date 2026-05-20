@@ -170,6 +170,7 @@ export default function SubscribeRequestPage() {
     paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number)
   );
   const paymentInfoMissing = Boolean(selectedPackageId) && !paymentLoading && !paymentFetching && !hasPaymentInfo;
+  const showPaymentSkeleton = Boolean(selectedPackageId) && !hasPaymentInfo && !paymentInfoMissing;
 
   // Auto-retry with exponential backoff when payment info fetch fails or is empty.
   // Delays: 2s, 4s, 8s. After MAX_RETRY attempts, stop auto-retry and let user retry manually.
