@@ -925,9 +925,60 @@ export default function Billing() {
                   ({new Date(subscription.expires_at).toLocaleDateString("ar-DZ")})
                 </span>
               )}
-              ، وبعدها سيتم إيقاف التنبيهات. هل أنت متأكد؟
+              ، وبعدها سيتم إيقاف التنبيهات.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Payments & refund summary */}
+          <div className="space-y-2 my-2">
+            <div className="rounded-lg border border-border/30 bg-background/40 p-3">
+              <div className="flex items-start gap-2">
+                <CreditCard className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-foreground mb-1">المدفوعات المتبقية</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    لا توجد دفعات مجدولة مستقبلية. التجديد التلقائي غير مفعّل حاليًا
+                    (الدفع يدوي عبر CCP/BaridiMob)، لذلك لن يتم خصم أي مبلغ بعد الإلغاء.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`rounded-lg border p-3 ${
+                status === "expiring"
+                  ? "border-accent/30 bg-accent/5"
+                  : "border-destructive/30 bg-destructive/5"
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <Info
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    status === "expiring" ? "text-accent" : "text-destructive"
+                  }`}
+                />
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-foreground mb-1">
+                    {status === "expiring"
+                      ? `لا يوجد استرجاع — ${daysLeft} يوم متبقّي فقط`
+                      : `لا يوجد استرجاع للأيام المتبقية (${daysLeft ?? 0} يوم)`}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    وفقًا لسياسة الاسترجاع، المبالغ المدفوعة عن الفترة الحالية غير قابلة
+                    للاسترداد بعد بدء الخدمة. يمكنك الاستفادة الكاملة من اشتراكك حتى
+                    تاريخ الانتهاء.
+                    {status !== "expiring" && (
+                      <>
+                        {" "}
+                        لحالات استثنائية، تواصل مع الدعم خلال 7 أيام من تاريخ الدفع.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogAction
               onClick={() => {
