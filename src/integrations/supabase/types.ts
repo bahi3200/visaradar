@@ -216,7 +216,9 @@ export type Database = {
           browser_notifications: boolean
           countries: string[]
           created_at: string
+          digest_frequency: string
           id: string
+          last_digest_sent_at: string | null
           sound_enabled: boolean
           updated_at: string
           user_id: string
@@ -225,7 +227,9 @@ export type Database = {
           browser_notifications?: boolean
           countries?: string[]
           created_at?: string
+          digest_frequency?: string
           id?: string
+          last_digest_sent_at?: string | null
           sound_enabled?: boolean
           updated_at?: string
           user_id: string
@@ -234,7 +238,9 @@ export type Database = {
           browser_notifications?: boolean
           countries?: string[]
           created_at?: string
+          digest_frequency?: string
           id?: string
+          last_digest_sent_at?: string | null
           sound_enabled?: boolean
           updated_at?: string
           user_id?: string
