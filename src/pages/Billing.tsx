@@ -215,11 +215,13 @@ export default function Billing() {
     reason?: string;
     details?: string;
     message?: string;
+    errorReason?: ErrorReason;
   }>(null);
   const [updateOutcome, setUpdateOutcome] = useState<null | {
     status: "failed";
     at: string;
     message: string;
+    errorReason?: ErrorReason;
   }>(null);
   const [attempts, setAttempts] = useState<{ update: number; cancel: number }>({
     update: 0,
