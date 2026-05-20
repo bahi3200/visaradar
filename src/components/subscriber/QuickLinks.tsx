@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { Bell, Briefcase, FileText, Smartphone, CreditCard, Settings, LayoutDashboard, IdCard } from "lucide-react";
+import { Bell, Briefcase, FileText, Smartphone, CreditCard, Settings, LayoutDashboard, IdCard, Radar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const allUserLinks = [
   { icon: Bell, label: "تنبيهات التأشيرات", to: "/notification-settings", gradient: "from-accent/20 to-accent/5", iconBg: "gradient-accent", iconColor: "text-accent-foreground", border: "border-accent/20", adminHidden: false },
+  { icon: Radar, label: "مراقبة التأشيرات", to: "/visa-monitor", gradient: "from-emerald-500/20 to-emerald-500/5", iconBg: "bg-emerald-500", iconColor: "text-white", border: "border-emerald-500/20", adminHidden: false },
   { icon: IdCard, label: "ملفي للفيزا", to: "/profile/visa", gradient: "from-cyan-500/20 to-cyan-500/5", iconBg: "bg-cyan-500", iconColor: "text-white", border: "border-cyan-500/20", adminHidden: false },
   { icon: Briefcase, label: "عقود العمل", to: "/jobs", gradient: "from-primary/20 to-primary/5", iconBg: "gradient-primary", iconColor: "text-primary-foreground", border: "border-primary/20", adminHidden: false },
   { icon: FileText, label: "طلباتي", to: "/my-requests", gradient: "from-orange-500/20 to-orange-500/5", iconBg: "bg-orange-500", iconColor: "text-white", border: "border-orange-500/20", adminHidden: true },
