@@ -271,7 +271,11 @@ export default function ProfilePage() {
                           setTelegramId("");
                           setTelegramUsername(null);
                           setTelegramLinkedAt(null);
-                          toast.success("تم فك الربط");
+                          toast.success("تم فك الربط بنجاح", {
+                            description:
+                              "لاستئناف استلام التنبيهات، يرجى إعادة ربط حساب Telegram من جديد كأنك مستخدم جديد.",
+                            duration: 7000,
+                          });
                         }
                       }}
                       className="w-full gap-2"
