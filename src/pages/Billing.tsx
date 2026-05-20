@@ -621,6 +621,45 @@ export default function Billing() {
     }
   };
 
+  // Analytics: log "banner_shown" once whenever a provider_not_configured
+  // outcome banner appears (for update or cancel). De-duplicated via ref.
+  useEffect(() => {
+    const channels: { channel: "update" | "cancel"; at: string }[] = [];
+    if (
+      updateOutcome?.errorReason === "provider_not_configured" &&
+      updateOutcome.at
+    ) {
+      channels.push({ channel: "update", at: updateOutcome.at });
+    }
+    if (
+      cancelOutcome?.errorReason === "provider_not_configured" &&
+      cancelOutcome.at
+    ) {
+      channels.push({ channel: "cancel", at: cancelOutcome.at });
+    }
+    for (const c of channels) {
+      const key = `${c.channel}:${c.at}`;
+      if (loggedBannerShownRef.current.has(key)) continue;
+      loggedBannerShownRef.current.add(key);
+      void logEvent({
+        event_type: "payment_provider.banner_shown",
+        status: "info",
+        message: `عُرض بانر provider_not_configured في تدفّق ${c.channel === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك"}.`,
+        metadata: {
+          channel: c.channel,
+          missing_providers: missingProviders,
+          provider_status: providerStatus,
+          shown_at: new Date().toISOString(),
+          outcome_at: c.at,
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
+    }
+    // logEvent / providerStatus / missingProviders are stable per render and
+    // only matter at the moment a new outcome appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateOutcome?.at, updateOutcome?.errorReason, cancelOutcome?.at, cancelOutcome?.errorReason]);
+
   const notReady = async (
     action: "update" | "cancel",
     extraMeta: Record<string, unknown> = {},
