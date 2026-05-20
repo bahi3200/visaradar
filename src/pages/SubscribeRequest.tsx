@@ -140,7 +140,7 @@ export default function SubscribeRequestPage() {
     },
   });
 
-  const { data: paymentSettings } = useQuery({
+  const { data: paymentSettings, error: paymentError, isLoading: paymentLoading, isFetching: paymentFetching, refetch: refetchPayment } = useQuery({
     queryKey: ["payment-info"],
     queryFn: async () => {
       // Session cache: avoid re-fetching across navigations within the same tab
@@ -162,7 +162,13 @@ export default function SubscribeRequestPage() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    retry: 1,
   });
+
+  const hasPaymentInfo = Boolean(
+    paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number)
+  );
+  const paymentInfoMissing = Boolean(selectedPackageId) && !paymentLoading && !paymentFetching && !hasPaymentInfo;
 
   const { data: activeSubscription } = useQuery({
     queryKey: ["my-active-sub", user?.id],
@@ -256,6 +262,7 @@ export default function SubscribeRequestPage() {
     if (!selectedPackageId) issues.push("لم تختر الباقة");
     if (!fullName.trim()) issues.push("الاسم الكامل غير مسجّل في ملفك الشخصي");
     if (!receiptFile) issues.push("لم ترفق وصل الدفع");
+    if (!hasPaymentInfo) issues.push("لا يمكن المتابعة بدون تحميل معلومات الدفع — أعد المحاولة");
     if (needsCountry) {
       const cleaned = Array.from(new Set(countries.map((c) => c.toUpperCase())))
         .filter((c) => VALID_COUNTRY_CODES.includes(c));
@@ -886,7 +893,45 @@ export default function SubscribeRequestPage() {
             )}
 
             {/* Payment Info - shown after preparing */}
-            {!isAlreadySubscribed && !isPreparingPayment && paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
+            {!isAlreadySubscribed && !isPreparingPayment && paymentInfoMissing && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="gradient-card rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center"
+                role="alert"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-destructive" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">
+                    {paymentError ? "تعذّر جلب معلومات الدفع" : "معلومات الدفع غير متوفرة حالياً"}
+                  </p>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    {paymentError
+                      ? "حدث خطأ أثناء الاتصال بالخادم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة. لا يمكن رفع وصل الدفع قبل ظهور رقم CCP / BaridiMob."
+                      : "لم نتمكن من العثور على رقم CCP أو BaridiMob في إعدادات الموقع. يُرجى المحاولة مجدداً، وإذا استمر الخطأ فتواصل مع الدعم."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try { sessionStorage.removeItem("vr_payment_info"); } catch {}
+                      refetchPayment();
+                    }}
+                    disabled={paymentFetching}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-foreground bg-muted/40 hover:bg-muted/60 disabled:opacity-50 rounded-lg px-4 py-2 transition-all"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${paymentFetching ? "animate-spin" : ""}`} />
+                    إعادة المحاولة
+                  </button>
+                  <Link to="/contact" className="text-[11px] text-accent hover:underline">
+                    تواصل مع الدعم
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {!isAlreadySubscribed && !isPreparingPayment && hasPaymentInfo && (
               <motion.div
                 ref={paymentInfoRef}
                 initial={selectedPackageId ? { opacity: 0, y: 10 } : false}
@@ -970,7 +1015,7 @@ export default function SubscribeRequestPage() {
               </motion.div>
             )}
 
-            {!isAlreadySubscribed && !isPreparingPayment && <div
+            {!isAlreadySubscribed && !isPreparingPayment && (!selectedPackageId || hasPaymentInfo) && <div
               ref={receiptSectionRef}
               className={`gradient-card rounded-2xl border p-6 transition-all ${selectedPackageId && !receiptFile ? "border-accent/40 ring-2 ring-accent/20 animate-pulse-once" : "border-border/50"}`}
             >
