@@ -733,6 +733,58 @@ export default function SubscribeRequestPage() {
                     })}
                   </div>
                 )}
+
+                {/* Custom monitoring scope per country */}
+                {countries.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <p className="text-xs font-bold text-primary">نطاق المراقبة لكل دولة</p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mb-3">
+                      اختر ما إذا كنت تريد مراقبة المراكز الرسمية فقط أو جميع المواقع المرتبطة بكل دولة.
+                    </p>
+                    <div className="space-y-2">
+                      {countries.map((code) => {
+                        const co = countryOptions.find((c) => c.code === code.toUpperCase());
+                        const current = monitoringScopes[code.toUpperCase()] || "all_sites";
+                        return (
+                          <div key={code} className="rounded-lg bg-background/40 border border-border/40 p-2.5">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-xs font-bold text-foreground">
+                                {co?.flag} {co?.name || code}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setScope(code, "centers_only")}
+                                className={`text-[11px] px-2 py-2 rounded-md border transition-all ${
+                                  current === "centers_only"
+                                    ? "border-primary bg-primary/15 text-primary font-bold"
+                                    : "border-border/40 text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                🏢 المراكز فقط
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScope(code, "all_sites")}
+                                className={`text-[11px] px-2 py-2 rounded-md border transition-all ${
+                                  current === "all_sites"
+                                    ? "border-primary bg-primary/15 text-primary font-bold"
+                                    : "border-border/40 text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                🌐 كل المواقع
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
