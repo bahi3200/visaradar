@@ -51,6 +51,10 @@ export default function SubscribeRequestPage() {
   const [selectedPackageId, setSelectedPackageId] = useState<string>(renewPackageId);
   const initialCountries = (searchParams.get("countries") || "").split(",").map((c) => c.trim()).filter(Boolean);
   const [countries, setCountries] = useState<string[]>(initialCountries);
+  type MonitoringScope = "centers_only" | "all_sites";
+  const [monitoringScopes, setMonitoringScopes] = useState<Record<string, MonitoringScope>>({});
+  const setScope = (code: string, scope: MonitoringScope) =>
+    setMonitoringScopes((prev) => ({ ...prev, [code.toUpperCase()]: scope }));
   // Use stored user data directly - no need to ask again
   const fullName = user?.user_metadata?.full_name || "";
   const phone = user?.user_metadata?.phone || "";
