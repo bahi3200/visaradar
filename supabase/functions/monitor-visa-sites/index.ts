@@ -992,28 +992,44 @@ Deno.serve(async (req) => {
         if (chatIds.length === 0) continue;
 
         const isRecheck = !alert.changed;
-        const header = isRecheck
-          ? `🟢 <b>المواعيد لا تزال مفتوحة ${target.flag}</b>`
-          : `🚨 <b>تنبيه عاجل! مواعيد مفتوحة ${target.flag}</b>`;
+        const nowStr = new Date().toLocaleString('ar-DZ', {
+          timeZone: 'Africa/Algiers',
+          hour: '2-digit',
+          minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+        });
+        const headerLine = isRecheck
+          ? `🟢 <b>المواعيد لا تزال مفتوحة</b>`
+          : `🚨 <b>تنبيه عاجل — مواعيد مفتوحة الآن</b>`;
+        const statusBadge = isRecheck ? '🟢 مستمرة' : '🆕 جديدة';
 
         const message = [
-          header,
+          headerLine,
+          `━━━━━━━━━━━━━━━━━━`,
+          `${target.flag} <b>${target.nameAr}</b>`,
           ``,
-          `🔔 تم اكتشاف فتح مواعيد تأشيرة <b>${target.nameAr}</b>!`,
+          `🛂 <b>نوع التأشيرة:</b> 🏖️ سياحة • 🎓 دراسة • 💼 عمل • 👨‍👩‍👧 لمّ شمل`,
+          `🏢 <b>المزود:</b> <code>${target.provider}</code>`,
+          `📌 <b>الحالة:</b> ${statusBadge}`,
+          `🕒 <b>وقت الرصد:</b> ${nowStr}`,
+          `━━━━━━━━━━━━━━━━━━`,
+          `⚡ <i>المواعيد تنفد خلال دقائق — سارِع بالحجز</i>`,
           ``,
-          `🎯 <b>يشمل جميع أنواع التأشيرات:</b>`,
-          `   • 🏖️ سياحة`,
-          `   • 🎓 دراسة`,
-          `   • 💼 عمل`,
-          `   • 👨‍👩‍👧 لمّ شمل / زيارة عائلية`,
-          ``,
-          `📍 <b>المزود:</b> ${target.provider}`,
-          `🔗 <a href="${target.officialUrl}">احجز موعدك الآن!</a>`,
-          ``,
-          `⚡ <b>سارع! المواعيد تنفد بسرعة!</b>`,
-          ``,
-          `🤖 <i>تنبيه تلقائي من VisaRadar</i>`,
+          `🤖 <i>VisaRadar — تنبيه تلقائي</i>`,
         ].join('\n');
+
+        const replyMarkup = {
+          inline_keyboard: [
+            [
+              { text: `🚀 احجز الآن عبر ${target.provider}`, url: target.officialUrl },
+            ],
+            [
+              { text: '🔔 إدارة التنبيهات', url: 'https://visaradar.lovable.app/notifications' },
+              { text: '🌐 فتح VisaRadar', url: 'https://visaradar.lovable.app' },
+            ],
+          ],
+        };
 
         let sentCount = 0;
         for (let i = 0; i < chatIds.length; i += 5) {
@@ -1027,7 +1043,8 @@ Deno.serve(async (req) => {
                   chat_id: chatId,
                   text: message,
                   parse_mode: 'HTML',
-                  disable_web_page_preview: false,
+                  disable_web_page_preview: true,
+                  reply_markup: replyMarkup,
                 }),
               }).then((res) => res.ok),
             ),
