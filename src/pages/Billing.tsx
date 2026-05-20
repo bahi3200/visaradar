@@ -353,6 +353,9 @@ export default function Billing() {
     cancel: 0,
   });
   const lastCancelMetaRef = useRef<Record<string, unknown>>({});
+  // Track which provider_not_configured banner instances have already been
+  // logged as "banner_shown" to avoid duplicate analytics events on re-render.
+  const loggedBannerShownRef = useRef<Set<string>>(new Set());
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
