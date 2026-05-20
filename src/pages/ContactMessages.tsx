@@ -43,6 +43,19 @@ export default function ContactMessages() {
     },
   });
 
+  const { data: thread = [] } = useQuery({
+    queryKey: ["contact_message_replies", selectedMessage?.id],
+    enabled: !!selectedMessage?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)("contact_message_replies")
+        .select("*")
+        .eq("message_id", selectedMessage.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await (supabase.from as any)("contact_messages")
