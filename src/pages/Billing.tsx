@@ -312,6 +312,28 @@ export default function Billing() {
     if (actionLockRef.current !== null) {
       return;
     }
+    // Enforce max attempts per action
+    const currentAttempts = attempts[action];
+    if (currentAttempts >= MAX_ATTEMPTS) {
+      toast({
+        title: "تم بلوغ الحد الأقصى للمحاولات",
+        description: `لقد جرّبت ${MAX_ATTEMPTS} مرات. يرجى التواصل مع الدعم لإتمام العملية يدويًا.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const attemptNumber = currentAttempts + 1;
+    const isRetry = currentAttempts > 0;
+    setAttempts((prev) => ({ ...prev, [action]: attemptNumber }));
+    if (action === "cancel") {
+      lastCancelMetaRef.current = extraMeta;
+    }
+    const baseMeta = {
+      ...extraMeta,
+      attempt: attemptNumber,
+      max_attempts: MAX_ATTEMPTS,
+      is_retry: isRetry,
+    };
     actionLockRef.current = action;
     setPendingAction(action);
     const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
@@ -338,7 +360,7 @@ export default function Billing() {
           metadata: {
             scheduled_for: subscription.expires_at,
             action,
-            ...extraMeta,
+            ...baseMeta,
           },
         });
         setCancelOutcome({
@@ -349,6 +371,8 @@ export default function Billing() {
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
         });
+        // Reset attempts on success
+        setAttempts((prev) => ({ ...prev, cancel: 0 }));
         toast({
           title: "تم تسجيل الإلغاء",
           description: message,
@@ -364,12 +388,18 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message: errMsg,
-        metadata: { reason: "provider_not_configured", action, ...extraMeta },
+        metadata: { reason: "provider_not_configured", action, ...baseMeta },
+      });
+
+      setUpdateOutcome({
+        status: "failed",
+        at: new Date().toISOString(),
+        message: errMsg,
       });
 
       toast({
         title: `فشل ${friendlyAction}`,
-        description: `${errMsg} تواصل مع الدعم لإجراء العملية يدويًا.`,
+        description: `${errMsg} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } catch (err) {
@@ -378,7 +408,7 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message,
-        metadata: { reason: "client_error", action, ...extraMeta },
+        metadata: { reason: "client_error", action, ...baseMeta },
       });
       if (action === "cancel") {
         setCancelOutcome({
@@ -388,15 +418,29 @@ export default function Billing() {
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
         });
+      } else {
+        setUpdateOutcome({
+          status: "failed",
+          at: new Date().toISOString(),
+          message,
+        });
       }
       toast({
         title: `فشل ${friendlyAction}`,
-        description: message,
+        description: `${message} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } finally {
       setPendingAction(null);
       actionLockRef.current = null;
+    }
+  };
+
+  const retryAction = (action: "update" | "cancel") => {
+    if (action === "cancel") {
+      notReady("cancel", lastCancelMetaRef.current);
+    } else {
+      notReady("update");
     }
   };
 
