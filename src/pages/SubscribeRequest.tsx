@@ -262,6 +262,7 @@ export default function SubscribeRequestPage() {
     if (!selectedPackageId) issues.push("لم تختر الباقة");
     if (!fullName.trim()) issues.push("الاسم الكامل غير مسجّل في ملفك الشخصي");
     if (!receiptFile) issues.push("لم ترفق وصل الدفع");
+    if (!hasPaymentInfo) issues.push("لا يمكن المتابعة بدون تحميل معلومات الدفع — أعد المحاولة");
     if (needsCountry) {
       const cleaned = Array.from(new Set(countries.map((c) => c.toUpperCase())))
         .filter((c) => VALID_COUNTRY_CODES.includes(c));
