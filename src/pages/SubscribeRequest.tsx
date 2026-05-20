@@ -276,6 +276,11 @@ export default function SubscribeRequestPage() {
           user_id: currentUser.id,
           package_id: selectedPackageId,
           countries: needsCountry ? countries : [],
+          monitoring_scopes: needsCountry
+            ? Object.fromEntries(
+                countries.map((c) => [c.toUpperCase(), monitoringScopes[c.toUpperCase()] || "all_sites"])
+              )
+            : {},
           full_name: fullName,
           phone,
           email: email || currentUser.email,
