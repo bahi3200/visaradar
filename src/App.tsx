@@ -57,6 +57,7 @@ import ShortcutsHelp from "./pages/help/Shortcuts";
 import VisaCalendar from "./pages/VisaCalendar";
 import AdminVisaAppointments from "./pages/AdminVisaAppointments";
 import AdminVisaOpenings from "./pages/AdminVisaOpenings";
+import AdminVisaSignals from "./pages/AdminVisaSignals";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -126,6 +127,7 @@ const App = () => (
       <Route path="/dashboard/packages" element={<AdminRoute adminOnly><ManagePackages /></AdminRoute>} />
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
       <Route path="/dashboard/visa-openings" element={<AdminRoute><AdminVisaOpenings /></AdminRoute>} />
+      <Route path="/dashboard/visa-signals" element={<AdminRoute><AdminVisaSignals /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
