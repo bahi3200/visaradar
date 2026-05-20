@@ -206,6 +206,8 @@ export default function Billing() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [updateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [cancelReasonDetails, setCancelReasonDetails] = useState<string>("");
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
