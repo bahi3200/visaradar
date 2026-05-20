@@ -527,6 +527,64 @@ export default function Billing() {
           </Link>
         </div>
 
+        {/* Update payment method failure banner */}
+        {updateOutcome && (
+          <div
+            className="gradient-card rounded-xl border border-destructive/40 p-4 mb-4 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0 text-xs leading-relaxed">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                <p className="text-sm font-bold text-foreground">
+                  فشل تحديث طريقة الدفع
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setUpdateOutcome(null)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                  aria-label="إغلاق الإشعار"
+                >
+                  إخفاء
+                </button>
+              </div>
+              <p className="text-muted-foreground">{updateOutcome.message}</p>
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {attempts.update < MAX_ATTEMPTS ? (
+                  <button
+                    type="button"
+                    onClick={() => retryAction("update")}
+                    disabled={pendingAction !== null}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {pendingAction === "update" ? (
+                      <Clock className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                    إعادة المحاولة ({attempts.update}/{MAX_ATTEMPTS})
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-destructive font-bold">
+                    تم بلوغ الحد الأقصى ({MAX_ATTEMPTS}). تواصل مع الدعم.
+                  </span>
+                )}
+                <Link
+                  to="/contact"
+                  className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  الدعم
+                  <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                آخر محاولة: {new Date(updateOutcome.at).toLocaleString("ar-DZ")}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Cancellation outcome banner */}
         {cancelOutcome && (
           <div
