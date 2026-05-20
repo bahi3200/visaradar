@@ -1209,6 +1209,7 @@ export default function Billing() {
 
                 {/* Auto-renewal status */}
                 <div
+                  id="connect-provider"
                   className={`flex items-start gap-3 rounded-lg p-3 border ${
                     autoRenew
                       ? "bg-primary/5 border-primary/20"
