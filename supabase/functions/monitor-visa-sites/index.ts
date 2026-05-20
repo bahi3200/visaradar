@@ -1213,6 +1213,7 @@ Deno.serve(async (req) => {
         success: true,
         checked: siteResults.map((r) => ({
           country: r.countryCode,
+          category: r.category,
           status: r.status,
           previousStatus: r.previousStatus,
           changed: r.changed,
