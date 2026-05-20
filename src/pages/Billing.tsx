@@ -297,6 +297,11 @@ export default function Billing() {
     action: "update" | "cancel",
     extraMeta: Record<string, unknown> = {},
   ) => {
+    // Atomic re-entry guard — if any action is already running, ignore.
+    if (actionLockRef.current !== null) {
+      return;
+    }
+    actionLockRef.current = action;
     setPendingAction(action);
     const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
     const friendlyAction = action === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك";
@@ -380,6 +385,7 @@ export default function Billing() {
       });
     } finally {
       setPendingAction(null);
+      actionLockRef.current = null;
     }
   };
 
