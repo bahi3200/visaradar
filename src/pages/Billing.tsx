@@ -463,6 +463,92 @@ export default function Billing() {
           </Link>
         </div>
 
+        {/* Cancellation outcome banner */}
+        {cancelOutcome && (
+          <div
+            className={`gradient-card rounded-xl border p-4 mb-4 flex items-start gap-3 ${
+              cancelOutcome.status === "scheduled"
+                ? "border-primary/40"
+                : "border-destructive/40"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {cancelOutcome.status === "scheduled" ? (
+              <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            ) : (
+              <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 min-w-0 text-xs leading-relaxed">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                <p className="text-sm font-bold text-foreground">
+                  {cancelOutcome.status === "scheduled"
+                    ? "تم تسجيل طلب الإلغاء بنجاح"
+                    : "فشل تسجيل طلب الإلغاء"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCancelOutcome(null)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                  aria-label="إغلاق الإشعار"
+                >
+                  إخفاء
+                </button>
+              </div>
+
+              {cancelOutcome.status === "scheduled" ? (
+                <>
+                  <p className="text-muted-foreground">
+                    سيبقى اشتراكك فعّالًا حتى{" "}
+                    {cancelOutcome.until && (
+                      <span className="font-bold text-foreground">
+                        {formatDate(cancelOutcome.until)}
+                      </span>
+                    )}
+                    ، وبعدها سيتم إيقاف التنبيهات ولن يتم تجديده تلقائيًا. لن يتم خصم أي
+                    مبلغ إضافي.
+                  </p>
+                  <ul className="mt-2 space-y-1 text-muted-foreground list-disc pr-5">
+                    <li>تستمر جميع الميزات في العمل حتى تاريخ الانتهاء.</li>
+                    <li>إذا غيّرت رأيك قبل ذلك التاريخ، تواصل مع الدعم لإعادة التفعيل.</li>
+                  </ul>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  {cancelOutcome.message ??
+                    "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء. يرجى المحاولة مجددًا أو التواصل مع الدعم."}
+                </p>
+              )}
+
+              {cancelOutcome.reason && (
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  السبب:{" "}
+                  <span className="font-bold text-foreground">
+                    {
+                      {
+                        too_expensive: "السعر مرتفع",
+                        not_useful: "لم أعد بحاجة للخدمة",
+                        missing_features: "ميزات ناقصة أو لا تناسبني",
+                        technical_issues: "مشاكل تقنية أو إشعارات غير دقيقة",
+                        found_alternative: "وجدت بديلًا أفضل",
+                        temporary_pause: "إيقاف مؤقت — سأعود لاحقًا",
+                        other: "سبب آخر",
+                      }[cancelOutcome.reason] ?? cancelOutcome.reason
+                    }
+                  </span>
+                  {cancelOutcome.details && (
+                    <span className="block mt-0.5">«{cancelOutcome.details}»</span>
+                  )}
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground mt-2">
+                سُجِّل في {new Date(cancelOutcome.at).toLocaleString("ar-DZ")}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Current subscription */}
         <div className="gradient-card rounded-xl border border-border/30 p-5 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
