@@ -948,24 +948,34 @@ export default function SubscribeRequestPage() {
                     <AlertTriangle className="w-6 h-6 text-destructive" />
                   </div>
                   <p className="text-sm font-bold text-foreground">
-                    {paymentError ? "تعذّر جلب معلومات الدفع" : "معلومات الدفع غير متوفرة حالياً"}
+                    {autoRetryActive
+                      ? (retryCountdown > 0
+                          ? `إعادة المحاولة تلقائياً خلال ${retryCountdown} ثانية…`
+                          : `جاري إعادة المحاولة (${retryAttempt + 1}/${MAX_RETRY})…`)
+                      : (paymentError ? "تعذّر جلب معلومات الدفع" : "معلومات الدفع غير متوفرة حالياً")}
                   </p>
                   <p className="text-xs text-muted-foreground max-w-sm">
-                    {paymentError
-                      ? "حدث خطأ أثناء الاتصال بالخادم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة. لا يمكن رفع وصل الدفع قبل ظهور رقم CCP / BaridiMob."
-                      : "لم نتمكن من العثور على رقم CCP أو BaridiMob في إعدادات الموقع. يُرجى المحاولة مجدداً، وإذا استمر الخطأ فتواصل مع الدعم."}
+                    {autoRetryActive
+                      ? "نحاول إعادة جلب معلومات الدفع تلقائياً مع انتظار متدرّج. يمكنك الانتظار أو الضغط على إعادة المحاولة الآن."
+                      : autoRetryExhausted
+                        ? "تعذّر جلب معلومات الدفع بعد عدة محاولات تلقائية. تحقق من الاتصال بالإنترنت ثم أعد المحاولة يدوياً، أو تواصل مع الدعم."
+                        : (paymentError
+                            ? "حدث خطأ أثناء الاتصال بالخادم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة. لا يمكن رفع وصل الدفع قبل ظهور رقم CCP / BaridiMob."
+                            : "لم نتمكن من العثور على رقم CCP أو BaridiMob في إعدادات الموقع. يُرجى المحاولة مجدداً، وإذا استمر الخطأ فتواصل مع الدعم.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => {
                       try { sessionStorage.removeItem("vr_payment_info"); } catch {}
+                      setRetryAttempt(0);
+                      setRetryCountdown(0);
                       refetchPayment();
                     }}
-                    disabled={paymentFetching}
+                    disabled={paymentFetching || retryCountdown > 0}
                     className="inline-flex items-center gap-2 text-xs font-bold text-foreground bg-muted/40 hover:bg-muted/60 disabled:opacity-50 rounded-lg px-4 py-2 transition-all"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${paymentFetching ? "animate-spin" : ""}`} />
-                    إعادة المحاولة
+                    <RefreshCw className={`w-3.5 h-3.5 ${paymentFetching || retryCountdown > 0 ? "animate-spin" : ""}`} />
+                    {paymentFetching ? "جاري الجلب…" : (retryCountdown > 0 ? `إعادة محاولة (${retryCountdown}ث)` : "إعادة المحاولة الآن")}
                   </button>
                   <Link to="/contact" className="text-[11px] text-accent hover:underline">
                     تواصل مع الدعم
