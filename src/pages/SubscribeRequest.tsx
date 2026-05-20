@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X, MapPin, PlusCircle, MinusCircle, Building2, Loader2, CreditCard } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -169,6 +169,49 @@ export default function SubscribeRequestPage() {
     paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number)
   );
   const paymentInfoMissing = Boolean(selectedPackageId) && !paymentLoading && !paymentFetching && !hasPaymentInfo;
+
+  // Auto-retry with exponential backoff when payment info fetch fails or is empty.
+  // Delays: 2s, 4s, 8s. After MAX_RETRY attempts, stop auto-retry and let user retry manually.
+  const MAX_RETRY = 3;
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [retryCountdown, setRetryCountdown] = useState(0);
+
+  // Reset auto-retry state when package changes or info becomes available
+  useEffect(() => {
+    if (hasPaymentInfo || !selectedPackageId) {
+      setRetryAttempt(0);
+      setRetryCountdown(0);
+    }
+  }, [hasPaymentInfo, selectedPackageId]);
+
+  // Schedule next auto-retry when missing and under cap
+  useEffect(() => {
+    if (!paymentInfoMissing) return;
+    if (retryAttempt >= MAX_RETRY) return;
+    if (retryCountdown > 0) return;
+    const delaySec = Math.pow(2, retryAttempt + 1); // 2, 4, 8
+    setRetryCountdown(delaySec);
+  }, [paymentInfoMissing, retryAttempt, retryCountdown]);
+
+  // Countdown ticker → triggers refetch when it reaches 0
+  useEffect(() => {
+    if (retryCountdown <= 0) return;
+    const t = setTimeout(() => {
+      const next = retryCountdown - 1;
+      if (next <= 0) {
+        try { sessionStorage.removeItem("vr_payment_info"); } catch {}
+        setRetryAttempt((a) => a + 1);
+        setRetryCountdown(0);
+        refetchPayment();
+      } else {
+        setRetryCountdown(next);
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [retryCountdown, refetchPayment]);
+
+  const autoRetryExhausted = paymentInfoMissing && retryAttempt >= MAX_RETRY;
+  const autoRetryActive = paymentInfoMissing && retryAttempt < MAX_RETRY;
 
   const { data: activeSubscription } = useQuery({
     queryKey: ["my-active-sub", user?.id],
@@ -905,24 +948,34 @@ export default function SubscribeRequestPage() {
                     <AlertTriangle className="w-6 h-6 text-destructive" />
                   </div>
                   <p className="text-sm font-bold text-foreground">
-                    {paymentError ? "تعذّر جلب معلومات الدفع" : "معلومات الدفع غير متوفرة حالياً"}
+                    {autoRetryActive
+                      ? (retryCountdown > 0
+                          ? `إعادة المحاولة تلقائياً خلال ${retryCountdown} ثانية…`
+                          : `جاري إعادة المحاولة (${retryAttempt + 1}/${MAX_RETRY})…`)
+                      : (paymentError ? "تعذّر جلب معلومات الدفع" : "معلومات الدفع غير متوفرة حالياً")}
                   </p>
                   <p className="text-xs text-muted-foreground max-w-sm">
-                    {paymentError
-                      ? "حدث خطأ أثناء الاتصال بالخادم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة. لا يمكن رفع وصل الدفع قبل ظهور رقم CCP / BaridiMob."
-                      : "لم نتمكن من العثور على رقم CCP أو BaridiMob في إعدادات الموقع. يُرجى المحاولة مجدداً، وإذا استمر الخطأ فتواصل مع الدعم."}
+                    {autoRetryActive
+                      ? "نحاول إعادة جلب معلومات الدفع تلقائياً مع انتظار متدرّج. يمكنك الانتظار أو الضغط على إعادة المحاولة الآن."
+                      : autoRetryExhausted
+                        ? "تعذّر جلب معلومات الدفع بعد عدة محاولات تلقائية. تحقق من الاتصال بالإنترنت ثم أعد المحاولة يدوياً، أو تواصل مع الدعم."
+                        : (paymentError
+                            ? "حدث خطأ أثناء الاتصال بالخادم. تحقق من الاتصال بالإنترنت ثم أعد المحاولة. لا يمكن رفع وصل الدفع قبل ظهور رقم CCP / BaridiMob."
+                            : "لم نتمكن من العثور على رقم CCP أو BaridiMob في إعدادات الموقع. يُرجى المحاولة مجدداً، وإذا استمر الخطأ فتواصل مع الدعم.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => {
                       try { sessionStorage.removeItem("vr_payment_info"); } catch {}
+                      setRetryAttempt(0);
+                      setRetryCountdown(0);
                       refetchPayment();
                     }}
-                    disabled={paymentFetching}
+                    disabled={paymentFetching || retryCountdown > 0}
                     className="inline-flex items-center gap-2 text-xs font-bold text-foreground bg-muted/40 hover:bg-muted/60 disabled:opacity-50 rounded-lg px-4 py-2 transition-all"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${paymentFetching ? "animate-spin" : ""}`} />
-                    إعادة المحاولة
+                    <RefreshCw className={`w-3.5 h-3.5 ${paymentFetching || retryCountdown > 0 ? "animate-spin" : ""}`} />
+                    {paymentFetching ? "جاري الجلب…" : (retryCountdown > 0 ? `إعادة محاولة (${retryCountdown}ث)` : "إعادة المحاولة الآن")}
                   </button>
                   <Link to="/contact" className="text-[11px] text-accent hover:underline">
                     تواصل مع الدعم
