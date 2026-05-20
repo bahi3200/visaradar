@@ -948,11 +948,19 @@ export default function SubscribeRequestPage() {
                   )}
                 </div>
                 {selectedPkg ? (
-                  <div className="rounded-lg bg-accent/10 border border-accent/20 p-3 text-center">
+                  <div className="rounded-lg bg-accent/10 border border-accent/20 p-4 text-center space-y-2">
                     <p className="text-xs text-accent font-bold">
                       المبلغ المطلوب: {isUpgrade ? priceDifference : (selectedPkg?.price || 0)} د.ج
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">قم بتحويل المبلغ ثم أرفق صورة الوصل أدناه</p>
+                    <p className="text-[10px] text-muted-foreground">قم بتحويل المبلغ ثم أنقر للذهاب إلى الخطوة التالية</p>
+                    <button
+                      type="button"
+                      onClick={() => receiptSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                      className="inline-flex items-center gap-2 text-xs font-bold text-accent-foreground bg-accent/90 hover:bg-accent rounded-lg px-4 py-2 transition-all"
+                    >
+                      <FileImage className="w-3.5 h-3.5" />
+                      ارفع وصل الدفع الآن
+                    </button>
                   </div>
                 ) : (
                   <div className="rounded-lg bg-muted/30 border border-border/50 p-3 text-center">
