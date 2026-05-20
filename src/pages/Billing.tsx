@@ -788,6 +788,25 @@ export default function Billing() {
         },
       });
 
+      // Distinct retry-failure event so analytics can tell first failures
+      // apart from failed auto-retries that happened after a connect attempt.
+      if (isRetry) {
+        await logEvent({
+          event_type: "payment_provider.retry_failed",
+          status: "failed",
+          message: `إعادة المحاولة بعد ربط مزوّد الدفع لم تنجح — لا يزال غير مفعّل (${missingProviders.join(", ") || "غير معروف"}).`,
+          metadata: {
+            reason: "provider_not_configured",
+            action,
+            attempt: attemptNumber,
+            max_attempts: MAX_ATTEMPTS,
+            missing_providers: missingProviders,
+            provider_status: providerStatus,
+            simulator_version: SIMULATOR_VERSION,
+          },
+        });
+      }
+
       setUpdateOutcome({
         status: "failed",
         at: new Date().toISOString(),
