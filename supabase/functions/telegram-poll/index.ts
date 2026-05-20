@@ -14,6 +14,12 @@ interface TgUpdate {
     chat: { id: number; first_name?: string; last_name?: string; username?: string };
     text?: string;
   };
+  callback_query?: {
+    id: string;
+    from: { id: number; first_name?: string; username?: string };
+    message?: { chat: { id: number }; message_id: number };
+    data?: string;
+  };
 }
 
 async function tg(method: string, body: Record<string, unknown>, token: string) {
@@ -87,7 +93,7 @@ Deno.serve(async (req) => {
     const data = await tg("getUpdates", {
       offset: currentOffset,
       timeout,
-      allowed_updates: ["message"],
+      allowed_updates: ["message", "callback_query"],
     }, TOKEN);
 
     if (!data.ok) {
@@ -103,6 +109,92 @@ Deno.serve(async (req) => {
     }
 
     for (const u of updates) {
+      // ─── Inline button callbacks (unsubscribe / change service) ───
+      if (u.callback_query) {
+        const cq = u.callback_query;
+        const chatId = String(cq.message?.chat.id ?? cq.from.id);
+        const cbData = cq.data || '';
+
+        // Resolve user via telegram_id == chatId
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('telegram_id', chatId)
+          .maybeSingle();
+
+        let answerText = '';
+        let followUp: string | null = null;
+
+        if (!profile) {
+          answerText = '⚠️ الحساب غير مربوط بعد';
+        } else if (cbData.startsWith('unsub:')) {
+          const code = cbData.slice(6).toUpperCase();
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('id, countries')
+            .eq('user_id', profile.user_id)
+            .eq('status', 'active')
+            .order('expires_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (sub) {
+            const next = (sub.countries || []).filter((c: string) => c !== code);
+            await supabase.from('subscriptions').update({ countries: next }).eq('id', sub.id);
+            answerText = `🔕 تم إيقاف تنبيهات ${code}`;
+            followUp = `🔕 <b>تم إيقاف تنبيهات الدولة ${code}</b>\nيمكنك إعادة تفعيلها من إعدادات الإشعارات على الموقع.`;
+          } else {
+            answerText = 'لا يوجد اشتراك نشط';
+          }
+        } else if (cbData === 'svc:menu') {
+          followUp = `🛠️ <b>اختر نوع الخدمة</b>`;
+          await tg('sendMessage', {
+            chat_id: chatId,
+            text: followUp,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '🛂 تأشيرات', callback_data: 'svc:visa' },
+                { text: '💼 وظائف', callback_data: 'svc:jobs' },
+                { text: '🎯 كل الخدمات', callback_data: 'svc:both' },
+              ]],
+            },
+          }, TOKEN);
+          followUp = null;
+          answerText = '';
+        } else if (cbData.startsWith('svc:')) {
+          const type = cbData.slice(4);
+          if (['visa', 'jobs', 'both'].includes(type)) {
+            const { data: sub } = await supabase
+              .from('subscriptions')
+              .select('id')
+              .eq('user_id', profile.user_id)
+              .eq('status', 'active')
+              .order('expires_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (sub) {
+              await supabase.from('subscriptions').update({ service_type: type }).eq('id', sub.id);
+              const labels: Record<string, string> = { visa: 'تأشيرات', jobs: 'وظائف', both: 'كل الخدمات' };
+              answerText = `✅ تم التحديث: ${labels[type]}`;
+              followUp = `✅ <b>تم تغيير نوع الخدمة إلى:</b> ${labels[type]}`;
+            } else {
+              answerText = 'لا يوجد اشتراك نشط';
+            }
+          } else {
+            answerText = 'خيار غير صالح';
+          }
+        } else {
+          answerText = 'إجراء غير معروف';
+        }
+
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: answerText || '✓' }, TOKEN);
+        if (followUp) {
+          await tg('sendMessage', { chat_id: chatId, text: followUp, parse_mode: 'HTML' }, TOKEN);
+        }
+        processed++;
+        continue;
+      }
+
       const msg = u.message;
       if (!msg?.text) continue;
       const text = msg.text.trim();
