@@ -306,11 +306,40 @@ export default function Billing() {
         throw new Error("لا يوجد اشتراك نشط مرتبط بحسابك حاليًا.");
       }
 
+      // Cancel path: record a manual cancellation request and surface a
+      // persistent status banner. No real provider action — but the request
+      // is logged for the admin to honor on the renewal date.
+      if (action === "cancel") {
+        const message =
+          "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي ولن يتم تجديد الاشتراك تلقائيًا.";
+        await logEvent({
+          event_type: "subscription.cancel_scheduled",
+          status: "info",
+          message,
+          metadata: {
+            scheduled_for: subscription.expires_at,
+            action,
+            ...extraMeta,
+          },
+        });
+        setCancelOutcome({
+          status: "scheduled",
+          at: new Date().toISOString(),
+          until: subscription.expires_at,
+          reason: (extraMeta.cancellation_reason as string) || undefined,
+          details: (extraMeta.cancellation_details as string) || undefined,
+          message,
+        });
+        toast({
+          title: "تم تسجيل الإلغاء",
+          description: message,
+        });
+        return;
+      }
+
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
       const errMsg =
-        action === "update"
-          ? "تعذّر فتح بوابة تحديث طريقة الدفع: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد."
-          : "تعذّر إلغاء الاشتراك تلقائيًا: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد.";
+        "تعذّر فتح بوابة تحديث طريقة الدفع: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد.";
 
       await logEvent({
         event_type: eventType,
@@ -332,6 +361,15 @@ export default function Billing() {
         message,
         metadata: { reason: "client_error", action, ...extraMeta },
       });
+      if (action === "cancel") {
+        setCancelOutcome({
+          status: "failed",
+          at: new Date().toISOString(),
+          reason: (extraMeta.cancellation_reason as string) || undefined,
+          details: (extraMeta.cancellation_details as string) || undefined,
+          message,
+        });
+      }
       toast({
         title: `فشل ${friendlyAction}`,
         description: message,
