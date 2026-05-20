@@ -402,6 +402,29 @@ export default function Billing() {
       attempt: attemptNumber,
       max_attempts: MAX_ATTEMPTS,
       is_retry: isRetry,
+      simulator_version: SIMULATOR_VERSION,
+      requested_action: action,
+      requested_at: new Date().toISOString(),
+      client: {
+        user_agent:
+          typeof navigator !== "undefined" ? navigator.userAgent : null,
+        language:
+          typeof navigator !== "undefined" ? navigator.language : null,
+        timezone:
+          typeof Intl !== "undefined"
+            ? Intl.DateTimeFormat().resolvedOptions().timeZone
+            : null,
+      },
+      subscription_snapshot: subscription
+        ? {
+            id: subscription.id,
+            status: subscription.status,
+            expires_at: subscription.expires_at,
+            starts_at: subscription.starts_at,
+            package_id: subscription.package_id,
+            service_type: subscription.service_type,
+          }
+        : null,
     };
     actionLockRef.current = action;
     setPendingAction(action);
