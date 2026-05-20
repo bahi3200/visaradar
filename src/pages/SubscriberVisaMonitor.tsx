@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe,
-  Radar, TrendingUp, Timer, RefreshCw,
+  Radar, TrendingUp, Timer, RefreshCw, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
