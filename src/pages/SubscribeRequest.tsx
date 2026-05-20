@@ -1,9 +1,9 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X, MapPin, PlusCircle, MinusCircle, Building2 } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X, MapPin, PlusCircle, MinusCircle, Building2, Loader2, CreditCard } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +79,26 @@ export default function SubscribeRequestPage() {
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [isPreparingPayment, setIsPreparingPayment] = useState(false);
+  const paymentInfoRef = useRef<HTMLDivElement | null>(null);
+  const receiptSectionRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // When a package is selected, show a brief loading state, then reveal
+  // payment info and smooth-scroll to it; afterwards nudge the receipt area
+  // into view so the user can attach the receipt immediately.
+  const handleSelectPackage = (pkgId: string) => {
+    setSelectedPackageId(pkgId);
+    setCountries([]);
+    setIsPreparingPayment(true);
+    setTimeout(() => {
+      setIsPreparingPayment(false);
+      paymentInfoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => {
+        receiptSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 2200);
+    }, 900);
+  };
 
   // Fetch live provider centers + change history for selected countries
   const { data: providerCenters } = useQuery({
@@ -508,7 +528,7 @@ export default function SubscribeRequestPage() {
                     <button
                       key={pkg.id}
                       disabled={isCurrentPkg && !isUpgrade && !isRenewal}
-                      onClick={() => { if (isCurrentPkg && !isUpgrade && !isRenewal) return; setSelectedPackageId(pkg.id); setCountries([]); }}
+                      onClick={() => { if (isCurrentPkg && !isUpgrade && !isRenewal) return; handleSelectPackage(pkg.id); }}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-right ${
                         isCurrentPkg && !isUpgrade && !isRenewal
                           ? "border-muted bg-muted/30 opacity-60 cursor-not-allowed"
@@ -830,9 +850,34 @@ export default function SubscribeRequestPage() {
               </div>
             )}
 
-            {/* Payment Info - always visible */}
-            {!isAlreadySubscribed && paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
-              <div className="gradient-card rounded-2xl border border-accent/20 p-6">
+            {/* Preparing payment info loader */}
+            {selectedPackageId && isPreparingPayment && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="gradient-card rounded-2xl border border-accent/30 p-6 text-center"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
+                      <CreditCard className="w-7 h-7 text-accent" />
+                    </div>
+                    <Loader2 className="w-5 h-5 text-accent animate-spin absolute -bottom-1 -left-1" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">جاري تحضير معلومات الدفع…</p>
+                  <p className="text-xs text-muted-foreground">سيتم عرض رقم CCP/BaridiMob ثم نفتح لك خانة رفع الوصل تلقائياً</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Payment Info - shown after preparing */}
+            {!isAlreadySubscribed && !isPreparingPayment && paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number) && (
+              <motion.div
+                ref={paymentInfoRef}
+                initial={selectedPackageId ? { opacity: 0, y: 10 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                className="gradient-card rounded-2xl border border-accent/20 p-6"
+              >
                 <label className="block text-sm font-bold text-foreground mb-4">معلومات الدفع</label>
                 {paymentSettings.account_holder && (
                   <p className="text-xs text-muted-foreground mb-3 text-center">صاحب الحساب: <span className="font-bold text-foreground">{paymentSettings.account_holder}</span></p>
@@ -899,10 +944,13 @@ export default function SubscribeRequestPage() {
                     <p className="text-xs text-muted-foreground">اختر الباقة أعلاه لمعرفة المبلغ المطلوب</p>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
 
-            {!isAlreadySubscribed && <div className="gradient-card rounded-2xl border border-border/50 p-6">
+            {!isAlreadySubscribed && !isPreparingPayment && <div
+              ref={receiptSectionRef}
+              className={`gradient-card rounded-2xl border p-6 transition-all ${selectedPackageId && !receiptFile ? "border-accent/40 ring-2 ring-accent/20 animate-pulse-once" : "border-border/50"}`}
+            >
               <label className="block text-sm font-medium text-foreground mb-3">
                 وصل الدفع CCP * {isUpgrade && <span className="text-xs text-muted-foreground">(بمبلغ الفارق: {priceDifference} د.ج)</span>}
               </label>
@@ -927,7 +975,7 @@ export default function SubscribeRequestPage() {
                     <FileImage className="w-10 h-10 text-muted-foreground mx-auto" />
                     <p className="text-sm text-muted-foreground">اضغط لتحميل صورة أو PDF للوصل</p>
                     <p className="text-xs text-muted-foreground/60">JPG, PNG, WEBP, PDF - حد أقصى {MAX_RECEIPT_SIZE_MB}MB</p>
-                    <input type="file" accept="image/*,application/pdf,.pdf" onChange={handleFileChange} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.pdf" onChange={handleFileChange} className="hidden" />
                   </label>
                 )}
               </div>
