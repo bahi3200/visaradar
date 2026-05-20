@@ -936,6 +936,39 @@ export default function Billing() {
                 <h3 className="text-sm font-bold text-foreground">
                   {pendingAction === "update" ? "جاري الفتح..." : "تحديث طريقة الدفع"}
                 </h3>
+                {(() => {
+                  const state =
+                    pendingAction === "update"
+                      ? "running"
+                      : updateOutcome?.status === "failed"
+                      ? "failed"
+                      : "idle";
+                  const cls =
+                    state === "running"
+                      ? "bg-primary/15 text-primary border-primary/30"
+                      : state === "failed"
+                      ? "bg-destructive/15 text-destructive border-destructive/30"
+                      : "bg-muted/40 text-muted-foreground border-border/40";
+                  const label =
+                    state === "running" ? "قيد التنفيذ" : state === "failed" ? "فشل" : "جاهز";
+                  return (
+                    <span
+                      className={`mr-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${cls}`}
+                      aria-label={`حالة تحديث طريقة الدفع: ${label}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          state === "running"
+                            ? "bg-primary animate-pulse"
+                            : state === "failed"
+                            ? "bg-destructive"
+                            : "bg-muted-foreground/60"
+                        }`}
+                      />
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-xs text-muted-foreground">تغيير البطاقة أو وسيلة الدفع</p>
             </button>
@@ -956,6 +989,51 @@ export default function Billing() {
                 <h3 className="text-sm font-bold text-foreground">
                   {pendingAction === "cancel" ? "جاري المعالجة..." : "إلغاء الاشتراك"}
                 </h3>
+                {(() => {
+                  const state =
+                    pendingAction === "cancel"
+                      ? "running"
+                      : cancelOutcome?.status === "failed"
+                      ? "failed"
+                      : cancelOutcome?.status === "scheduled"
+                      ? "scheduled"
+                      : "idle";
+                  const cls =
+                    state === "running"
+                      ? "bg-destructive/15 text-destructive border-destructive/30"
+                      : state === "failed"
+                      ? "bg-destructive/15 text-destructive border-destructive/30"
+                      : state === "scheduled"
+                      ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                      : "bg-muted/40 text-muted-foreground border-border/40";
+                  const label =
+                    state === "running"
+                      ? "قيد التنفيذ"
+                      : state === "failed"
+                      ? "فشل"
+                      : state === "scheduled"
+                      ? "مجدول"
+                      : "جاهز";
+                  return (
+                    <span
+                      className={`mr-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${cls}`}
+                      aria-label={`حالة إلغاء الاشتراك: ${label}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          state === "running"
+                            ? "bg-destructive animate-pulse"
+                            : state === "failed"
+                            ? "bg-destructive"
+                            : state === "scheduled"
+                            ? "bg-emerald-500"
+                            : "bg-muted-foreground/60"
+                        }`}
+                      />
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-xs text-muted-foreground">إيقاف التجديد التلقائي للاشتراك</p>
             </button>
