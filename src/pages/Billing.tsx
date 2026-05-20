@@ -71,13 +71,13 @@ const ERROR_REASON_INFO: Record<
 > = {
   provider_not_configured: {
     label: "مزوّد الدفع غير مفعّل",
-    title: "بوابة الدفع غير متاحة حاليًا",
+    title: "بوابة الدفع الإلكترونية غير مربوطة بعد",
     description:
-      "لم يتم تفعيل مزوّد الدفع الإلكتروني (Paddle/Stripe) بعد، لذلك لا يمكن تنفيذ العملية تلقائيًا.",
+      "سبب الفشل: لم يتم ربط مزوّد دفع (Paddle أو Stripe) بهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح.",
     nextStep:
-      "يمكنك في هذه الأثناء الدفع يدويًا عبر CCP/BaridiMob أو التواصل مع الدعم لإتمام العملية.",
-    nextStepLabel: "الدفع اليدوي",
-    nextStepHref: "/pricing",
+      "اربط Paddle أو Stripe الآن لتفعيل التجديد التلقائي وإتمام العملية بنقرة واحدة، أو ادفع يدويًا عبر CCP/BaridiMob في هذه الأثناء.",
+    nextStepLabel: "ربط بوابة الدفع",
+    nextStepHref: "/billing#connect-provider",
   },
   no_subscription: {
     label: "لا يوجد اشتراك نشط",
@@ -155,6 +155,52 @@ function deriveStatus(sub: SubscriptionWithPackage | null): {
   if (daysLeft <= 0 || sub.status !== "active") return { status: "expired", daysLeft };
   if (daysLeft <= 7) return { status: "expiring", daysLeft };
   return { status: "active", daysLeft };
+}
+
+function ProviderConnectInline({
+  connectingProvider,
+  onConnect,
+}: {
+  connectingProvider: null | "paddle" | "stripe";
+  onConnect: (p: "paddle" | "stripe") => void;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onConnect("paddle")}
+        disabled={connectingProvider !== null}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {connectingProvider === "paddle" ? (
+          <Clock className="w-3 h-3 animate-spin" />
+        ) : (
+          <RefreshCw className="w-3 h-3" />
+        )}
+        ربط Paddle
+      </button>
+      <button
+        type="button"
+        onClick={() => onConnect("stripe")}
+        disabled={connectingProvider !== null}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border border-border/40 bg-background/40 text-foreground hover:bg-background/70 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {connectingProvider === "stripe" ? (
+          <Clock className="w-3 h-3 animate-spin" />
+        ) : (
+          <CreditCard className="w-3 h-3" />
+        )}
+        ربط Stripe
+      </button>
+      <Link
+        to="/pricing"
+        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+      >
+        أو الدفع يدويًا
+        <ArrowLeft className="w-3 h-3" />
+      </Link>
+    </div>
+  );
 }
 
 export default function Billing() {
@@ -768,13 +814,20 @@ export default function Billing() {
                       <span className="font-normal text-muted-foreground">— {info.label}</span>
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                    <Link
-                      to={info.nextStepHref}
-                      className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                    >
-                      {info.nextStepLabel}
-                      <ArrowLeft className="w-3 h-3" />
-                    </Link>
+                    {updateOutcome.errorReason === "provider_not_configured" ? (
+                      <ProviderConnectInline
+                        connectingProvider={connectingProvider}
+                        onConnect={requestProviderConnection}
+                      />
+                    ) : (
+                      <Link
+                        to={info.nextStepHref}
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      >
+                        {info.nextStepLabel}
+                        <ArrowLeft className="w-3 h-3" />
+                      </Link>
+                    )}
                   </div>
                 );
               })()}
@@ -882,13 +935,20 @@ export default function Billing() {
                           </span>
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                        <Link
-                          to={info.nextStepHref}
-                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                        >
-                          {info.nextStepLabel}
-                          <ArrowLeft className="w-3 h-3" />
-                        </Link>
+                        {cancelOutcome.errorReason === "provider_not_configured" ? (
+                          <ProviderConnectInline
+                            connectingProvider={connectingProvider}
+                            onConnect={requestProviderConnection}
+                          />
+                        ) : (
+                          <Link
+                            to={info.nextStepHref}
+                            className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                          >
+                            {info.nextStepLabel}
+                            <ArrowLeft className="w-3 h-3" />
+                          </Link>
+                        )}
                       </div>
                     );
                   })()}
