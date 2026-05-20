@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -216,6 +216,9 @@ export default function Billing() {
     details?: string;
     message?: string;
   }>(null);
+  // Synchronous lock to prevent double-execution from rapid clicks
+  // (setState is async, so it can't be the sole guard).
+  const actionLockRef = useRef<null | "update" | "cancel">(null);
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
@@ -294,6 +297,11 @@ export default function Billing() {
     action: "update" | "cancel",
     extraMeta: Record<string, unknown> = {},
   ) => {
+    // Atomic re-entry guard — if any action is already running, ignore.
+    if (actionLockRef.current !== null) {
+      return;
+    }
+    actionLockRef.current = action;
     setPendingAction(action);
     const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
     const friendlyAction = action === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك";
@@ -377,6 +385,7 @@ export default function Billing() {
       });
     } finally {
       setPendingAction(null);
+      actionLockRef.current = null;
     }
   };
 
@@ -1059,6 +1068,8 @@ export default function Billing() {
       <AlertDialog
         open={cancelConfirmOpen}
         onOpenChange={(open) => {
+          // Block closing while a cancel is in flight
+          if (!open && pendingAction === "cancel") return;
           setCancelConfirmOpen(open);
           if (!open) {
             setCancelReason("");
@@ -1174,23 +1185,45 @@ export default function Billing() {
 
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogAction
-              disabled={!cancelReason || (cancelReason === "other" && !cancelReasonDetails.trim())}
-              onClick={() => {
+              disabled={
+                pendingAction !== null ||
+                !cancelReason ||
+                (cancelReason === "other" && !cancelReasonDetails.trim())
+              }
+              onClick={(e) => {
+                // Hard guard against rapid double clicks
+                if (pendingAction !== null || actionLockRef.current !== null) {
+                  e.preventDefault();
+                  return;
+                }
+                // Keep dialog open while in-flight so spinner is visible and
+                // close is prevented by onOpenChange guard above.
+                e.preventDefault();
                 const reason = cancelReason;
                 const details = cancelReasonDetails.trim();
-                setCancelConfirmOpen(false);
                 notReady("cancel", {
                   cancellation_reason: reason,
                   cancellation_details: details || undefined,
+                }).finally(() => {
+                  setCancelConfirmOpen(false);
+                  setCancelReason("");
+                  setCancelReasonDetails("");
                 });
-                setCancelReason("");
-                setCancelReasonDetails("");
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              نعم، إلغاء الاشتراك
+              {pendingAction === "cancel" ? (
+                <span className="inline-flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 animate-spin" />
+                  جاري المعالجة...
+                </span>
+              ) : (
+                "نعم، إلغاء الاشتراك"
+              )}
             </AlertDialogAction>
-            <AlertDialogCancel>تراجع</AlertDialogCancel>
+            <AlertDialogCancel disabled={pendingAction === "cancel"}>
+              تراجع
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
