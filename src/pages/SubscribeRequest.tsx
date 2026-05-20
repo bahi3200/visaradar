@@ -140,7 +140,7 @@ export default function SubscribeRequestPage() {
     },
   });
 
-  const { data: paymentSettings } = useQuery({
+  const { data: paymentSettings, error: paymentError, isLoading: paymentLoading, isFetching: paymentFetching, refetch: refetchPayment } = useQuery({
     queryKey: ["payment-info"],
     queryFn: async () => {
       // Session cache: avoid re-fetching across navigations within the same tab
@@ -162,7 +162,13 @@ export default function SubscribeRequestPage() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    retry: 1,
   });
+
+  const hasPaymentInfo = Boolean(
+    paymentSettings && (paymentSettings.ccp_number || paymentSettings.rip_number)
+  );
+  const paymentInfoMissing = Boolean(selectedPackageId) && !paymentLoading && !paymentFetching && !hasPaymentInfo;
 
   const { data: activeSubscription } = useQuery({
     queryKey: ["my-active-sub", user?.id],
