@@ -64,6 +64,8 @@ export default function SubscriberVisaMonitor() {
   const { isPrivileged } = useIsAdmin();
   const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("7d");
   const [filterCountry, setFilterCountry] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // User's active subscription countries (admins see all)
   const { data: subCountries = [] } = useQuery({
