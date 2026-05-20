@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck, Play, Zap, CalendarDays, CalendarRange } from "lucide-react";
+import { Bell, BellOff, Volume2, VolumeX, Globe, Save, ArrowRight, Lock, Crown, ShieldCheck, Play, Zap, CalendarDays, CalendarRange, Languages } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ export default function NotificationSettings() {
   const [browserNotifications, setBrowserNotifications] = useState(true);
   const [selectedCountries, setSelectedCountries] = useState<string[]>(["IT", "FR", "ES"]);
   const [digestFrequency, setDigestFrequency] = useState<'instant' | 'daily' | 'weekly'>('instant');
+  const [preferredLanguage, setPreferredLanguage] = useState<'ar' | 'en'>('ar');
   const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch subscription with package info to get max_countries
@@ -90,6 +91,10 @@ export default function NotificationSettings() {
       if (freq === 'daily' || freq === 'weekly' || freq === 'instant') {
         setDigestFrequency(freq);
       }
+      const lang = (prefs as any).preferred_language;
+      if (lang === 'ar' || lang === 'en') {
+        setPreferredLanguage(lang);
+      }
     }
   }, [prefs, isPrivileged]);
 
@@ -103,6 +108,7 @@ export default function NotificationSettings() {
         browser_notifications: browserNotifications,
         countries: selectedCountries,
         digest_frequency: digestFrequency,
+        preferred_language: preferredLanguage,
       };
 
       if (prefs) {
