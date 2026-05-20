@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe,
   Radar, TrendingUp, Timer, RefreshCw, ChevronLeft, ChevronRight,
+  FileDown, FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +18,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
 const COUNTRY_NAMES: Record<string, string> = {
   IT: "إيطاليا 🇮🇹", FR: "فرنسا 🇫🇷", ES: "إسبانيا 🇪🇸",
@@ -175,6 +179,73 @@ export default function SubscriberVisaMonitor() {
     const h = Math.floor(min / 60);
     const m = min % 60;
     return m ? `${h} س ${m} د` : `${h} س`;
+  };
+
+  const rangeLabel = RANGES.find((r) => r.key === range)?.label || range;
+  const fmtDate = (s: string) => new Date(s).toLocaleString("ar", { hour12: false });
+
+  const exportCSV = () => {
+    if (filteredEvents.length === 0) {
+      toast.error("لا توجد بيانات للتصدير");
+      return;
+    }
+    const headers = ["الدولة", "رمز الدولة", "المزوّد", "فُتحت في", "أُغلقت في", "المدة (دقائق)", "الحالة"];
+    const rows = filteredEvents.map((e) => [
+      cn(e.country_code),
+      e.country_code,
+      e.provider,
+      fmtDate(e.opened_at),
+      e.closed_at ? fmtDate(e.closed_at) : "—",
+      e.duration_minutes ?? "",
+      e.closed_at ? "مغلق" : "مفتوح",
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `visa-openings-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("تم تصدير ملف CSV");
+  };
+
+  const exportPDF = () => {
+    if (filteredEvents.length === 0) {
+      toast.error("لا توجد بيانات للتصدير");
+      return;
+    }
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("Visa Openings Log", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Period: ${rangeLabel}  |  Country: ${filterCountry === "all" ? "All" : filterCountry}`, 14, 22);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(
+      `Total: ${filteredEvents.length}  |  Still open: ${stats.stillOpen}  |  Avg duration: ${fmtDur(stats.avg)}`,
+      14,
+      34
+    );
+
+    autoTable(doc, {
+      startY: 40,
+      head: [["Country", "Provider", "Opened At", "Closed At", "Duration (min)", "Status"]],
+      body: filteredEvents.map((e) => [
+        e.country_code,
+        e.provider.toUpperCase(),
+        new Date(e.opened_at).toLocaleString(),
+        e.closed_at ? new Date(e.closed_at).toLocaleString() : "—",
+        e.duration_minutes ?? "—",
+        e.closed_at ? "Closed" : "Open",
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [15, 23, 42] },
+    });
+
+    doc.save(`visa-openings-${range}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("تم تصدير ملف PDF");
   };
 
   return (
