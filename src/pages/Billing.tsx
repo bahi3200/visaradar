@@ -382,9 +382,10 @@ export default function Billing() {
     // Enforce max attempts per action
     const currentAttempts = attempts[action];
     if (currentAttempts >= MAX_ATTEMPTS) {
+      const info = ERROR_REASON_INFO.max_attempts_reached;
       toast({
-        title: "تم بلوغ الحد الأقصى للمحاولات",
-        description: `لقد جرّبت ${MAX_ATTEMPTS} مرات. يرجى التواصل مع الدعم لإتمام العملية يدويًا.`,
+        title: info.title,
+        description: `${info.description} ${info.nextStep}`,
         variant: "destructive",
       });
       return;
@@ -411,7 +412,34 @@ export default function Billing() {
 
       // Guard: must have an active subscription
       if (!subscription) {
-        throw new Error("لا يوجد اشتراك نشط مرتبط بحسابك حاليًا.");
+        const info = ERROR_REASON_INFO.no_subscription;
+        await logEvent({
+          event_type: eventType,
+          status: "failed",
+          message: info.description,
+          metadata: { reason: "no_subscription", action, ...baseMeta },
+        });
+        const outcome = {
+          status: "failed" as const,
+          at: new Date().toISOString(),
+          message: info.description,
+          errorReason: "no_subscription" as ErrorReason,
+        };
+        if (action === "cancel") {
+          setCancelOutcome({
+            ...outcome,
+            reason: (extraMeta.cancellation_reason as string) || undefined,
+            details: (extraMeta.cancellation_details as string) || undefined,
+          });
+        } else {
+          setUpdateOutcome(outcome);
+        }
+        toast({
+          title: info.title,
+          description: `${info.description} ${info.nextStep}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       // Cancel path: record a manual cancellation request and surface a
@@ -448,8 +476,8 @@ export default function Billing() {
       }
 
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
-      const errMsg =
-        "تعذّر فتح بوابة تحديث طريقة الدفع: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد.";
+      const providerInfo = ERROR_REASON_INFO.provider_not_configured;
+      const errMsg = providerInfo.description;
 
       await logEvent({
         event_type: eventType,
@@ -462,15 +490,17 @@ export default function Billing() {
         status: "failed",
         at: new Date().toISOString(),
         message: errMsg,
+        errorReason: "provider_not_configured",
       });
 
       toast({
-        title: `فشل ${friendlyAction}`,
-        description: `${errMsg} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
+        title: providerInfo.title,
+        description: `${errMsg} ${providerInfo.nextStep} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع.";
+      const clientInfo = ERROR_REASON_INFO.client_error;
       await logEvent({
         event_type: eventType,
         status: "failed",
@@ -484,17 +514,19 @@ export default function Billing() {
           reason: (extraMeta.cancellation_reason as string) || undefined,
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
+          errorReason: "client_error",
         });
       } else {
         setUpdateOutcome({
           status: "failed",
           at: new Date().toISOString(),
           message,
+          errorReason: "client_error",
         });
       }
       toast({
-        title: `فشل ${friendlyAction}`,
-        description: `${message} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
+        title: `فشل ${friendlyAction} — ${clientInfo.label}`,
+        description: `${message} ${clientInfo.nextStep} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } finally {
