@@ -1084,7 +1084,7 @@ export default function SubscribeRequestPage() {
               </motion.div>
             )}
 
-            {!isAlreadySubscribed && !isPreparingPayment && (!selectedPackageId || hasPaymentInfo) && <div
+            {!isAlreadySubscribed && !showPaymentSkeleton && (!selectedPackageId || hasPaymentInfo) && <div
               ref={receiptSectionRef}
               className={`gradient-card rounded-2xl border p-6 transition-all ${selectedPackageId && !receiptFile ? "border-accent/40 ring-2 ring-accent/20 animate-pulse-once" : "border-border/50"}`}
             >
