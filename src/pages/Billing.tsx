@@ -216,6 +216,17 @@ export default function Billing() {
     details?: string;
     message?: string;
   }>(null);
+  const [updateOutcome, setUpdateOutcome] = useState<null | {
+    status: "failed";
+    at: string;
+    message: string;
+  }>(null);
+  const [attempts, setAttempts] = useState<{ update: number; cancel: number }>({
+    update: 0,
+    cancel: 0,
+  });
+  const lastCancelMetaRef = useRef<Record<string, unknown>>({});
+  const MAX_ATTEMPTS = 3;
   // Synchronous lock to prevent double-execution from rapid clicks
   // (setState is async, so it can't be the sole guard).
   const actionLockRef = useRef<null | "update" | "cancel">(null);
@@ -301,6 +312,28 @@ export default function Billing() {
     if (actionLockRef.current !== null) {
       return;
     }
+    // Enforce max attempts per action
+    const currentAttempts = attempts[action];
+    if (currentAttempts >= MAX_ATTEMPTS) {
+      toast({
+        title: "تم بلوغ الحد الأقصى للمحاولات",
+        description: `لقد جرّبت ${MAX_ATTEMPTS} مرات. يرجى التواصل مع الدعم لإتمام العملية يدويًا.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const attemptNumber = currentAttempts + 1;
+    const isRetry = currentAttempts > 0;
+    setAttempts((prev) => ({ ...prev, [action]: attemptNumber }));
+    if (action === "cancel") {
+      lastCancelMetaRef.current = extraMeta;
+    }
+    const baseMeta = {
+      ...extraMeta,
+      attempt: attemptNumber,
+      max_attempts: MAX_ATTEMPTS,
+      is_retry: isRetry,
+    };
     actionLockRef.current = action;
     setPendingAction(action);
     const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
@@ -327,7 +360,7 @@ export default function Billing() {
           metadata: {
             scheduled_for: subscription.expires_at,
             action,
-            ...extraMeta,
+            ...baseMeta,
           },
         });
         setCancelOutcome({
@@ -338,6 +371,8 @@ export default function Billing() {
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
         });
+        // Reset attempts on success
+        setAttempts((prev) => ({ ...prev, cancel: 0 }));
         toast({
           title: "تم تسجيل الإلغاء",
           description: message,
@@ -353,12 +388,18 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message: errMsg,
-        metadata: { reason: "provider_not_configured", action, ...extraMeta },
+        metadata: { reason: "provider_not_configured", action, ...baseMeta },
+      });
+
+      setUpdateOutcome({
+        status: "failed",
+        at: new Date().toISOString(),
+        message: errMsg,
       });
 
       toast({
         title: `فشل ${friendlyAction}`,
-        description: `${errMsg} تواصل مع الدعم لإجراء العملية يدويًا.`,
+        description: `${errMsg} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } catch (err) {
@@ -367,7 +408,7 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message,
-        metadata: { reason: "client_error", action, ...extraMeta },
+        metadata: { reason: "client_error", action, ...baseMeta },
       });
       if (action === "cancel") {
         setCancelOutcome({
@@ -377,15 +418,29 @@ export default function Billing() {
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
         });
+      } else {
+        setUpdateOutcome({
+          status: "failed",
+          at: new Date().toISOString(),
+          message,
+        });
       }
       toast({
         title: `فشل ${friendlyAction}`,
-        description: message,
+        description: `${message} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } finally {
       setPendingAction(null);
       actionLockRef.current = null;
+    }
+  };
+
+  const retryAction = (action: "update" | "cancel") => {
+    if (action === "cancel") {
+      notReady("cancel", lastCancelMetaRef.current);
+    } else {
+      notReady("update");
     }
   };
 
@@ -472,6 +527,64 @@ export default function Billing() {
           </Link>
         </div>
 
+        {/* Update payment method failure banner */}
+        {updateOutcome && (
+          <div
+            className="gradient-card rounded-xl border border-destructive/40 p-4 mb-4 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0 text-xs leading-relaxed">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                <p className="text-sm font-bold text-foreground">
+                  فشل تحديث طريقة الدفع
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setUpdateOutcome(null)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                  aria-label="إغلاق الإشعار"
+                >
+                  إخفاء
+                </button>
+              </div>
+              <p className="text-muted-foreground">{updateOutcome.message}</p>
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {attempts.update < MAX_ATTEMPTS ? (
+                  <button
+                    type="button"
+                    onClick={() => retryAction("update")}
+                    disabled={pendingAction !== null}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {pendingAction === "update" ? (
+                      <Clock className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                    إعادة المحاولة ({attempts.update}/{MAX_ATTEMPTS})
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-destructive font-bold">
+                    تم بلوغ الحد الأقصى ({MAX_ATTEMPTS}). تواصل مع الدعم.
+                  </span>
+                )}
+                <Link
+                  to="/contact"
+                  className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  الدعم
+                  <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                آخر محاولة: {new Date(updateOutcome.at).toLocaleString("ar-DZ")}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Cancellation outcome banner */}
         {cancelOutcome && (
           <div
@@ -523,10 +636,40 @@ export default function Billing() {
                   </ul>
                 </>
               ) : (
-                <p className="text-muted-foreground">
-                  {cancelOutcome.message ??
-                    "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء. يرجى المحاولة مجددًا أو التواصل مع الدعم."}
-                </p>
+                <>
+                  <p className="text-muted-foreground">
+                    {cancelOutcome.message ??
+                      "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء."}
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {attempts.cancel < MAX_ATTEMPTS ? (
+                      <button
+                        type="button"
+                        onClick={() => retryAction("cancel")}
+                        disabled={pendingAction !== null}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {pendingAction === "cancel" ? (
+                          <Clock className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                        إعادة المحاولة ({attempts.cancel}/{MAX_ATTEMPTS})
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-destructive font-bold">
+                        تم بلوغ الحد الأقصى ({MAX_ATTEMPTS}). تواصل مع الدعم.
+                      </span>
+                    )}
+                    <Link
+                      to="/contact"
+                      className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      الدعم
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </>
               )}
 
               {cancelOutcome.reason && (
