@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe,
   Radar, TrendingUp, Timer, RefreshCw, ChevronLeft, ChevronRight,
-  FileDown, FileText, Bell, BellOff, Building2, Network,
+  FileDown, FileText, Bell, BellOff, Building2, Network, Filter, RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -69,11 +69,22 @@ const SCOPE_CFG: Record<MonitoringScope, { label: string; icon: typeof Building2
   all_sites:    { label: "كل المواقع",  icon: Network,   color: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
 };
 
+const FILTERS_KEY = "visa_monitor_filters_v1";
+type SavedFilters = { range?: string; country?: string; provider?: string };
+const loadFilters = (): SavedFilters => {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(FILTERS_KEY) || "{}"); } catch { return {}; }
+};
+const initial = loadFilters();
+
 export default function SubscriberVisaMonitor() {
   const { user } = useAuth();
   const { isPrivileged } = useIsAdmin();
-  const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("7d");
-  const [filterCountry, setFilterCountry] = useState<string>("all");
+  const [range, setRange] = useState<(typeof RANGES)[number]["key"]>(
+    (RANGES.find((r) => r.key === initial.range)?.key as any) || "7d"
+  );
+  const [filterCountry, setFilterCountry] = useState<string>(initial.country || "all");
+  const [filterProvider, setFilterProvider] = useState<string>(initial.provider || "all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
   const queryClient = useQueryClient();
@@ -87,6 +98,15 @@ export default function SubscriberVisaMonitor() {
       localStorage.setItem("visa_monitor_alerts", alertsEnabled ? "on" : "off");
     }
   }, [alertsEnabled]);
+
+  // Persist filters
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      FILTERS_KEY,
+      JSON.stringify({ range, country: filterCountry, provider: filterProvider })
+    );
+  }, [range, filterCountry, filterProvider]);
 
   const playBeep = () => {
     try {
@@ -233,9 +253,30 @@ export default function SubscriberVisaMonitor() {
     return () => { supabase.removeChannel(ch); };
   }, [refetchLatest, queryClient, alertsEnabled, isPrivileged, countries]);
 
+  // Available providers from current data (live + events)
+  const availableProviders = useMemo(() => {
+    const set = new Set<string>();
+    latestChecks.forEach((c: any) => c?.provider && set.add(String(c.provider)));
+    events.forEach((e) => e.provider && set.add(String(e.provider)));
+    return Array.from(set).sort();
+  }, [latestChecks, events]);
+
+  const filteredLatest = useMemo(
+    () => (latestChecks as any[]).filter(
+      (c) =>
+        (filterCountry === "all" || c.country_code === filterCountry) &&
+        (filterProvider === "all" || c.provider === filterProvider)
+    ),
+    [latestChecks, filterCountry, filterProvider]
+  );
+
   const filteredEvents = useMemo(
-    () => events.filter((e) => filterCountry === "all" || e.country_code === filterCountry),
-    [events, filterCountry]
+    () => events.filter(
+      (e) =>
+        (filterCountry === "all" || e.country_code === filterCountry) &&
+        (filterProvider === "all" || e.provider === filterProvider)
+    ),
+    [events, filterCountry, filterProvider]
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
@@ -245,7 +286,16 @@ export default function SubscriberVisaMonitor() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [range, filterCountry]);
+  }, [range, filterCountry, filterProvider]);
+
+  const resetFilters = () => {
+    setRange("7d");
+    setFilterCountry("all");
+    setFilterProvider("all");
+    toast.success("تمت إعادة ضبط الفلاتر");
+  };
+
+  const hasActiveFilters = range !== "7d" || filterCountry !== "all" || filterProvider !== "all";
 
   const stats = useMemo(() => {
     const total = events.length;
@@ -423,11 +473,11 @@ export default function SubscriberVisaMonitor() {
           <h2 className="font-bold mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-accent" /> الحالة المباشرة لكل مزوّد
           </h2>
-          {latestChecks.length === 0 ? (
+          {filteredLatest.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">لا توجد بيانات بعد لدولك المختارة.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {latestChecks.map((c) => {
+              {filteredLatest.map((c) => {
                 const cfg = STATUS_CONFIG[c.status] || STATUS_CONFIG.unknown;
                 const Icon = cfg.icon;
                 return (
@@ -501,6 +551,27 @@ export default function SubscriberVisaMonitor() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={filterProvider} onValueChange={setFilterProvider}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <Filter className="w-3 h-3 ml-1 opacity-60" />
+                  <SelectValue placeholder="المزوّد" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل المزوّدين</SelectItem>
+                  {availableProviders.map((p) => (
+                    <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border border-border hover:bg-secondary/50"
+                  title="إعادة ضبط الفلاتر"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> إعادة ضبط
+                </button>
+              )}
               <button
                 onClick={exportCSV}
                 className="inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border border-border hover:bg-secondary/50"
