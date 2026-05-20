@@ -350,6 +350,20 @@ export default function SubscriberVisaMonitor() {
                   ))}
                 </SelectContent>
               </Select>
+              <button
+                onClick={exportCSV}
+                className="inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border border-border hover:bg-secondary/50"
+                title="تصدير CSV"
+              >
+                <FileDown className="w-3.5 h-3.5" /> CSV
+              </button>
+              <button
+                onClick={exportPDF}
+                className="inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border border-border hover:bg-secondary/50"
+                title="تصدير PDF"
+              >
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </button>
             </div>
           </div>
 
