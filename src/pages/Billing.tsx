@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
 type DerivedStatus = "active" | "expiring" | "expired" | "none";
