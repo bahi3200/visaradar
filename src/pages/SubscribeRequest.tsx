@@ -871,7 +871,7 @@ function ReviewDialog({
   serviceType: ServiceType;
   needsCountry: boolean;
   countries: string[];
-  countryOptions: typeof countryOptions;
+  countryOptions: Array<{ code: string; flag: string; name: string; provider: string; center: string }>;
   maxCountries: number;
   amount: number;
   isUpgrade: boolean;
