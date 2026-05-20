@@ -59,6 +59,22 @@ export default function ContactMessages() {
 
   const sendReply = useMutation({
     mutationFn: async ({ message, reply }: { message: any; reply: string }) => {
+      // 1) Save in-app reply (visible to the user inside the app)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("غير مصادق");
+
+      if (message.user_id) {
+        const { error: replyError } = await (supabase.from as any)("contact_message_replies")
+          .insert({
+            message_id: message.id,
+            sender_role: "admin",
+            sender_id: user.id,
+            body: reply,
+          });
+        if (replyError) throw replyError;
+      }
+
+      // 2) Also send an email copy (so guests / users not currently online get it too)
       const htmlBody = `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -78,7 +94,6 @@ export default function ContactMessages() {
         </div>
       `;
 
-      // Save reply to email_notifications
       const { error: emailError } = await (supabase.from as any)("email_notifications")
         .insert({
           recipient_email: message.email,
@@ -89,7 +104,7 @@ export default function ContactMessages() {
         });
       if (emailError) throw emailError;
 
-      // Update message status to replied
+      // 3) Update message status to replied
       const { error: statusError } = await (supabase.from as any)("contact_messages")
         .update({ status: "replied" })
         .eq("id", message.id);
@@ -97,6 +112,7 @@ export default function ContactMessages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact_messages"] });
+      queryClient.invalidateQueries({ queryKey: ["contact_message_replies"] });
       toast.success("تم حفظ الرد بنجاح");
       setReplyText("");
       setShowReplyForm(false);
