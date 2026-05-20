@@ -298,9 +298,57 @@ export default function Billing() {
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
 
-  // Auto-renewal is currently unavailable globally: provider not yet activated.
-  // Lifted to component scope so messages in notReady() can stay accurate.
-  const autoRenew = false;
+  // Derive auto-renewal state from real signals instead of a hardcoded flag, so the
+  // UI reflects whatever the subscription / payment provider actually reports per user.
+  //
+  // Sources, in priority order:
+  //   1. Subscription row metadata (`auto_renew` boolean, or `provider` string set by webhook).
+  //   2. Latest payment_events toggle: `auto_renew.enabled` vs `auto_renew.disabled`
+  //      (or provider lifecycle: `payment_provider.connected` vs `.disconnected`).
+  //   3. Fallback: false (no provider activation evidence for this user).
+  const autoRenew = (() => {
+    if (!subscription) return false;
+
+    // 1) Subscription-level signal (set by Paddle/Stripe webhook when wired up).
+    const subAny = subscription as unknown as Record<string, unknown>;
+    const subMeta =
+      (subAny.metadata as Record<string, unknown> | undefined) ?? undefined;
+    const metaFlag =
+      typeof subAny.auto_renew === "boolean"
+        ? (subAny.auto_renew as boolean)
+        : typeof subMeta?.auto_renew === "boolean"
+          ? (subMeta.auto_renew as boolean)
+          : undefined;
+    if (typeof metaFlag === "boolean") return metaFlag;
+    if (typeof subAny.provider === "string" && (subAny.provider as string).length > 0) {
+      return true;
+    }
+
+    // 2) Walk events newest → oldest and return the first decisive signal.
+    for (const ev of events) {
+      const sameSub =
+        !subscription?.id ||
+        !(ev as PaymentEvent & { subscription_id?: string | null }).subscription_id ||
+        (ev as PaymentEvent & { subscription_id?: string | null }).subscription_id ===
+          subscription.id;
+      if (!sameSub) continue;
+      switch (ev.event_type) {
+        case "auto_renew.enabled":
+        case "payment_provider.connected":
+        case "subscription.renewed":
+          if (ev.status !== "rejected" && ev.status !== "failed") return true;
+          break;
+        case "auto_renew.disabled":
+        case "payment_provider.disconnected":
+        case "subscription.cancelled":
+          if (ev.status !== "rejected" && ev.status !== "failed") return false;
+          break;
+      }
+    }
+
+    // 3) No evidence → assume off.
+    return false;
+  })();
 
   const requestProviderConnection = async (provider: "paddle" | "stripe") => {
     if (connectingProvider) return;
