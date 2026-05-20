@@ -315,6 +315,18 @@ export default function Billing() {
     };
   }, [user, queryClient]);
 
+  // Scroll to #connect-provider when hash is present (on mount or hash change)
+  useEffect(() => {
+    if (location.hash !== "#connect-provider") return;
+    const el = document.getElementById("connect-provider");
+    if (!el) return;
+    // Defer slightly so layout/rendering stabilizes
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [location.hash]);
+
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [updateConfirmOpen, setUpdateConfirmOpen] = useState(false);
