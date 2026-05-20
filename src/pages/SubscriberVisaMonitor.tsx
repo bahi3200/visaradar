@@ -380,6 +380,44 @@ export default function SubscriberVisaMonitor() {
           </div>
         </motion.div>
 
+        {/* Monitoring scopes per country (from subscription) */}
+        {!isPrivileged && countries.length > 0 && (
+          <section className="bg-card border border-border/50 rounded-2xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <h2 className="font-bold flex items-center gap-2 text-sm">
+                <Network className="w-4 h-4 text-accent" /> نطاق المراقبة لكل دولة
+                {packageName && (
+                  <span className="text-[10px] font-normal text-muted-foreground">· باقة {packageName}</span>
+                )}
+              </h2>
+              <a
+                href="/subscribe"
+                className="text-[11px] text-accent hover:underline"
+              >
+                تعديل من صفحة الاشتراك ←
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {countries.map((cc) => {
+                const s = scopeFor(cc);
+                const cfg = SCOPE_CFG[s];
+                const SIcon = cfg.icon;
+                return (
+                  <div
+                    key={cc}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${cfg.color}`}
+                  >
+                    <span className="font-bold">{cn(cc)}</span>
+                    <span className="opacity-50">·</span>
+                    <SIcon className="w-3 h-3" />
+                    <span>{cfg.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Live status */}
         <section className="bg-card border border-border/50 rounded-2xl p-4">
           <h2 className="font-bold mb-3 flex items-center gap-2">
@@ -404,8 +442,19 @@ export default function SubscriberVisaMonitor() {
                       <span className="opacity-80 uppercase">{c.provider}</span>
                       <span className="font-bold">{cfg.label}</span>
                     </div>
-                    <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {timeAgo(c.checked_at)}
+                    <div className="text-[10px] opacity-70 mt-1 flex items-center justify-between gap-1">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {timeAgo(c.checked_at)}
+                      </span>
+                      {!isPrivileged && countries.includes(c.country_code) && (() => {
+                        const s = scopeFor(c.country_code);
+                        const SIcon = SCOPE_CFG[s].icon;
+                        return (
+                          <span className="flex items-center gap-1" title={SCOPE_CFG[s].label}>
+                            <SIcon className="w-3 h-3" /> {SCOPE_CFG[s].label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
