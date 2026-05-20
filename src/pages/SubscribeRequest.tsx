@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -10,6 +10,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const countryOptions = [
   { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global",            center: "الجزائر العاصمة • وهران" },
@@ -66,6 +74,7 @@ export default function SubscribeRequestPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const { data: packages } = useQuery({
     queryKey: ["packages"],
@@ -163,35 +172,43 @@ export default function SubscribeRequestPage() {
     setReceiptPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = async () => {
-    if (!selectedPackageId || !fullName.trim() || !receiptFile) {
-      toast.error("يرجى ملء جميع الحقول المطلوبة ورفع وصل الدفع");
-      return;
-    }
+  // Returns a list of validation issues; empty array = valid
+  const getValidationIssues = (): string[] => {
+    const issues: string[] = [];
+    if (!selectedPackageId) issues.push("لم تختر الباقة");
+    if (!fullName.trim()) issues.push("الاسم الكامل غير مسجّل في ملفك الشخصي");
+    if (!receiptFile) issues.push("لم ترفق وصل الدفع");
     if (needsCountry) {
-      // Dedupe + whitelist against known providers
       const cleaned = Array.from(new Set(countries.map((c) => c.toUpperCase())))
         .filter((c) => VALID_COUNTRY_CODES.includes(c));
-      if (cleaned.length === 0) {
-        toast.error("يرجى اختيار دولة واحدة على الأقل من القائمة المتاحة");
-        return;
-      }
-      if (cleaned.length !== countries.length) {
-        toast.error("بعض الدول غير صالحة، تم تنقية الاختيار. راجع القائمة وأعد المحاولة");
-        setCountries(cleaned);
-        return;
+      const invalid = countries.filter((c) => !VALID_COUNTRY_CODES.includes(c.toUpperCase()));
+      if (cleaned.length === 0) issues.push("يجب اختيار دولة واحدة على الأقل من القائمة المتاحة");
+      if (invalid.length > 0) issues.push(`دول غير مدعومة في الاختيار: ${invalid.join(", ")}`);
+      if (cleaned.length !== new Set(countries.map((c) => c.toUpperCase())).size) {
+        issues.push("توجد دول مكرّرة في الاختيار");
       }
       if (cleaned.length > maxCountries) {
-        toast.error(`هذه الباقة تسمح بحد أقصى ${maxCountries} دول — قلّص اختيارك`);
-        return;
+        issues.push(`هذه الباقة تسمح بحد أقصى ${maxCountries} دول — اخترت ${cleaned.length}`);
       }
     }
-    if (isAlreadySubscribed) {
-      toast.error("أنت مشترك بالفعل في هذه الباقة. يمكنك الترقية لباقة أعلى.");
+    if (isAlreadySubscribed) issues.push("أنت مشترك بالفعل في هذه الباقة");
+    if (hasPendingRequest) issues.push("لديك طلب قيد المراجعة لنفس الباقة");
+    return issues;
+  };
+
+  const openReview = () => {
+    const issues = getValidationIssues();
+    if (issues.length > 0) {
+      toast.error(issues[0]);
       return;
     }
-    if (hasPendingRequest) {
-      toast.error("لديك طلب قيد المراجعة لنفس الباقة. انتظر حتى يتم معالجته.");
+    setReviewOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    const issues = getValidationIssues();
+    if (issues.length > 0) {
+      toast.error(issues[0]);
       return;
     }
 
@@ -260,6 +277,7 @@ export default function SubscribeRequestPage() {
       setReceiptFile(null);
       if (receiptPreview) URL.revokeObjectURL(receiptPreview);
       setReceiptPreview("");
+      setReviewOpen(false);
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء الإرسال");
     } finally {
@@ -760,18 +778,16 @@ export default function SubscribeRequestPage() {
 
             {/* Submit */}
             {!isAlreadySubscribed && <button
-              onClick={handleSubmit}
+              onClick={openReview}
               disabled={submitting}
               className="w-full py-4 rounded-xl font-bold gradient-primary text-primary-foreground hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
-                isRenewal || isAlreadySubscribed ? <RefreshCw className="w-4 h-4" /> :
-                isUpgrade || isSelectingDifferentPkg ? <ArrowUpCircle className="w-4 h-4" /> :
-                <Send className="w-4 h-4" />
+                <ClipboardCheck className="w-4 h-4" />
               )}
-              {submitting ? "جاري الإرسال..." : isRenewal ? "إرسال طلب التجديد" : isUpgrade ? "إرسال طلب الترقية" : isAlreadySubscribed ? "إرسال طلب التجديد" : isSelectingDifferentPkg ? "إرسال طلب الترقية" : "إرسال طلب الاشتراك"}
+              {submitting ? "جاري الإرسال..." : "مراجعة وتأكيد الطلب"}
             </button>}
           </div>
 
@@ -806,6 +822,193 @@ export default function SubscribeRequestPage() {
           )}
         </motion.div>
       </div>
+
+      {/* Final review dialog */}
+      <ReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        issues={getValidationIssues()}
+        submitting={submitting}
+        onConfirm={handleSubmit}
+        selectedPkg={selectedPkg}
+        serviceType={serviceType}
+        needsCountry={needsCountry}
+        countries={countries}
+        countryOptions={countryOptions}
+        maxCountries={maxCountries}
+        amount={isUpgrade ? priceDifference : (selectedPkg?.price || 0)}
+        isUpgrade={isUpgrade}
+        isRenewal={isRenewal}
+        receiptFile={receiptFile}
+      />
     </Layout>
+  );
+}
+
+function ReviewDialog({
+  open,
+  onOpenChange,
+  issues,
+  submitting,
+  onConfirm,
+  selectedPkg,
+  serviceType,
+  needsCountry,
+  countries,
+  countryOptions,
+  maxCountries,
+  amount,
+  isUpgrade,
+  isRenewal,
+  receiptFile,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  issues: string[];
+  submitting: boolean;
+  onConfirm: () => void;
+  selectedPkg: any;
+  serviceType: ServiceType;
+  needsCountry: boolean;
+  countries: string[];
+  countryOptions: Array<{ code: string; flag: string; name: string; provider: string; center: string }>;
+  maxCountries: number;
+  amount: number;
+  isUpgrade: boolean;
+  isRenewal: boolean;
+  receiptFile: File | null;
+}) {
+  const hasIssues = issues.length > 0;
+  const serviceLabel = serviceType === "visa" ? "تنبيهات الفيزا" : serviceType === "jobs" ? "عقود العمل" : "الباقة الشاملة (فيزا + عمل)";
+  const title = isRenewal ? "تأكيد طلب التجديد" : isUpgrade ? "تأكيد طلب الترقية" : "تأكيد طلب الاشتراك";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-right">
+            <ClipboardCheck className="w-5 h-5 text-primary" />
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-right">
+            راجع التفاصيل بعناية قبل التأكيد. لا يمكن تعديل الطلب بعد الإرسال.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 text-sm">
+          {/* Package */}
+          <div className="rounded-xl border border-border/50 p-4 bg-muted/20">
+            <p className="text-xs text-muted-foreground mb-1">الباقة</p>
+            <p className="font-bold text-foreground">{selectedPkg?.name_ar || "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {selectedPkg?.duration_months} أشهر • حد أقصى {maxCountries} {maxCountries === 1 ? "دولة" : "دول"}
+            </p>
+          </div>
+
+          {/* Service type */}
+          <div className="rounded-xl border border-border/50 p-4 bg-muted/20">
+            <p className="text-xs text-muted-foreground mb-1">نوع الخدمة</p>
+            <p className="font-bold text-foreground">{serviceLabel}</p>
+          </div>
+
+          {/* Countries + centers */}
+          {needsCountry && (
+            <div className="rounded-xl border border-border/50 p-4 bg-muted/20">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground">الدول والمراكز المراقَبة</p>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  countries.length === 0
+                    ? "bg-destructive/10 text-destructive"
+                    : countries.length > maxCountries
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-primary/10 text-primary"
+                }`}>
+                  {countries.length} / {maxCountries}
+                </span>
+              </div>
+              {countries.length === 0 ? (
+                <p className="text-xs text-destructive">لم تختر أي دولة.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {countries.map((code) => {
+                    const c = countryOptions.find((x: any) => x.code === code.toUpperCase());
+                    if (!c) {
+                      return (
+                        <li key={code} className="flex items-center gap-2 text-destructive text-xs">
+                          <X className="w-3.5 h-3.5" />
+                          رمز غير صالح: {code}
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={code} className="flex items-start gap-2">
+                        <span className="text-lg leading-none">{c.flag}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-foreground">{c.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{c.provider} • 📍 {c.center}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Receipt */}
+          <div className="rounded-xl border border-border/50 p-4 bg-muted/20">
+            <p className="text-xs text-muted-foreground mb-1">وصل الدفع</p>
+            {receiptFile ? (
+              <p className="text-xs font-bold text-foreground truncate">📎 {receiptFile.name}</p>
+            ) : (
+              <p className="text-xs text-destructive">لم يُرفق أي ملف</p>
+            )}
+          </div>
+
+          {/* Amount */}
+          <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 flex items-center justify-between">
+            <span className="text-sm font-bold text-foreground">
+              {isUpgrade ? "مبلغ الترقية (الفارق)" : "المبلغ المطلوب"}
+            </span>
+            <span className="text-base font-bold text-accent">{amount} د.ج</span>
+          </div>
+
+          {/* Issues */}
+          {hasIssues && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                <p className="text-xs font-bold text-destructive">يوجد {issues.length} مشكلة تمنع الإرسال</p>
+              </div>
+              <ul className="space-y-1 text-xs text-destructive/90 list-disc pr-5">
+                {issues.map((iss, i) => <li key={i}>{iss}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <button
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+            className="px-4 py-2 rounded-xl border border-border/50 bg-secondary/40 text-foreground text-sm font-bold hover:bg-secondary/60 transition-colors disabled:opacity-50"
+          >
+            رجوع للتعديل
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={submitting || hasIssues}
+            className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            {submitting ? "جاري الإرسال..." : "تأكيد وإرسال"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
