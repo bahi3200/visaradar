@@ -298,6 +298,10 @@ export default function Billing() {
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
 
+  // Auto-renewal is currently unavailable globally: provider not yet activated.
+  // Lifted to component scope so messages in notReady() can stay accurate.
+  const autoRenew = false;
+
   const requestProviderConnection = async (provider: "paddle" | "stripe") => {
     if (connectingProvider) return;
     setConnectingProvider(provider);
@@ -502,8 +506,9 @@ export default function Billing() {
       // persistent status banner. No real provider action — but the request
       // is logged for the admin to honor on the renewal date.
       if (action === "cancel") {
-        const message =
-          "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي ولن يتم تجديد الاشتراك تلقائيًا.";
+        const message = autoRenew
+          ? "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي ولن يتم تجديد الاشتراك تلقائيًا بعدها."
+          : "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي. التجديد التلقائي غير مُفعّل أصلًا، فلن يتم خصم أي مبلغ بعد ذلك.";
         await logEvent({
           event_type: "subscription.cancel_scheduled",
           status: "info",
