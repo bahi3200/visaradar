@@ -523,6 +523,19 @@ export default function Billing() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "تعذّر ربط المزوّد";
+      await logEvent({
+        event_type: "payment_provider.connect_failed",
+        status: "failed",
+        message: `فشل ربط ${provider === "paddle" ? "Paddle" : "Stripe"}: ${msg}`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          failed_at: new Date().toISOString(),
+          retry_after: retryAfter ?? null,
+          error: msg,
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
       toast({ title: "فشل ربط المزوّد", description: msg, variant: "destructive" });
     } finally {
       setConnectingProvider(null);
