@@ -699,13 +699,19 @@ export default function Billing() {
 
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
       const providerInfo = ERROR_REASON_INFO.provider_not_configured;
-      const errMsg = providerInfo.description;
+      const errMsg = providerFailureDescription;
 
       await logEvent({
         event_type: eventType,
         status: "failed",
         message: errMsg,
-        metadata: { reason: "provider_not_configured", action, ...baseMeta },
+        metadata: {
+          reason: "provider_not_configured",
+          action,
+          missing_providers: missingProviders,
+          provider_status: providerStatus,
+          ...baseMeta,
+        },
       });
 
       setUpdateOutcome({
