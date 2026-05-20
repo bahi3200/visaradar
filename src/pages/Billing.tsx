@@ -50,6 +50,71 @@ import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
 type DerivedStatus = "active" | "expiring" | "expired" | "none";
 
+type ErrorReason =
+  | "provider_not_configured"
+  | "no_subscription"
+  | "client_error"
+  | "max_attempts_reached"
+  | "unknown";
+
+const ERROR_REASON_INFO: Record<
+  ErrorReason,
+  {
+    label: string;
+    title: string;
+    description: string;
+    nextStep: string;
+    nextStepLabel: string;
+    nextStepHref: string;
+  }
+> = {
+  provider_not_configured: {
+    label: "مزوّد الدفع غير مفعّل",
+    title: "بوابة الدفع غير متاحة حاليًا",
+    description:
+      "لم يتم تفعيل مزوّد الدفع الإلكتروني (Paddle/Stripe) بعد، لذلك لا يمكن تنفيذ العملية تلقائيًا.",
+    nextStep:
+      "يمكنك في هذه الأثناء الدفع يدويًا عبر CCP/BaridiMob أو التواصل مع الدعم لإتمام العملية.",
+    nextStepLabel: "الدفع اليدوي",
+    nextStepHref: "/pricing",
+  },
+  no_subscription: {
+    label: "لا يوجد اشتراك نشط",
+    title: "لا يوجد اشتراك نشط مرتبط بحسابك",
+    description:
+      "لم نعثر على اشتراك فعّال يمكن تحديثه أو إلغاؤه في الوقت الحالي.",
+    nextStep: "اختر باقة مناسبة وفعّل اشتراكك من صفحة الباقات للبدء.",
+    nextStepLabel: "تصفّح الباقات",
+    nextStepHref: "/pricing",
+  },
+  client_error: {
+    label: "خطأ من جهة المتصفح",
+    title: "تعذّر إكمال الطلب من المتصفح",
+    description:
+      "حدث خطأ غير متوقع أثناء معالجة الطلب من جهة جهازك (شبكة، جلسة، أو مكوّن واجهة).",
+    nextStep:
+      "حدّث الصفحة وحاول مجددًا. إن استمر الخطأ، تأكّد من اتصالك بالإنترنت ثم تواصل مع الدعم.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+  max_attempts_reached: {
+    label: "تم بلوغ الحد الأقصى",
+    title: "تم بلوغ الحد الأقصى من المحاولات",
+    description: "جرّبت العملية عدة مرات دون نجاح، ولا يمكن المتابعة تلقائيًا.",
+    nextStep: "تواصل مع فريق الدعم لإتمام العملية يدويًا والتحقّق من حسابك.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+  unknown: {
+    label: "خطأ غير معروف",
+    title: "حدث خطأ غير متوقع",
+    description: "لم نتمكن من تحديد سبب الفشل بدقة.",
+    nextStep: "أعد المحاولة بعد قليل، وإن استمر الخطأ تواصل مع الدعم.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+};
+
 type PaymentEvent = {
   id: string;
   event_type: string;
