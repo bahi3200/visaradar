@@ -71,13 +71,13 @@ const ERROR_REASON_INFO: Record<
 > = {
   provider_not_configured: {
     label: "مزوّد الدفع غير مفعّل",
-    title: "بوابة الدفع غير متاحة حاليًا",
+    title: "بوابة الدفع الإلكترونية غير مربوطة بعد",
     description:
-      "لم يتم تفعيل مزوّد الدفع الإلكتروني (Paddle/Stripe) بعد، لذلك لا يمكن تنفيذ العملية تلقائيًا.",
+      "سبب الفشل: لم يتم ربط مزوّد دفع (Paddle أو Stripe) بهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح.",
     nextStep:
-      "يمكنك في هذه الأثناء الدفع يدويًا عبر CCP/BaridiMob أو التواصل مع الدعم لإتمام العملية.",
-    nextStepLabel: "الدفع اليدوي",
-    nextStepHref: "/pricing",
+      "اربط Paddle أو Stripe الآن لتفعيل التجديد التلقائي وإتمام العملية بنقرة واحدة، أو ادفع يدويًا عبر CCP/BaridiMob في هذه الأثناء.",
+    nextStepLabel: "ربط بوابة الدفع",
+    nextStepHref: "/billing#connect-provider",
   },
   no_subscription: {
     label: "لا يوجد اشتراك نشط",
