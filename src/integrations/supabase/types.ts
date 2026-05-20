@@ -1206,6 +1206,7 @@ export type Database = {
       }
       visa_monitor_checks: {
         Row: {
+          category: string
           checked_at: string
           country_code: string
           detection_method: string | null
@@ -1218,6 +1219,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          category?: string
           checked_at?: string
           country_code: string
           detection_method?: string | null
@@ -1230,6 +1232,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          category?: string
           checked_at?: string
           country_code?: string
           detection_method?: string | null
@@ -1245,6 +1248,7 @@ export type Database = {
       }
       visa_notifications: {
         Row: {
+          category: string
           country_code: string
           created_at: string
           id: string
@@ -1253,6 +1257,7 @@ export type Database = {
           sent_count: number
         }
         Insert: {
+          category?: string
           country_code: string
           created_at?: string
           id?: string
@@ -1261,6 +1266,7 @@ export type Database = {
           sent_count?: number
         }
         Update: {
+          category?: string
           country_code?: string
           created_at?: string
           id?: string
