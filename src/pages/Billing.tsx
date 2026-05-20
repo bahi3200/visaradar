@@ -294,6 +294,7 @@ export default function Billing() {
   });
   const lastCancelMetaRef = useRef<Record<string, unknown>>({});
   const MAX_ATTEMPTS = 3;
+  const SIMULATOR_VERSION = "billing-sim@1.2.0";
   // Synchronous lock to prevent double-execution from rapid clicks
   // (setState is async, so it can't be the sole guard).
   const actionLockRef = useRef<null | "update" | "cancel">(null);
