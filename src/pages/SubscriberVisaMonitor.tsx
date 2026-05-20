@@ -3,12 +3,12 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe,
   Radar, TrendingUp, Timer, RefreshCw, ChevronLeft, ChevronRight,
-  FileDown, FileText,
+  FileDown, FileText, Bell, BellOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -70,6 +70,36 @@ export default function SubscriberVisaMonitor() {
   const [filterCountry, setFilterCountry] = useState<string>("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
+  const queryClient = useQueryClient();
+  const [alertsEnabled, setAlertsEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("visa_monitor_alerts") !== "off";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("visa_monitor_alerts", alertsEnabled ? "on" : "off");
+    }
+  }, [alertsEnabled]);
+
+  const playBeep = () => {
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch { /* ignore */ }
+  };
 
   // User's active subscription countries (admins see all)
   const { data: subCountries = [] } = useQuery({
@@ -140,16 +170,52 @@ export default function SubscriberVisaMonitor() {
     },
   });
 
-  // Realtime: refresh on new checks
+  // Realtime: refresh on new checks + show alerts on status changes
   useEffect(() => {
     const ch = supabase
       .channel("sub-visa-monitor")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "visa_monitor_checks" }, () => {
-        refetchLatest();
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "visa_monitor_checks" },
+        (payload) => {
+          const row: any = payload.new;
+          if (!row) return;
+
+          // Filter to user's countries (admins see all)
+          if (!isPrivileged && countries.length > 0 && !countries.includes(row.country_code)) return;
+
+          refetchLatest();
+
+          const prev = row.previous_status;
+          const curr = row.status;
+          const changed = prev && prev !== curr;
+          const isOpening = curr === "open" && prev !== "open";
+
+          // Always refresh events list when a new opening is detected
+          if (isOpening) {
+            queryClient.invalidateQueries({ queryKey: ["sub-open-events"] });
+          }
+
+          if (!alertsEnabled) return;
+
+          if (isOpening) {
+            toast.success(`🎉 فتحة جديدة: ${cn(row.country_code)}`, {
+              description: `المزوّد ${String(row.provider).toUpperCase()} أصبح مفتوحاً الآن`,
+              duration: 8000,
+            });
+            playBeep();
+          } else if (changed) {
+            const cfg = STATUS_CONFIG[curr] || STATUS_CONFIG.unknown;
+            toast(`تغيّر الحالة: ${cn(row.country_code)}`, {
+              description: `${String(row.provider).toUpperCase()} — ${cfg.label}`,
+              duration: 6000,
+            });
+          }
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [refetchLatest]);
+  }, [refetchLatest, queryClient, alertsEnabled, isPrivileged, countries]);
 
   const filteredEvents = useMemo(
     () => events.filter((e) => filterCountry === "all" || e.country_code === filterCountry),
