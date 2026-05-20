@@ -282,7 +282,10 @@ export default function Billing() {
     }
   };
 
-  const notReady = async (action: "update" | "cancel") => {
+  const notReady = async (
+    action: "update" | "cancel",
+    extraMeta: Record<string, unknown> = {},
+  ) => {
     setPendingAction(action);
     const eventType = action === "update" ? "payment_method.update_attempted" : "subscription.cancel_attempted";
     const friendlyAction = action === "update" ? "تحديث طريقة الدفع" : "إلغاء الاشتراك";
@@ -305,7 +308,7 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message: errMsg,
-        metadata: { reason: "provider_not_configured", action },
+        metadata: { reason: "provider_not_configured", action, ...extraMeta },
       });
 
       toast({
@@ -319,7 +322,7 @@ export default function Billing() {
         event_type: eventType,
         status: "failed",
         message,
-        metadata: { reason: "client_error", action },
+        metadata: { reason: "client_error", action, ...extraMeta },
       });
       toast({
         title: `فشل ${friendlyAction}`,
