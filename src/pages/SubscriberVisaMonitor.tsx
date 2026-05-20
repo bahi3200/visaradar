@@ -335,13 +335,33 @@ export default function SubscriberVisaMonitor() {
                   : "لا توجد دول في اشتراكك الحالي"}
             </p>
           </div>
-          <button
-            onClick={() => refetchLatest()}
-            disabled={isFetching}
-            className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border hover:bg-secondary/50 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> تحديث
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setAlertsEnabled((v) => {
+                  const next = !v;
+                  toast(next ? "تم تفعيل تنبيهات الفتحات" : "تم إيقاف تنبيهات الفتحات");
+                  return next;
+                });
+              }}
+              className={`inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-colors ${
+                alertsEnabled
+                  ? "border-accent/50 bg-accent/10 text-accent"
+                  : "border-border hover:bg-secondary/50 text-muted-foreground"
+              }`}
+              title={alertsEnabled ? "إيقاف التنبيهات" : "تفعيل التنبيهات"}
+            >
+              {alertsEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+              {alertsEnabled ? "التنبيهات مفعّلة" : "التنبيهات متوقفة"}
+            </button>
+            <button
+              onClick={() => refetchLatest()}
+              disabled={isFetching}
+              className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-border hover:bg-secondary/50 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> تحديث
+            </button>
+          </div>
         </motion.div>
 
         {/* Live status */}
