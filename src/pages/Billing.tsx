@@ -924,7 +924,16 @@ export default function Billing() {
         );
       })()}
 
-      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+      <AlertDialog
+        open={cancelConfirmOpen}
+        onOpenChange={(open) => {
+          setCancelConfirmOpen(open);
+          if (!open) {
+            setCancelReason("");
+            setCancelReasonDetails("");
+          }
+        }}
+      >
         <AlertDialogContent dir="rtl" className="text-right">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 justify-start">
@@ -993,13 +1002,59 @@ export default function Billing() {
             </div>
           </div>
 
+          {/* Cancellation reason */}
+          <div className="space-y-2 my-1">
+            <Label htmlFor="cancel-reason" className="text-xs font-bold text-foreground">
+              ما سبب الإلغاء؟ <span className="text-destructive">*</span>
+            </Label>
+            <Select value={cancelReason} onValueChange={setCancelReason}>
+              <SelectTrigger id="cancel-reason" dir="rtl" className="text-right">
+                <SelectValue placeholder="اختر سببًا..." />
+              </SelectTrigger>
+              <SelectContent dir="rtl" className="text-right">
+                <SelectItem value="too_expensive">السعر مرتفع</SelectItem>
+                <SelectItem value="not_useful">لم أعد بحاجة للخدمة</SelectItem>
+                <SelectItem value="missing_features">ميزات ناقصة أو لا تناسبني</SelectItem>
+                <SelectItem value="technical_issues">مشاكل تقنية أو إشعارات غير دقيقة</SelectItem>
+                <SelectItem value="found_alternative">وجدت بديلًا أفضل</SelectItem>
+                <SelectItem value="temporary_pause">إيقاف مؤقت — سأعود لاحقًا</SelectItem>
+                <SelectItem value="other">سبب آخر</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {cancelReason === "other" && (
+              <Textarea
+                dir="rtl"
+                value={cancelReasonDetails}
+                onChange={(e) => setCancelReasonDetails(e.target.value.slice(0, 300))}
+                placeholder="اكتب السبب باختصار..."
+                rows={2}
+                className="text-right text-xs"
+              />
+            )}
+
+            {!cancelReason && (
+              <p className="text-[10px] text-muted-foreground">
+                مساعدتك لنا في فهم السبب تساعدنا على تحسين الخدمة.
+              </p>
+            )}
+          </div>
+
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogAction
+              disabled={!cancelReason || (cancelReason === "other" && !cancelReasonDetails.trim())}
               onClick={() => {
+                const reason = cancelReason;
+                const details = cancelReasonDetails.trim();
                 setCancelConfirmOpen(false);
-                notReady("cancel");
+                notReady("cancel", {
+                  cancellation_reason: reason,
+                  cancellation_details: details || undefined,
+                });
+                setCancelReason("");
+                setCancelReasonDetails("");
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               نعم، إلغاء الاشتراك
             </AlertDialogAction>
