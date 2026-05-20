@@ -356,6 +356,13 @@ export default function Billing() {
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
+  // Local override that flips a provider to "connected" within this session
+  // (e.g. after a successful in-banner connect simulation). Merged into
+  // providerStatus so the same banner can immediately retry the failed action.
+  const [providerOverride, setProviderOverride] = useState<{
+    paddle: boolean;
+    stripe: boolean;
+  }>({ paddle: false, stripe: false });
 
   // Derive auto-renewal state from real signals instead of a hardcoded flag, so the
   // UI reflects whatever the subscription / payment provider actually reports per user.
