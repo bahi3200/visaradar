@@ -299,7 +299,7 @@ export default function SubscriberVisaMonitor() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.slice(0, 100).map((e) => (
+                  {paginatedEvents.map((e) => (
                     <TableRow key={e.id}>
                       <TableCell className="font-medium">{cn(e.country_code)}</TableCell>
                       <TableCell className="uppercase text-xs">{e.provider}</TableCell>
@@ -316,6 +316,46 @@ export default function SubscriberVisaMonitor() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredEvents.length > 0 && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/40">
+              <span className="text-xs text-muted-foreground">
+                {filteredEvents.length} نتيجة · صفحة {safePage} من {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-border bg-transparent hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="الصفحة السابقة"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-xs font-medium border transition-colors ${
+                      p === safePage
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border bg-transparent hover:bg-secondary text-foreground"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-border bg-transparent hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="الصفحة التالية"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
         </section>
