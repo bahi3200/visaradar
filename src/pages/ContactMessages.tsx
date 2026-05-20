@@ -341,6 +341,35 @@ export default function ContactMessages() {
                 </div>
               </div>
 
+              {/* Thread */}
+              {thread.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-2">سجل المحادثة</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {thread.map((r: any) => (
+                      <div
+                        key={r.id}
+                        className={`rounded-lg p-3 text-sm whitespace-pre-wrap leading-relaxed border ${
+                          r.sender_role === "admin"
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-muted/50 border-border/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {r.sender_role === "admin" ? "الإدارة" : "المستخدم"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(r.created_at), "d MMM - HH:mm", { locale: ar })}
+                          </span>
+                        </div>
+                        {r.body}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Status buttons */}
               <div className="flex items-center gap-2 pt-2">
                 <p className="text-xs text-muted-foreground ml-2">تغيير الحالة:</p>
