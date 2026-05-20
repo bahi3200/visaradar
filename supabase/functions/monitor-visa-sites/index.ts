@@ -926,18 +926,45 @@ Deno.serve(async (req) => {
       console.error('Admin alert error:', alertErr);
     }
 
-    // Send alerts for "open" changes
-    const openAlerts = siteResults.filter((r) => r.status === 'open' && r.changed);
+    // ──────────────────────────────────────────────
+    // Send alerts for open appointments
+    // - Fires immediately on any transition into "open"
+    // - Re-notifies every 30 min while still open (in case users missed the first ping)
+    // - Covers ALL visa categories (tourism / study / work) — the providers don't
+    //   expose per-type slots, so any opening triggers a single combined alert.
+    // ──────────────────────────────────────────────
+    const RENOTIFY_WINDOW_MIN = 30;
+    const openResults = siteResults.filter((r) => r.status === 'open');
     let totalSent = 0;
 
-    if (openAlerts.length > 0) {
+    if (openResults.length > 0) {
+      // Only visa subscribers (or 'both') receive these alerts
       const { data: allSubscriptions } = await supabase
         .from('subscriptions')
-        .select('telegram_chat_id, countries')
-        .eq('status', 'active');
+        .select('telegram_chat_id, countries, service_type')
+        .eq('status', 'active')
+        .in('service_type', ['visa', 'both']);
 
-      for (const alert of openAlerts) {
+      for (const alert of openResults) {
         const target = MONITOR_TARGETS[alert.countryCode];
+
+        // Decide if we should notify now:
+        //   - status just changed to open  → always notify
+        //   - still open                   → notify only if last notification was >= 30 min ago
+        let shouldNotify = alert.changed;
+        if (!shouldNotify) {
+          const { data: lastNotif } = await supabase
+            .from('visa_notifications')
+            .select('created_at')
+            .eq('country_code', alert.countryCode)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const lastAt = lastNotif?.created_at ? new Date(lastNotif.created_at).getTime() : 0;
+          const ageMin = (Date.now() - lastAt) / 60000;
+          shouldNotify = ageMin >= RENOTIFY_WINDOW_MIN;
+        }
+        if (!shouldNotify) continue;
 
         const chatIds = (allSubscriptions || [])
           .filter((s) => s.telegram_chat_id && (s.countries || []).includes(alert.countryCode))
@@ -945,10 +972,21 @@ Deno.serve(async (req) => {
 
         if (chatIds.length === 0) continue;
 
+        const isRecheck = !alert.changed;
+        const header = isRecheck
+          ? `🟢 <b>المواعيد لا تزال مفتوحة ${target.flag}</b>`
+          : `🚨 <b>تنبيه عاجل! مواعيد مفتوحة ${target.flag}</b>`;
+
         const message = [
-          `🚨 <b>تنبيه عاجل! مواعيد مفتوحة ${target.flag}</b>`,
+          header,
           ``,
           `🔔 تم اكتشاف فتح مواعيد تأشيرة <b>${target.nameAr}</b>!`,
+          ``,
+          `🎯 <b>يشمل جميع أنواع التأشيرات:</b>`,
+          `   • 🏖️ سياحة`,
+          `   • 🎓 دراسة`,
+          `   • 💼 عمل`,
+          `   • 👨‍👩‍👧 لمّ شمل / زيارة عائلية`,
           ``,
           `📍 <b>المزود:</b> ${target.provider}`,
           `🔗 <a href="${target.officialUrl}">احجز موعدك الآن!</a>`,
@@ -982,7 +1020,9 @@ Deno.serve(async (req) => {
 
         await supabase.from('visa_notifications').insert({
           country_code: alert.countryCode,
-          message_ar: `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} عبر ${target.provider}`,
+          message_ar: isRecheck
+            ? `تذكير تلقائي: مواعيد ${target.nameAr} لا تزال مفتوحة (${target.provider}) — يشمل سياحة/دراسة/عمل`
+            : `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} عبر ${target.provider} — يشمل سياحة/دراسة/عمل`,
           sent_count: sentCount,
         });
 
