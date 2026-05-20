@@ -950,11 +950,12 @@ Deno.serve(async (req) => {
 
       for (const result of siteResults) {
         const target = MONITOR_TARGETS[result.countryCode];
-        // Pull last 5 checks (excluding the row we just inserted)
+        // Pull last 5 checks for the same country+category
         const { data: history } = await supabase
           .from('visa_monitor_checks')
           .select('status, error_message, checked_at')
           .eq('country_code', result.countryCode)
+          .eq('category', result.category)
           .order('checked_at', { ascending: false })
           .limit(6);
         const prior = (history || []).slice(1); // skip just-inserted row
@@ -975,13 +976,15 @@ Deno.serve(async (req) => {
 
         // Dedupe: skip if last check already triggered the same admin alert (notified flag reused)
         const reason = guessReason(target, prior, result);
+        const catInfo = VISA_CATEGORIES.find((c) => c.key === result.category);
+        const catLabel = catInfo ? `${catInfo.icon} ${catInfo.ar}` : result.category;
         const header = isRepeatedFailure
           ? `⚠️ <b>فشل متكرر في المراقبة</b>`
           : `🔄 <b>تغيّر مفاجئ في الاستجابة</b>`;
         const lines = [
           header,
           ``,
-          `${target.flag} <b>${target.nameAr}</b> — ${target.provider}`,
+          `${target.flag} <b>${target.nameAr}</b> — ${catLabel} — ${target.provider}`,
           `📊 الحالة: <b>${result.status}</b>` + (prevStatus ? ` (سابقاً: ${prevStatus})` : ''),
           result.httpStatus ? `🌐 HTTP: ${result.httpStatus}` : ``,
           result.detectionMethod ? `🔍 طريقة الكشف: ${result.detectionMethod}` : ``,
