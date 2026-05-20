@@ -296,6 +296,37 @@ export default function Billing() {
   const lastCancelMetaRef = useRef<Record<string, unknown>>({});
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
+  const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
+
+  const requestProviderConnection = async (provider: "paddle" | "stripe") => {
+    if (connectingProvider) return;
+    setConnectingProvider(provider);
+    try {
+      await logEvent({
+        event_type: "payment_provider.connect_requested",
+        status: "info",
+        message: `طلب تفعيل التجديد التلقائي عبر ${provider === "paddle" ? "Paddle" : "Stripe"}`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          requested_at: new Date().toISOString(),
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
+      toast({
+        title: "تم تسجيل طلبك",
+        description:
+          provider === "paddle"
+            ? "سنفعّل بوابة Paddle للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها."
+            : "سنفعّل بوابة Stripe للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "تعذّر تسجيل الطلب";
+      toast({ title: "فشل تسجيل الطلب", description: msg, variant: "destructive" });
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
   // Synchronous lock to prevent double-execution from rapid clicks
   // (setState is async, so it can't be the sole guard).
   const actionLockRef = useRef<null | "update" | "cancel">(null);
