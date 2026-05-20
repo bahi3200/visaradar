@@ -655,6 +655,67 @@ export default function SubscribeRequestPage() {
                 {countries.length === 0 && (
                   <p className="text-xs text-destructive/80 mt-3">⚠️ يجب اختيار دولة واحدة على الأقل لتفعيل التنبيهات.</p>
                 )}
+
+                {/* Center change notifications for selected countries */}
+                {countries.length > 0 && centerChanges && centerChanges.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-4 h-4 text-accent" />
+                      <p className="text-xs font-bold text-accent">
+                        تنبيه: تغييرات حديثة على المراكز ({centerChanges.length})
+                      </p>
+                    </div>
+                    <ul className="space-y-2">
+                      {centerChanges.slice(0, 6).map((ch: any) => {
+                        const co = countryOptions.find((c) => c.code === ch.country_code);
+                        const isAdd = ch.change_type === "added";
+                        return (
+                          <li key={ch.id} className="flex items-start gap-2 text-xs">
+                            {isAdd ? (
+                              <PlusCircle className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                            ) : (
+                              <MinusCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-foreground">
+                                <span className="font-bold">{co?.flag} {co?.name || ch.country_code}</span>
+                                {" • "}
+                                <span className={isAdd ? "text-green-400 font-bold" : "text-destructive font-bold"}>
+                                  {isAdd ? "تمت إضافة" : "تم حذف"} مركز "{ch.center_name}"
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {ch.provider} • {new Date(ch.detected_at).toLocaleDateString("ar")}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {centerChanges.length > 6 && (
+                      <p className="text-[11px] text-muted-foreground mt-2">+ {centerChanges.length - 6} تنبيه آخر</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Live centers per selected country (overrides hardcoded if available) */}
+                {countries.length > 0 && providerCenters && providerCenters.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {countries.map((code) => {
+                      const live = providerCenters.find((p: any) => p.country_code === code.toUpperCase());
+                      const co = countryOptions.find((c) => c.code === code.toUpperCase());
+                      if (!live || !co) return null;
+                      return (
+                        <div key={code} className="flex items-start gap-2 text-[11px] text-muted-foreground rounded-lg bg-muted/20 px-3 py-2">
+                          <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-primary" />
+                          <span>
+                            <span className="font-bold text-foreground">{co.flag} {co.name}</span> — المراكز الحالية: {(live.centers || []).join(" • ") || "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
