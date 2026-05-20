@@ -170,6 +170,49 @@ export default function SubscribeRequestPage() {
   );
   const paymentInfoMissing = Boolean(selectedPackageId) && !paymentLoading && !paymentFetching && !hasPaymentInfo;
 
+  // Auto-retry with exponential backoff when payment info fetch fails or is empty.
+  // Delays: 2s, 4s, 8s. After MAX_RETRY attempts, stop auto-retry and let user retry manually.
+  const MAX_RETRY = 3;
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [retryCountdown, setRetryCountdown] = useState(0);
+
+  // Reset auto-retry state when package changes or info becomes available
+  useEffect(() => {
+    if (hasPaymentInfo || !selectedPackageId) {
+      setRetryAttempt(0);
+      setRetryCountdown(0);
+    }
+  }, [hasPaymentInfo, selectedPackageId]);
+
+  // Schedule next auto-retry when missing and under cap
+  useEffect(() => {
+    if (!paymentInfoMissing) return;
+    if (retryAttempt >= MAX_RETRY) return;
+    if (retryCountdown > 0) return;
+    const delaySec = Math.pow(2, retryAttempt + 1); // 2, 4, 8
+    setRetryCountdown(delaySec);
+  }, [paymentInfoMissing, retryAttempt, retryCountdown]);
+
+  // Countdown ticker → triggers refetch when it reaches 0
+  useEffect(() => {
+    if (retryCountdown <= 0) return;
+    const t = setTimeout(() => {
+      const next = retryCountdown - 1;
+      if (next <= 0) {
+        try { sessionStorage.removeItem("vr_payment_info"); } catch {}
+        setRetryAttempt((a) => a + 1);
+        setRetryCountdown(0);
+        refetchPayment();
+      } else {
+        setRetryCountdown(next);
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [retryCountdown, refetchPayment]);
+
+  const autoRetryExhausted = paymentInfoMissing && retryAttempt >= MAX_RETRY;
+  const autoRetryActive = paymentInfoMissing && retryAttempt < MAX_RETRY;
+
   const { data: activeSubscription } = useQuery({
     queryKey: ["my-active-sub", user?.id],
     queryFn: async () => {
