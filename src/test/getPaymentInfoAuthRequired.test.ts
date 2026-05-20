@@ -69,9 +69,7 @@ describe("get_payment_info — authentication gate", () => {
   it("REJECTS anonymous (signed-out) callers", () => {
     const res = simulateGetPaymentInfo(null, existingSettings);
     expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error).toMatch(/authenticated/i);
-    }
+    expect((res as { ok: false; error: string }).error).toMatch(/authenticated/i);
   });
 
   it("does NOT leak any payment fields to anonymous callers", () => {
@@ -83,32 +81,30 @@ describe("get_payment_info — authentication gate", () => {
   it("allows ANY authenticated user (regular subscriber) to read payment info", () => {
     const res = simulateGetPaymentInfo("user-uuid-regular", existingSettings);
     expect(res.ok).toBe(true);
-    if (res.ok) {
-      expect(res.data).toHaveLength(1);
-      expect(res.data[0].ccp_number).toBe(existingSettings.ccp_number);
-      expect(res.data[0].rip_number).toBe(existingSettings.rip_number);
-      expect(res.data[0].account_holder).toBe(existingSettings.account_holder);
-      expect(res.data[0].ccp_key).toBe(existingSettings.ccp_key);
-    }
+    const data = (res as { ok: true; data: PaymentInfo[] }).data;
+    expect(data).toHaveLength(1);
+    expect(data[0].ccp_number).toBe(existingSettings.ccp_number);
+    expect(data[0].rip_number).toBe(existingSettings.rip_number);
+    expect(data[0].account_holder).toBe(existingSettings.account_holder);
+    expect(data[0].ccp_key).toBe(existingSettings.ccp_key);
   });
 
   it("only exposes the four whitelisted columns (no id, updated_at, etc.)", () => {
     const res = simulateGetPaymentInfo("user-uuid-regular", existingSettings);
     expect(res.ok).toBe(true);
-    if (res.ok) {
-      const keys = Object.keys(res.data[0]).sort();
-      expect(keys).toEqual(
-        ["account_holder", "ccp_key", "ccp_number", "rip_number"].sort(),
-      );
-      expect(keys).not.toContain("id");
-      expect(keys).not.toContain("updated_at");
-    }
+    const data = (res as { ok: true; data: PaymentInfo[] }).data;
+    const keys = Object.keys(data[0]).sort();
+    expect(keys).toEqual(
+      ["account_holder", "ccp_key", "ccp_number", "rip_number"].sort(),
+    );
+    expect(keys).not.toContain("id");
+    expect(keys).not.toContain("updated_at");
   });
 
   it("returns an empty array when no payment_settings row exists", () => {
     const res = simulateGetPaymentInfo("user-uuid-regular", null);
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.data).toEqual([]);
+    expect((res as { ok: true; data: PaymentInfo[] }).data).toEqual([]);
   });
 
   it("treats empty string user id as anonymous (defense in depth)", () => {
