@@ -952,7 +952,7 @@ export default function SubscribeRequestPage() {
             )}
 
             {/* Payment Info - shown after preparing */}
-            {!isAlreadySubscribed && !isPreparingPayment && paymentInfoMissing && (
+            {!isAlreadySubscribed && paymentInfoMissing && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
