@@ -152,6 +152,15 @@ export default function SubscriberVisaMonitor() {
     [events, filterCountry]
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginatedEvents = filteredEvents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [range, filterCountry]);
+
   const stats = useMemo(() => {
     const total = events.length;
     const stillOpen = events.filter((e) => !e.closed_at).length;
