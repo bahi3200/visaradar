@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   CreditCard,
   XCircle,
@@ -206,6 +206,7 @@ function ProviderConnectInline({
 export default function Billing() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: subscription, isLoading, isFetching, refetch } = useQuery<
@@ -313,6 +314,18 @@ export default function Billing() {
       supabase.removeChannel(channel);
     };
   }, [user, queryClient]);
+
+  // Scroll to #connect-provider when hash is present (on mount or hash change)
+  useEffect(() => {
+    if (location.hash !== "#connect-provider") return;
+    const el = document.getElementById("connect-provider");
+    if (!el) return;
+    // Defer slightly so layout/rendering stabilizes
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [location.hash]);
 
   const [pendingAction, setPendingAction] = useState<null | "update" | "cancel">(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -814,20 +827,13 @@ export default function Billing() {
                       <span className="font-normal text-muted-foreground">— {info.label}</span>
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                    {updateOutcome.errorReason === "provider_not_configured" ? (
-                      <ProviderConnectInline
-                        connectingProvider={connectingProvider}
-                        onConnect={requestProviderConnection}
-                      />
-                    ) : (
-                      <Link
-                        to={info.nextStepHref}
-                        className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                      >
-                        {info.nextStepLabel}
-                        <ArrowLeft className="w-3 h-3" />
-                      </Link>
-                    )}
+                    <Link
+                      to={info.nextStepHref}
+                      className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    >
+                      {info.nextStepLabel}
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
                   </div>
                 );
               })()}
@@ -935,20 +941,13 @@ export default function Billing() {
                           </span>
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                        {cancelOutcome.errorReason === "provider_not_configured" ? (
-                          <ProviderConnectInline
-                            connectingProvider={connectingProvider}
-                            onConnect={requestProviderConnection}
-                          />
-                        ) : (
-                          <Link
-                            to={info.nextStepHref}
-                            className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                          >
-                            {info.nextStepLabel}
-                            <ArrowLeft className="w-3 h-3" />
-                          </Link>
-                        )}
+                        <Link
+                          to={info.nextStepHref}
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          {info.nextStepLabel}
+                          <ArrowLeft className="w-3 h-3" />
+                        </Link>
                       </div>
                     );
                   })()}
@@ -1196,6 +1195,7 @@ export default function Billing() {
 
                 {/* Auto-renewal status */}
                 <div
+                  id="connect-provider"
                   className={`flex items-start gap-3 rounded-lg p-3 border ${
                     autoRenew
                       ? "bg-primary/5 border-primary/20"
