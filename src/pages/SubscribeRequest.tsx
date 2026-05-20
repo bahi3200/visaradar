@@ -180,11 +180,19 @@ export default function SubscribeRequestPage() {
 
   const toggleCountry = (code: string) => {
     setCountries((prev) => {
-      if (prev.includes(code)) return prev.filter((c) => c !== code);
+      if (prev.includes(code)) {
+        setMonitoringScopes((m) => {
+          const next = { ...m };
+          delete next[code.toUpperCase()];
+          return next;
+        });
+        return prev.filter((c) => c !== code);
+      }
       if (prev.length >= maxCountries) {
         toast.error(`الحد الأقصى ${maxCountries} دول لهذه الباقة`);
         return prev;
       }
+      setMonitoringScopes((m) => ({ ...m, [code.toUpperCase()]: m[code.toUpperCase()] || "all_sites" }));
       return [...prev, code];
     });
   };
