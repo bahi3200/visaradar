@@ -689,7 +689,14 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
 // Check a single site (multi-layer)
 // ──────────────────────────────────────────────
 export { MONITOR_TARGETS };
-export async function checkSite(countryCode: string, target: MonitorTarget): Promise<CheckResult> {
+export async function checkSite(
+  countryCode: string,
+  baseTarget: MonitorTarget,
+  category: VisaCategory | { key: string } = { key: 'all' } as any,
+): Promise<CheckResult> {
+  const target = (category as VisaCategory).vfsParam
+    ? buildCategoryTarget(baseTarget, category as VisaCategory)
+    : baseTarget;
   try {
     // Layer 0: Fetch the HTML page
     const { response, durationMs } = await fetchWithRetry(target.checkUrl);
@@ -706,7 +713,7 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
 
     if (isBlocked) {
       return {
-        countryCode, status: 'error', previousStatus: null,
+        countryCode, category: category.key, status: 'error', previousStatus: null,
         snippet: '[Blocked/CAPTCHA detected]', error: 'Anti-bot protection detected',
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
@@ -751,16 +758,16 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
       detectionMethod = `${detectionMethod} | spa-shell-no-signal`;
     }
 
-    console.log(`[${countryCode}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
+    console.log(`[${countryCode}/${category.key}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
     if (apiResult.apiResults.length > 0) {
-      console.log(`[${countryCode}] API probes:`, apiResult.apiResults.join(' | '));
+      console.log(`[${countryCode}/${category.key}] API probes:`, apiResult.apiResults.join(' | '));
     }
     if (scriptResult.detectedData.length > 0) {
-      console.log(`[${countryCode}] Script data:`, scriptResult.detectedData.join(' | '));
+      console.log(`[${countryCode}/${category.key}] Script data:`, scriptResult.detectedData.join(' | '));
     }
 
     return {
-      countryCode, status, previousStatus: null,
+      countryCode, category: category.key, status, previousStatus: null,
       snippet, error: null, changed: false,
       openScore: totalOpen, closedScore: totalClosed,
       httpStatus: response.status, responseTimeMs: durationMs,
@@ -768,9 +775,9 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`Error checking ${countryCode}:`, errorMsg);
+    console.error(`Error checking ${countryCode}/${category.key}:`, errorMsg);
     return {
-      countryCode, status: 'error', previousStatus: null,
+      countryCode, category: category.key, status: 'error', previousStatus: null,
       snippet: null, error: errorMsg, changed: false,
       openScore: 0, closedScore: 0,
       httpStatus: null, responseTimeMs: 0,
