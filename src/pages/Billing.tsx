@@ -216,6 +216,9 @@ export default function Billing() {
     details?: string;
     message?: string;
   }>(null);
+  // Synchronous lock to prevent double-execution from rapid clicks
+  // (setState is async, so it can't be the sole guard).
+  const actionLockRef = useRef<null | "update" | "cancel">(null);
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
