@@ -1000,7 +1000,7 @@ export default function SubscribeRequestPage() {
               </motion.div>
             )}
 
-            {!isAlreadySubscribed && !isPreparingPayment && hasPaymentInfo && (
+            {!isAlreadySubscribed && hasPaymentInfo && (
               <motion.div
                 ref={paymentInfoRef}
                 initial={selectedPackageId ? { opacity: 0, y: 10 } : false}
