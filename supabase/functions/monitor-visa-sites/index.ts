@@ -274,6 +274,7 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
 
 type CheckResult = {
   countryCode: string;
+  category: string; // 'tourism' | 'study' | 'work'
   status: 'open' | 'closed' | 'error' | 'unknown';
   previousStatus: string | null;
   snippet: string | null;
@@ -285,6 +286,67 @@ type CheckResult = {
   responseTimeMs: number;
   detectionMethod: string; // Which layer detected the status
 };
+
+// ──────────────────────────────────────────────
+// Visa categories (Tourism / Study / Work)
+// Provider-specific parameter mapping for VFS lift-api,
+// TLScontact and BLS check pages.
+// ──────────────────────────────────────────────
+export const VISA_CATEGORIES = [
+  {
+    key: 'tourism',
+    ar: 'سياحة',
+    en: 'Tourism',
+    icon: '🏖️',
+    vfsParam: 'Tourism',
+    tlsParam: 'TOURISM',
+    blsParam: 'tourism',
+  },
+  {
+    key: 'study',
+    ar: 'دراسة',
+    en: 'Study',
+    icon: '🎓',
+    vfsParam: 'Study',
+    tlsParam: 'STUDIES',
+    blsParam: 'student',
+  },
+  {
+    key: 'work',
+    ar: 'عمل',
+    en: 'Work',
+    icon: '💼',
+    vfsParam: 'Work',
+    tlsParam: 'WORK',
+    blsParam: 'work',
+  },
+] as const;
+
+type VisaCategory = typeof VISA_CATEGORIES[number];
+
+function buildCategoryTarget(target: MonitorTarget, cat: VisaCategory): MonitorTarget {
+  const isVfs = /vfsglobal/i.test(target.checkUrl);
+  const isTls = /tlscontact/i.test(target.checkUrl);
+  const isBls = /blsspainvisa/i.test(target.checkUrl);
+
+  const checkUrl = isVfs
+    ? `${target.checkUrl}?visaCategory=${encodeURIComponent(cat.vfsParam)}`
+    : isTls
+      ? `${target.checkUrl}?visa_category=${encodeURIComponent(cat.tlsParam)}`
+      : isBls
+        ? `${target.checkUrl}?category=${encodeURIComponent(cat.blsParam)}`
+        : target.checkUrl;
+
+  const apiEndpoints = (target.apiEndpoints || []).map((ep) => {
+    const sep = ep.url.includes('?') ? '&' : '?';
+    if (isVfs) return { ...ep, url: `${ep.url}${sep}visaCategory=${encodeURIComponent(cat.vfsParam)}` };
+    if (isTls) return { ...ep, url: `${ep.url}${sep}visa_category=${encodeURIComponent(cat.tlsParam)}` };
+    if (isBls) return { ...ep, url: `${ep.url}${sep}category=${encodeURIComponent(cat.blsParam)}` };
+    return ep;
+  });
+
+  return { ...target, checkUrl, apiEndpoints };
+}
 
 // ──────────────────────────────────────────────
 // Layer 1: Keyword-based weighted scoring
@@ -627,7 +689,14 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
 // Check a single site (multi-layer)
 // ──────────────────────────────────────────────
 export { MONITOR_TARGETS };
-export async function checkSite(countryCode: string, target: MonitorTarget): Promise<CheckResult> {
+export async function checkSite(
+  countryCode: string,
+  baseTarget: MonitorTarget,
+  category: VisaCategory | { key: string } = { key: 'all' } as any,
+): Promise<CheckResult> {
+  const target = (category as VisaCategory).vfsParam
+    ? buildCategoryTarget(baseTarget, category as VisaCategory)
+    : baseTarget;
   try {
     // Layer 0: Fetch the HTML page
     const { response, durationMs } = await fetchWithRetry(target.checkUrl);
@@ -644,7 +713,7 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
 
     if (isBlocked) {
       return {
-        countryCode, status: 'error', previousStatus: null,
+        countryCode, category: category.key, status: 'error', previousStatus: null,
         snippet: '[Blocked/CAPTCHA detected]', error: 'Anti-bot protection detected',
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
@@ -689,16 +758,16 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
       detectionMethod = `${detectionMethod} | spa-shell-no-signal`;
     }
 
-    console.log(`[${countryCode}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
+    console.log(`[${countryCode}/${category.key}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
     if (apiResult.apiResults.length > 0) {
-      console.log(`[${countryCode}] API probes:`, apiResult.apiResults.join(' | '));
+      console.log(`[${countryCode}/${category.key}] API probes:`, apiResult.apiResults.join(' | '));
     }
     if (scriptResult.detectedData.length > 0) {
-      console.log(`[${countryCode}] Script data:`, scriptResult.detectedData.join(' | '));
+      console.log(`[${countryCode}/${category.key}] Script data:`, scriptResult.detectedData.join(' | '));
     }
 
     return {
-      countryCode, status, previousStatus: null,
+      countryCode, category: category.key, status, previousStatus: null,
       snippet, error: null, changed: false,
       openScore: totalOpen, closedScore: totalClosed,
       httpStatus: response.status, responseTimeMs: durationMs,
@@ -706,9 +775,9 @@ export async function checkSite(countryCode: string, target: MonitorTarget): Pro
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`Error checking ${countryCode}:`, errorMsg);
+    console.error(`Error checking ${countryCode}/${category.key}:`, errorMsg);
     return {
-      countryCode, status: 'error', previousStatus: null,
+      countryCode, category: category.key, status: 'error', previousStatus: null,
       snippet: null, error: errorMsg, changed: false,
       openScore: 0, closedScore: 0,
       httpStatus: null, responseTimeMs: 0,
@@ -765,32 +834,35 @@ Deno.serve(async (req) => {
 
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
-    // Stagger checks with random delays
+    // Stagger checks with random delays — across every (country × category) pair
     const siteResults: CheckResult[] = [];
     for (const code of countryCodes) {
-      if (siteResults.length > 0) await randomDelay(800, 3000);
-      const result = await checkSite(code, MONITOR_TARGETS[code]);
-      siteResults.push(result);
+      for (const cat of VISA_CATEGORIES) {
+        if (siteResults.length > 0) await randomDelay(600, 2000);
+        const result = await checkSite(code, MONITOR_TARGETS[code], cat);
+        siteResults.push(result);
+      }
     }
 
-    // Fetch previous statuses
+    // Fetch previous statuses per (country, category)
     const previousStatuses = await Promise.all(
-      countryCodes.map(async (code) => {
+      siteResults.map(async (r) => {
         const { data } = await supabase
           .from('visa_monitor_checks')
           .select('status')
-          .eq('country_code', code)
+          .eq('country_code', r.countryCode)
+          .eq('category', r.category)
           .order('checked_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        return { code, status: data?.status || null };
+        return { key: `${r.countryCode}:${r.category}`, status: data?.status || null };
       }),
     );
 
-    // Merge & detect changes
-    const prevMap = new Map(previousStatuses.map((p) => [p.code, p.status]));
+    const prevMap = new Map(previousStatuses.map((p) => [p.key, p.status]));
     for (const result of siteResults) {
-      result.previousStatus = prevMap.get(result.countryCode) || null;
+      const k = `${result.countryCode}:${result.category}`;
+      result.previousStatus = prevMap.get(k) || null;
       result.changed = result.previousStatus
         ? result.previousStatus !== result.status
         : result.status === 'open';
@@ -802,6 +874,7 @@ Deno.serve(async (req) => {
       return {
         country_code: result.countryCode,
         provider: target.provider,
+        category: result.category,
         status: result.status,
         previous_status: result.previousStatus,
         response_snippet: result.snippet,
@@ -877,11 +950,12 @@ Deno.serve(async (req) => {
 
       for (const result of siteResults) {
         const target = MONITOR_TARGETS[result.countryCode];
-        // Pull last 5 checks (excluding the row we just inserted)
+        // Pull last 5 checks for the same country+category
         const { data: history } = await supabase
           .from('visa_monitor_checks')
           .select('status, error_message, checked_at')
           .eq('country_code', result.countryCode)
+          .eq('category', result.category)
           .order('checked_at', { ascending: false })
           .limit(6);
         const prior = (history || []).slice(1); // skip just-inserted row
@@ -902,13 +976,15 @@ Deno.serve(async (req) => {
 
         // Dedupe: skip if last check already triggered the same admin alert (notified flag reused)
         const reason = guessReason(target, prior, result);
+        const catInfo = VISA_CATEGORIES.find((c) => c.key === result.category);
+        const catLabel = catInfo ? `${catInfo.icon} ${catInfo.ar}` : result.category;
         const header = isRepeatedFailure
           ? `⚠️ <b>فشل متكرر في المراقبة</b>`
           : `🔄 <b>تغيّر مفاجئ في الاستجابة</b>`;
         const lines = [
           header,
           ``,
-          `${target.flag} <b>${target.nameAr}</b> — ${target.provider}`,
+          `${target.flag} <b>${target.nameAr}</b> — ${catLabel} — ${target.provider}`,
           `📊 الحالة: <b>${result.status}</b>` + (prevStatus ? ` (سابقاً: ${prevStatus})` : ''),
           result.httpStatus ? `🌐 HTTP: ${result.httpStatus}` : ``,
           result.detectionMethod ? `🔍 طريقة الكشف: ${result.detectionMethod}` : ``,
@@ -967,16 +1043,18 @@ Deno.serve(async (req) => {
 
       for (const alert of openResults) {
         const target = MONITOR_TARGETS[alert.countryCode];
+        const catInfo = VISA_CATEGORIES.find((c) => c.key === alert.category);
+        const catAr = catInfo ? `${catInfo.icon} ${catInfo.ar}` : 'مواعيد';
+        const catEn = catInfo ? `${catInfo.icon} ${catInfo.en}` : 'Appointments';
 
-        // Decide if we should notify now:
-        //   - status just changed to open  → always notify
-        //   - still open                   → notify only if last notification was >= 30 min ago
+        // Decide if we should notify now (per country+category):
         let shouldNotify = alert.changed;
         if (!shouldNotify) {
           const { data: lastNotif } = await supabase
             .from('visa_notifications')
             .select('created_at')
             .eq('country_code', alert.countryCode)
+            .eq('category', alert.category)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -1012,15 +1090,15 @@ Deno.serve(async (req) => {
               hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
             });
             const header = isRecheck
-              ? `🟢 <b>Appointments are still open</b>`
-              : `🚨 <b>Urgent — appointments just opened</b>`;
+              ? `🟢 <b>${catEn} appointments are still open</b>`
+              : `🚨 <b>Urgent — ${catEn} appointments just opened</b>`;
             const badge = isRecheck ? '🟢 Ongoing' : '🆕 New';
             const text = [
               header,
               `━━━━━━━━━━━━━━━━━━`,
               `${target.flag} <b>${nameEn}</b>`,
               ``,
-              `🛂 <b>Visa type:</b> 🏖️ Tourism • 🎓 Study • 💼 Work • 👨‍👩‍👧 Family`,
+              `🛂 <b>Visa category:</b> ${catEn}`,
               `🏢 <b>Provider:</b> <code>${target.provider}</code>`,
               `📌 <b>Status:</b> ${badge}`,
               `🕒 <b>Detected at:</b> ${nowStr}`,
@@ -1049,15 +1127,15 @@ Deno.serve(async (req) => {
             hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
           });
           const header = isRecheck
-            ? `🟢 <b>المواعيد لا تزال مفتوحة</b>`
-            : `🚨 <b>تنبيه عاجل — مواعيد مفتوحة الآن</b>`;
+            ? `🟢 <b>مواعيد ${catAr} لا تزال مفتوحة</b>`
+            : `🚨 <b>تنبيه عاجل — مواعيد ${catAr} مفتوحة الآن</b>`;
           const badge = isRecheck ? '🟢 مستمرة' : '🆕 جديدة';
           const text = [
             header,
             `━━━━━━━━━━━━━━━━━━`,
             `${target.flag} <b>${target.nameAr}</b>`,
             ``,
-            `🛂 <b>نوع التأشيرة:</b> 🏖️ سياحة • 🎓 دراسة • 💼 عمل • 👨‍👩‍👧 لمّ شمل`,
+            `🛂 <b>نوع التأشيرة:</b> ${catAr}`,
             `🏢 <b>المزود:</b> <code>${target.provider}</code>`,
             `📌 <b>الحالة:</b> ${badge}`,
             `🕒 <b>وقت الرصد:</b> ${nowStr}`,
@@ -1113,9 +1191,10 @@ Deno.serve(async (req) => {
 
         await supabase.from('visa_notifications').insert({
           country_code: alert.countryCode,
+          category: alert.category,
           message_ar: isRecheck
-            ? `تذكير تلقائي: مواعيد ${target.nameAr} لا تزال مفتوحة (${target.provider}) — يشمل سياحة/دراسة/عمل`
-            : `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} عبر ${target.provider} — يشمل سياحة/دراسة/عمل`,
+            ? `تذكير تلقائي: مواعيد ${target.nameAr} (${catAr}) لا تزال مفتوحة عبر ${target.provider}`
+            : `تنبيه تلقائي: تم اكتشاف فتح مواعيد ${target.nameAr} (${catAr}) عبر ${target.provider}`,
           sent_count: sentCount,
         });
 
@@ -1123,6 +1202,7 @@ Deno.serve(async (req) => {
           .from('visa_monitor_checks')
           .update({ notified: true })
           .eq('country_code', alert.countryCode)
+          .eq('category', alert.category)
           .order('checked_at', { ascending: false })
           .limit(1);
       }
@@ -1133,6 +1213,7 @@ Deno.serve(async (req) => {
         success: true,
         checked: siteResults.map((r) => ({
           country: r.countryCode,
+          category: r.category,
           status: r.status,
           previousStatus: r.previousStatus,
           changed: r.changed,
