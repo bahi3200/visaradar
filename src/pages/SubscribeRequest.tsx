@@ -12,12 +12,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const countryOptions = [
-  { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global" },
-  { code: "FR", flag: "🇫🇷", name: "فرنسا", provider: "Capago (TLScontact)" },
-  { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International Algeria" },
-  { code: "DE", flag: "🇩🇪", name: "ألمانيا", provider: "VFS Global" },
-  { code: "GR", flag: "🇬🇷", name: "اليونان", provider: "VFS Global" },
+  { code: "IT", flag: "🇮🇹", name: "إيطاليا", provider: "VFS Global",            center: "الجزائر العاصمة • وهران" },
+  { code: "FR", flag: "🇫🇷", name: "فرنسا",   provider: "Capago (TLScontact)",   center: "الجزائر • وهران • عنابة" },
+  { code: "ES", flag: "🇪🇸", name: "إسبانيا", provider: "BLS International",     center: "الجزائر العاصمة • وهران" },
+  { code: "DE", flag: "🇩🇪", name: "ألمانيا", provider: "VFS Global",            center: "الجزائر العاصمة" },
+  { code: "GR", flag: "🇬🇷", name: "اليونان", provider: "VFS Global",            center: "الجزائر العاصمة" },
 ];
+const VALID_COUNTRY_CODES = countryOptions.map((c) => c.code);
 
 type ServiceType = "visa" | "jobs" | "both";
 const MAX_RECEIPT_SIZE_MB = 10;
@@ -167,9 +168,23 @@ export default function SubscribeRequestPage() {
       toast.error("يرجى ملء جميع الحقول المطلوبة ورفع وصل الدفع");
       return;
     }
-    if (needsCountry && countries.length === 0) {
-      toast.error("يرجى اختيار دولة واحدة على الأقل");
-      return;
+    if (needsCountry) {
+      // Dedupe + whitelist against known providers
+      const cleaned = Array.from(new Set(countries.map((c) => c.toUpperCase())))
+        .filter((c) => VALID_COUNTRY_CODES.includes(c));
+      if (cleaned.length === 0) {
+        toast.error("يرجى اختيار دولة واحدة على الأقل من القائمة المتاحة");
+        return;
+      }
+      if (cleaned.length !== countries.length) {
+        toast.error("بعض الدول غير صالحة، تم تنقية الاختيار. راجع القائمة وأعد المحاولة");
+        setCountries(cleaned);
+        return;
+      }
+      if (cleaned.length > maxCountries) {
+        toast.error(`هذه الباقة تسمح بحد أقصى ${maxCountries} دول — قلّص اختيارك`);
+        return;
+      }
     }
     if (isAlreadySubscribed) {
       toast.error("أنت مشترك بالفعل في هذه الباقة. يمكنك الترقية لباقة أعلى.");
@@ -540,23 +555,57 @@ export default function SubscribeRequestPage() {
             {selectedPackageId && needsCountry && (
             !isAlreadySubscribed &&
               <div className="gradient-card rounded-2xl border border-border/50 p-6">
-                <label className="block text-sm font-medium text-foreground mb-3">
-                  اختر الدول ({countries.length}/{maxCountries}) *
-                </label>
-                <div className="flex gap-3 flex-wrap">
-                  {countryOptions.map((c) => (
-                    <button
-                      key={c.code}
-                      onClick={() => toggleCountry(c.code)}
-                      className={`flex flex-col items-center gap-1 px-5 py-3 rounded-xl border transition-all ${
-                        countries.includes(c.code) ? "border-primary bg-primary/10 text-primary" : "border-border/50 text-muted-foreground hover:border-primary/30"
-                      }`}
-                    >
-                      <span className="text-xl">{c.flag}</span>
-                      <span className="text-sm font-medium">{c.name}</span>
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-foreground">
+                    اختر الدول *
+                  </label>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    countries.length === 0
+                      ? 'bg-destructive/10 text-destructive'
+                      : countries.length >= maxCountries
+                        ? 'bg-accent/15 text-accent'
+                        : 'bg-primary/10 text-primary'
+                  }`}>
+                    {countries.length} / {maxCountries}
+                  </span>
                 </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  نراقب المراكز التالية لكل دولة. اختر فقط الدول التي تخطّط للتقدم منها.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {countryOptions.map((c) => {
+                    const selected = countries.includes(c.code);
+                    const atLimit = !selected && countries.length >= maxCountries;
+                    return (
+                      <button
+                        key={c.code}
+                        onClick={() => toggleCountry(c.code)}
+                        className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-right transition-all ${
+                          selected
+                            ? "border-primary bg-primary/10"
+                            : atLimit
+                              ? "border-border/30 bg-muted/20 opacity-60"
+                              : "border-border/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="text-2xl shrink-0">{c.flag}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold ${selected ? 'text-primary' : 'text-foreground'}`}>
+                            {c.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground truncate">{c.provider}</p>
+                          <p className="text-[11px] text-muted-foreground/80 truncate">📍 {c.center}</p>
+                        </div>
+                        {selected && (
+                          <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {countries.length === 0 && (
+                  <p className="text-xs text-destructive/80 mt-3">⚠️ يجب اختيار دولة واحدة على الأقل لتفعيل التنبيهات.</p>
+                )}
               </div>
             )}
 
