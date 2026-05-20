@@ -941,20 +941,13 @@ export default function Billing() {
                           </span>
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                        {cancelOutcome.errorReason === "provider_not_configured" ? (
-                          <ProviderConnectInline
-                            connectingProvider={connectingProvider}
-                            onConnect={requestProviderConnection}
-                          />
-                        ) : (
-                          <Link
-                            to={info.nextStepHref}
-                            className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                          >
-                            {info.nextStepLabel}
-                            <ArrowLeft className="w-3 h-3" />
-                          </Link>
-                        )}
+                        <Link
+                          to={info.nextStepHref}
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          {info.nextStepLabel}
+                          <ArrowLeft className="w-3 h-3" />
+                        </Link>
                       </div>
                     );
                   })()}
