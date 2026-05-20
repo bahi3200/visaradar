@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info, RotateCw } from "lucide-react";
+import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, RefreshCw, AlertCircle, XCircle, Info, Zap, ChevronDown, Settings2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ const TelegramLink = () => {
   const [pollingActive, setPollingActive] = useState(false);
   const [restartLink, setRestartLink] = useState<string | null>(null);
   const [restartExpiresAt, setRestartExpiresAt] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -387,7 +389,7 @@ const TelegramLink = () => {
           </div>
           <h1 className="text-3xl md:text-4xl font-bold">ربط Telegram</h1>
           <p className="text-muted-foreground">
-            استلم تنبيهات فتح مواعيد التأشيرات لحظياً عبر بوت Telegram
+            اربط حسابك بنقرة واحدة لتصلك تنبيهات فتح مواعيد التأشيرات لحظياً
           </p>
         </div>
 
@@ -418,95 +420,151 @@ const TelegramLink = () => {
           </Card>
         )}
 
-        {/* Step 1: Open bot */}
+        {/* One-click linking — primary path */}
+        {!currentChatId && (
+          <Card className="border-primary/40 bg-gradient-to-br from-primary/10 via-card to-accent/10 shadow-lg">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">اربط حسابك بنقرة واحدة</CardTitle>
+                  <CardDescription className="mt-1">
+                    سنفتح البوت لك ونربط الحساب تلقائياً — لا حاجة لنسخ أي رقم.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                type="button"
+                onClick={handleRestartLink}
+                disabled={restarting || pollingActive}
+                className="w-full h-14 text-base font-bold gradient-primary"
+                size="lg"
+              >
+                {restarting ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
+                    جارٍ إنشاء الرابط...
+                  </>
+                ) : pollingActive ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
+                    بانتظار ضغطك Start في البوت...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 ml-2" />
+                    اربط Telegram الآن
+                  </>
+                )}
+              </Button>
+
+              {restartLink && (
+                <div className="rounded-lg border border-accent/30 bg-background/60 p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    لم يُفتح البوت تلقائياً؟ افتح الرابط يدوياً:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={restartLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 truncate text-xs font-mono text-primary underline"
+                      dir="ltr"
+                    >
+                      {restartLink}
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(restartLink);
+                        toast.success("تم نسخ الرابط");
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {restartExpiresAt && (
+                    <p className="text-[11px] text-muted-foreground/70">
+                      صالح حتى: {new Date(restartExpiresAt).toLocaleTimeString("ar-DZ")}
+                    </p>
+                  )}
+                  {pollingActive && (
+                    <div className="flex items-center gap-2 text-xs text-primary pt-1">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      نتحقق كل 5 ثوانٍ من اكتمال الربط...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {[
+                  { n: "1", t: "اضغط الزر" },
+                  { n: "2", t: "افتح البوت" },
+                  { n: "3", t: "اضغط Start" },
+                ].map((s) => (
+                  <div key={s.n} className="text-center p-2 rounded-md bg-background/50 border border-border/40">
+                    <div className="w-6 h-6 mx-auto rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-1">
+                      {s.n}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{s.t}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Advanced options — manual chat_id + diagnostic */}
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground">
+              <span className="flex items-center gap-2">
+                <Settings2 className="w-4 h-4" />
+                خيارات متقدمة (إدخال يدوي وتشخيص)
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-6 pt-4">
+
+        {/* Open bot manually */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center text-base">
-                1
-              </Badge>
-              <CardTitle>افتح البوت في Telegram</CardTitle>
-            </div>
-            <CardDescription>
-              اضغط على الرابط أدناه لفتح المحادثة مع البوت الرسمي
-            </CardDescription>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-primary" /> فتح البوت يدوياً
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/30 font-mono text-sm">
-              <MessageCircle className="w-4 h-4 text-primary shrink-0" />
               <span className="flex-1 truncate" dir="ltr">@{BOT_USERNAME}</span>
               <Button size="sm" variant="ghost" onClick={copyBotLink}>
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
-            <Button asChild className="w-full" size="lg">
+            <Button asChild variant="outline" className="w-full">
               <a href={BOT_LINK} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 ml-2" />
                 فتح @{BOT_USERNAME}
               </a>
             </Button>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>1) أرسل /start داخل المحادثة.</p>
+              <p>2) احصل على chat_id من <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-primary underline" dir="ltr">@userinfobot</a> أو من بوتنا بالأمر <code className="font-mono bg-muted px-1.5 rounded">/myid</code>.</p>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Step 2: /start */}
+        {/* Manual verify */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center text-base">
-                2
-              </Badge>
-              <CardTitle>أرسل أمر /start للبوت</CardTitle>
-            </div>
-            <CardDescription>
-              داخل المحادثة، أرسل الأمر التالي ليبدأ البوت بالعمل
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 rounded-md bg-muted/40 border-2 border-dashed text-center">
-              <code className="text-lg font-mono font-bold text-primary">/start</code>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Step 3: Get chat_id */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center text-base">
-                3
-              </Badge>
-              <CardTitle>احصل على chat_id الخاص بك</CardTitle>
-            </div>
-            <CardDescription>
-              اطلب من البوت رقم المحادثة، أو استخدم بوت <span dir="ltr" className="font-mono">@userinfobot</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p className="flex items-start gap-2">
-                <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-primary" />
-                افتح <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-primary underline" dir="ltr">@userinfobot</a> وأرسل /start، سيرد عليك بالرقم.
-              </p>
-              <p className="flex items-start gap-2">
-                <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-primary" />
-                أو اطلب من بوتنا الأمر <code className="font-mono bg-muted px-1.5 rounded">/myid</code>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Step 4: Verify */}
-        <Card className="border-primary/30">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center text-base">
-                4
-              </Badge>
-              <CardTitle>أدخل chat_id واضغط تحقق</CardTitle>
-            </div>
-            <CardDescription>
-              سنرسل رسالة اختبار. إذا وصلتك، سيتم حفظ الربط تلقائياً.
-            </CardDescription>
+            <CardTitle className="text-base">إدخال chat_id يدوياً</CardTitle>
+            <CardDescription>سنرسل رسالة اختبار. إذا وصلتك، سيتم حفظ الربط.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -522,13 +580,10 @@ const TelegramLink = () => {
                 className="font-mono text-base"
               />
             </div>
-            <Button onClick={handleVerify} disabled={verifying} className="w-full" size="lg">
+            <Button onClick={handleVerify} disabled={verifying} variant="outline" className="w-full">
               <Send className="w-4 h-4 ml-2" />
               {verifying ? "جارٍ التحقق..." : "تحقق وأرسل رسالة اختبار"}
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              ⚠️ يجب أن تكون قد بدأت المحادثة مع البوت بأمر /start قبل التحقق
-            </p>
           </CardContent>
         </Card>
 
@@ -660,76 +715,8 @@ const TelegramLink = () => {
           </CardContent>
         </Card>
 
-        {/* Restart linking — auto deep-link + auto-verify */}
-        <Card className="border-accent/40 bg-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="w-8 h-8 rounded-full flex items-center justify-center">
-                <RotateCw className="w-4 h-4" />
-              </Badge>
-              <CardTitle>إعادة تشغيل الربط (تلقائي)</CardTitle>
-            </div>
-            <CardDescription>
-              فك أي ربط سابق، أنشئ رابطًا جديدًا بنقرة واحدة، افتح البوت، وسنتحقق من الربط تلقائيًا فور ضغطك Start.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              type="button"
-              onClick={handleRestartLink}
-              disabled={restarting || pollingActive}
-              className="w-full"
-              size="lg"
-            >
-              <RotateCw className={`w-4 h-4 ml-2 ${restarting ? "animate-spin" : ""}`} />
-              {restarting
-                ? "جارٍ إنشاء رابط جديد..."
-                : pollingActive
-                ? "بانتظار ضغطك Start في البوت..."
-                : "إعادة تشغيل الربط الآن"}
-            </Button>
-
-            {restartLink && (
-              <div className="rounded-lg border border-accent/30 bg-background/60 p-3 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  لم يُفتح البوت تلقائيًا؟ افتح الرابط يدويًا:
-                </p>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={restartLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 truncate text-xs font-mono text-primary underline"
-                    dir="ltr"
-                  >
-                    {restartLink}
-                  </a>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      navigator.clipboard.writeText(restartLink);
-                      toast.success("تم نسخ الرابط");
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                {restartExpiresAt && (
-                  <p className="text-[11px] text-muted-foreground/70">
-                    صالح حتى: {new Date(restartExpiresAt).toLocaleTimeString("ar-DZ")}
-                  </p>
-                )}
-                {pollingActive && (
-                  <div className="flex items-center gap-2 text-xs text-primary pt-1">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    نتحقق كل 5 ثوانٍ من اكتمال الربط...
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="text-center">
           <Button variant="link" asChild>
