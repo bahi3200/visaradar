@@ -257,7 +257,18 @@ export default function ContactMessages() {
                   {filtered.map((msg: any) => {
                     const st = statusMap[msg.status] || statusMap.new;
                     return (
-                      <TableRow key={msg.id} className={msg.status === "new" ? "bg-primary/5" : ""}>
+                      <TableRow
+                        key={msg.id}
+                        className={`cursor-pointer hover:bg-muted/40 ${msg.status === "new" ? "bg-primary/5" : ""}`}
+                        onClick={() => {
+                          setSelectedMessage(msg);
+                          setShowReplyForm(false);
+                          setReplyText("");
+                          if (msg.status === "new") {
+                            updateStatus.mutate({ id: msg.id, status: "read" });
+                          }
+                        }}
+                      >
                         <TableCell>
                           <div>
                             <p className="font-medium text-sm">{msg.full_name}</p>
@@ -278,17 +289,20 @@ export default function ContactMessages() {
                           <div className="flex items-center gap-1">
                             <Button
                               size="sm"
-                              variant="ghost"
-                              onClick={() => {
+                              variant="default"
+                              className="gap-1 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedMessage(msg);
-                                setShowReplyForm(false);
+                                setShowReplyForm(true);
                                 setReplyText("");
                                 if (msg.status === "new") {
                                   updateStatus.mutate({ id: msg.id, status: "read" });
                                 }
                               }}
                             >
-                              <Eye className="w-4 h-4" />
+                              <Reply className="w-3.5 h-3.5" />
+                              رد
                             </Button>
                           </div>
                         </TableCell>
