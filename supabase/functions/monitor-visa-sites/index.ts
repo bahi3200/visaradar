@@ -941,9 +941,24 @@ Deno.serve(async (req) => {
       // Only visa subscribers (or 'both') receive these alerts
       const { data: allSubscriptions } = await supabase
         .from('subscriptions')
-        .select('telegram_chat_id, countries, service_type')
+        .select('user_id, telegram_chat_id, countries, service_type')
         .eq('status', 'active')
         .in('service_type', ['visa', 'both']);
+
+      // Pull users who opted for daily/weekly digest — they will be EXCLUDED
+      // from instant Telegram alerts (the digest function delivers them later).
+      const subUserIds = Array.from(
+        new Set((allSubscriptions || []).map((s) => s.user_id).filter(Boolean)),
+      );
+      let digestUserIds = new Set<string>();
+      if (subUserIds.length > 0) {
+        const { data: prefs } = await supabase
+          .from('notification_preferences')
+          .select('user_id, digest_frequency')
+          .in('user_id', subUserIds)
+          .neq('digest_frequency', 'instant');
+        digestUserIds = new Set((prefs || []).map((p: any) => p.user_id));
+      }
 
       for (const alert of openResults) {
         const target = MONITOR_TARGETS[alert.countryCode];
@@ -967,7 +982,11 @@ Deno.serve(async (req) => {
         if (!shouldNotify) continue;
 
         const chatIds = (allSubscriptions || [])
-          .filter((s) => s.telegram_chat_id && (s.countries || []).includes(alert.countryCode))
+          .filter((s) =>
+            s.telegram_chat_id &&
+            (s.countries || []).includes(alert.countryCode) &&
+            !digestUserIds.has(s.user_id),
+          )
           .map((s) => s.telegram_chat_id!);
 
         if (chatIds.length === 0) continue;
