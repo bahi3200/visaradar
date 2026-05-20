@@ -834,32 +834,35 @@ Deno.serve(async (req) => {
 
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
-    // Stagger checks with random delays
+    // Stagger checks with random delays — across every (country × category) pair
     const siteResults: CheckResult[] = [];
     for (const code of countryCodes) {
-      if (siteResults.length > 0) await randomDelay(800, 3000);
-      const result = await checkSite(code, MONITOR_TARGETS[code]);
-      siteResults.push(result);
+      for (const cat of VISA_CATEGORIES) {
+        if (siteResults.length > 0) await randomDelay(600, 2000);
+        const result = await checkSite(code, MONITOR_TARGETS[code], cat);
+        siteResults.push(result);
+      }
     }
 
-    // Fetch previous statuses
+    // Fetch previous statuses per (country, category)
     const previousStatuses = await Promise.all(
-      countryCodes.map(async (code) => {
+      siteResults.map(async (r) => {
         const { data } = await supabase
           .from('visa_monitor_checks')
           .select('status')
-          .eq('country_code', code)
+          .eq('country_code', r.countryCode)
+          .eq('category', r.category)
           .order('checked_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        return { code, status: data?.status || null };
+        return { key: `${r.countryCode}:${r.category}`, status: data?.status || null };
       }),
     );
 
-    // Merge & detect changes
-    const prevMap = new Map(previousStatuses.map((p) => [p.code, p.status]));
+    const prevMap = new Map(previousStatuses.map((p) => [p.key, p.status]));
     for (const result of siteResults) {
-      result.previousStatus = prevMap.get(result.countryCode) || null;
+      const k = `${result.countryCode}:${result.category}`;
+      result.previousStatus = prevMap.get(k) || null;
       result.changed = result.previousStatus
         ? result.previousStatus !== result.status
         : result.status === 'open';
@@ -871,6 +874,7 @@ Deno.serve(async (req) => {
       return {
         country_code: result.countryCode,
         provider: target.provider,
+        category: result.category,
         status: result.status,
         previous_status: result.previousStatus,
         response_snippet: result.snippet,
