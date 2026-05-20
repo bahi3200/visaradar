@@ -348,6 +348,57 @@ export default function NotificationSettings() {
             )}
           </motion.div>
 
+          {/* Language preference */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.13 }}
+            className="gradient-card rounded-2xl border border-border/50 p-5"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Languages className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">لغة رسائل تيليجرام</p>
+                <p className="text-xs text-muted-foreground">اختر لغة عرض التنبيهات والتلخيصات</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: 'ar', label: 'العربية', desc: 'رسائل بالعربية', flag: '🇩🇿' },
+                { key: 'en', label: 'English',  desc: 'Messages in English', flag: '🇬🇧' },
+              ] as const).map(({ key, label, desc, flag }) => {
+                const active = preferredLanguage === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { setPreferredLanguage(key); setHasChanges(true); }}
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-right transition-all ${
+                      active
+                        ? 'border-primary/50 bg-primary/10'
+                        : 'border-border/50 bg-background/40 hover:border-border'
+                    }`}
+                  >
+                    <div className="text-2xl shrink-0">{flag}</div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-bold ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {label}
+                      </p>
+                      <p className="text-xs text-muted-foreground/80 mt-0.5">{desc}</p>
+                    </div>
+                    {active && (
+                      <Badge className="text-[10px] bg-primary/20 text-primary border-0 px-1.5 shrink-0">
+                        ✓
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+
           {/* Country selection */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
