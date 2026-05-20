@@ -421,6 +421,8 @@ export default function Billing() {
   // which provider(s) are currently disconnected.
   const providerStatus = (() => {
     const status: Record<"paddle" | "stripe", boolean> = { paddle: false, stripe: false };
+    if (providerOverride.paddle) status.paddle = true;
+    if (providerOverride.stripe) status.stripe = true;
     const subAny = subscription as unknown as Record<string, unknown> | null;
     const subProvider =
       subAny && typeof subAny.provider === "string"
