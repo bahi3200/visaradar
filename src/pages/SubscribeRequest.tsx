@@ -143,10 +143,25 @@ export default function SubscribeRequestPage() {
   const { data: paymentSettings } = useQuery({
     queryKey: ["payment-info"],
     queryFn: async () => {
+      // Session cache: avoid re-fetching across navigations within the same tab
+      try {
+        const cached = sessionStorage.getItem("vr_payment_info");
+        if (cached) return JSON.parse(cached);
+      } catch {}
       const { data, error } = await supabase.rpc("get_payment_info");
       if (error) throw error;
-      return data?.[0] ?? null;
+      const info = data?.[0] ?? null;
+      try {
+        if (info) sessionStorage.setItem("vr_payment_info", JSON.stringify(info));
+      } catch {}
+      return info;
     },
+    enabled: !!selectedPackageId,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: activeSubscription } = useQuery({
