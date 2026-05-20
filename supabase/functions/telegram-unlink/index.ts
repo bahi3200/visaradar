@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
       .from("profiles")
       .update({
         telegram_id: null,
+        telegram_username: null,
         telegram_link_token: null,
         telegram_link_expires_at: null,
         telegram_linked_at: null,
