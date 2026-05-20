@@ -56,6 +56,8 @@ import ShortcutsHelp from "./pages/help/Shortcuts";
 import VisaCalendar from "./pages/VisaCalendar";
 import AdminVisaAppointments from "./pages/AdminVisaAppointments";
 import AdminVisaOpenings from "./pages/AdminVisaOpenings";
+import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
+import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
 import VisaOpenAlertsBridge from "@/hooks/useVisaOpenAlerts";
 
@@ -133,6 +135,7 @@ const App = () => (
       <Route path="/telegram-link" element={<ProtectedRoute><TelegramLink /></ProtectedRoute>} />
       <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
       <Route path="/billing/events" element={<ProtectedRoute><BillingEvents /></ProtectedRoute>} />
+      <Route path="/visa-monitor" element={<SubscriberRoute><SubscriberVisaMonitor /></SubscriberRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
