@@ -881,21 +881,67 @@ export default function Billing() {
           </div>
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">جاري التحميل...</p>
+            <div
+              className="space-y-4"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="جاري تحميل بيانات الاشتراك"
+            >
+              <div className="flex items-start justify-between gap-3 pb-4 border-b border-border/20">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-10 w-16" />
+              </div>
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <div className="grid grid-cols-2 gap-2">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
+              <p className="sr-only">جاري تحميل بيانات الاشتراك...</p>
+            </div>
           ) : !subscription || status === "expired" ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-muted-foreground mb-4">
-                {status === "expired"
-                  ? "انتهى اشتراكك. جدّد للوصول الكامل."
-                  : "لا يوجد اشتراك نشط حاليًا"}
-              </p>
-              <Link
-                to="/pricing"
-                className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold px-5 py-2.5 rounded-full transition-all"
+            <div className="text-center py-8 px-4">
+              <div
+                className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  status === "expired"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-muted text-muted-foreground"
+                }`}
               >
-                {status === "expired" ? "جدّد الآن" : "اشترك الآن"}
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
+                {status === "expired" ? (
+                  <AlertTriangle className="w-7 h-7" />
+                ) : (
+                  <Crown className="w-7 h-7" />
+                )}
+              </div>
+              <h3 className="text-base font-bold text-foreground mb-1">
+                {status === "expired"
+                  ? "انتهى اشتراكك"
+                  : "لا يوجد اشتراك نشط"}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-5 max-w-sm mx-auto leading-relaxed">
+                {status === "expired"
+                  ? "للاستمرار في تلقّي تنبيهات المواعيد وفتح كل ميزات حسابك، جدّد اشتراكك الآن."
+                  : "اختر باقة تناسبك من الباقات المتاحة لتفعيل التنبيهات والوصول الكامل إلى الميزات."}
+              </p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Link
+                  to="/pricing"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-bold px-5 py-2.5 rounded-full transition-all"
+                >
+                  {status === "expired" ? "جدّد الآن" : "تصفّح الباقات"}
+                  <ArrowLeft className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline px-3 py-2"
+                >
+                  تواصل مع الدعم
+                </Link>
+              </div>
             </div>
           ) : (() => {
             const pkg = subscription.packages;
@@ -919,7 +965,7 @@ export default function Billing() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="text-xl font-bold text-foreground">
-                        {pkg?.name_ar ?? "—"}
+                        {pkg?.name_ar ?? "باقة غير معروفة"}
                       </h3>
                       {pkg?.is_golden && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/15 text-accent">
@@ -931,7 +977,7 @@ export default function Billing() {
                     <p className="text-xs text-muted-foreground">
                       {pkg?.duration_months
                         ? `لمدة ${pkg.duration_months} ${pkg.duration_months === 1 ? "شهر" : "أشهر"}`
-                        : "—"}
+                        : "المدة غير محدّدة"}
                       {subscription.service_type && ` · ${subscription.service_type}`}
                     </p>
                   </div>
@@ -1062,8 +1108,8 @@ export default function Billing() {
                       </p>
                       <p className="text-xs font-medium text-foreground mt-1 truncate">
                         {subscription.countries?.length
-                          ? `${subscription.countries.length} / ${pkg?.max_countries ?? "—"}`
-                          : `0 / ${pkg?.max_countries ?? "—"}`}
+                          ? `${subscription.countries.length} / ${pkg?.max_countries ?? "غير محدود"}`
+                          : `0 / ${pkg?.max_countries ?? "غير محدود"}`}
                       </p>
                     </div>
                   </div>
