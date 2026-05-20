@@ -1325,7 +1325,113 @@ export default function Billing() {
           </Link>
         </div>
 
-        {/* Invoices / Transactions */}
+        {/* Recent payments — concise success/failure history */}
+        <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8" id="recent-payments">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-primary" />
+              آخر المدفوعات
+            </h2>
+            <Link
+              to="/billing/events"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              عرض السجل الكامل
+              <ArrowLeft className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {invoicesLoading ? (
+            <div className="space-y-2" role="status" aria-live="polite" aria-busy="true">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : (() => {
+            const payments = invoices.filter((i) =>
+              ["approved", "rejected", "cancelled"].includes(i.status),
+            );
+            if (payments.length === 0) {
+              return (
+                <div className="text-center py-6">
+                  <Receipt className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    لا توجد مدفوعات مكتملة أو فاشلة بعد.
+                  </p>
+                </div>
+              );
+            }
+            const paymentMeta: Record<
+              string,
+              { label: string; tone: string; Icon: typeof CheckCircle2 }
+            > = {
+              approved: {
+                label: "ناجحة",
+                tone: "bg-primary/15 text-primary",
+                Icon: CheckCircle2,
+              },
+              rejected: {
+                label: "فاشلة",
+                tone: "bg-destructive/15 text-destructive",
+                Icon: XCircle,
+              },
+              cancelled: {
+                label: "ملغاة",
+                tone: "bg-muted text-muted-foreground",
+                Icon: XCircle,
+              },
+            };
+            return (
+              <ul className="space-y-2">
+                {payments.slice(0, 5).map((inv) => {
+                  const meta = paymentMeta[inv.status] ?? paymentMeta.cancelled;
+                  const amount = inv.packages?.promo_price ?? inv.packages?.price ?? null;
+                  const dateLabel =
+                    inv.status === "approved" && inv.reviewed_at
+                      ? inv.reviewed_at
+                      : inv.created_at;
+                  const Icon = meta.Icon;
+                  return (
+                    <li
+                      key={inv.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border/20 bg-background/40"
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${meta.tone}`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">
+                          {inv.packages?.name_ar ?? "اشتراك"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(dateLabel)}
+                        </p>
+                      </div>
+                      <div className="text-left shrink-0">
+                        {amount != null && (
+                          <p className="text-sm font-bold text-foreground leading-none">
+                            {amount.toLocaleString("ar-DZ")}{" "}
+                            <span className="text-[10px] text-muted-foreground">دج</span>
+                          </p>
+                        )}
+                        <span
+                          className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${meta.tone}`}
+                        >
+                          {meta.label}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          })()}
+        </div>
+
+        {/* Invoices / Transactions (full) */}
         <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
