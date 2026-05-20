@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, ArrowRight, RefreshCw, AlertCircle, XCircle, Info, RotateCw, Zap, ChevronDown, Settings2 } from "lucide-react";
+import { Send, Copy, ExternalLink, CheckCircle2, MessageCircle, RefreshCw, AlertCircle, XCircle, Info, Zap, ChevronDown, Settings2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
