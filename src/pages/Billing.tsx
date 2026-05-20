@@ -1325,11 +1325,6 @@ export default function Billing() {
           </Link>
         </div>
 
-        {/* Invoices / Transactions */}
-        <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8">
-          {(() => null)()}
-        </div>
-
         {/* Recent payments — concise success/failure history */}
         <div className="gradient-card rounded-xl border border-border/30 p-5 mt-8" id="recent-payments">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
