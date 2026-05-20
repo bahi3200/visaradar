@@ -992,8 +992,6 @@ export default function Billing() {
             const used = Math.max(0, totalDays - (daysLeft ?? 0));
             const progress = Math.min(100, Math.max(0, (used / totalDays) * 100));
             const price = pkg?.promo_price ?? pkg?.price ?? null;
-            // Auto-renewal is currently unavailable: provider not yet activated
-            const autoRenew = false;
             return (
               <div className="space-y-4">
                 {/* Plan hero */}
