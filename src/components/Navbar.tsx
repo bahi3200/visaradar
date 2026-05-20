@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell, IdCard, Keyboard } from "lucide-react";
+import { Radar, Menu, X, LogOut, User, ChevronDown, Smartphone, ClipboardList, LayoutDashboard, Sun, Moon, Bell, IdCard, Keyboard, Activity } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,12 @@ export default function Navbar() {
                     إعدادات الإشعارات
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/visa-monitor" className="flex items-center gap-2 cursor-pointer">
+                    <Activity className="w-4 h-4" />
+                    مراقبة التأشيرات
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/help/shortcuts" className="flex items-center gap-2 cursor-pointer">
@@ -232,6 +238,10 @@ export default function Navbar() {
                   </Link>
                   <Link to="/notification-settings" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                     🔔 إعدادات الإشعارات
+                  </Link>
+                  <Link to="/visa-monitor" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    مراقبة التأشيرات
                   </Link>
                   <Link to="/help/shortcuts" onClick={() => setOpen(false)} className="px-4 py-3 rounded-lg text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                     <Keyboard className="w-4 h-4" />
