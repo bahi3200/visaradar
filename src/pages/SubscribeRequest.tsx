@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X, MapPin, PlusCircle, MinusCircle, Building2 } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -75,6 +75,37 @@ export default function SubscribeRequestPage() {
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+
+  // Fetch live provider centers + change history for selected countries
+  const { data: providerCenters } = useQuery({
+    queryKey: ["provider-centers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("provider_centers" as any)
+        .select("country_code, provider, centers, last_checked_at, updated_at");
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+  });
+
+  const selectedCountryCodes = countries.map((c) => c.toUpperCase());
+  const { data: centerChanges } = useQuery({
+    queryKey: ["provider-center-changes", selectedCountryCodes.join(",")],
+    queryFn: async () => {
+      if (selectedCountryCodes.length === 0) return [];
+      const sinceIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(); // last 60 days
+      const { data, error } = await supabase
+        .from("provider_center_changes" as any)
+        .select("id, country_code, provider, change_type, center_name, detected_at")
+        .in("country_code", selectedCountryCodes)
+        .gte("detected_at", sinceIso)
+        .order("detected_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+    enabled: selectedCountryCodes.length > 0,
+  });
 
   const { data: packages } = useQuery({
     queryKey: ["packages"],
@@ -623,6 +654,67 @@ export default function SubscribeRequestPage() {
                 </div>
                 {countries.length === 0 && (
                   <p className="text-xs text-destructive/80 mt-3">⚠️ يجب اختيار دولة واحدة على الأقل لتفعيل التنبيهات.</p>
+                )}
+
+                {/* Center change notifications for selected countries */}
+                {countries.length > 0 && centerChanges && centerChanges.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-4 h-4 text-accent" />
+                      <p className="text-xs font-bold text-accent">
+                        تنبيه: تغييرات حديثة على المراكز ({centerChanges.length})
+                      </p>
+                    </div>
+                    <ul className="space-y-2">
+                      {centerChanges.slice(0, 6).map((ch: any) => {
+                        const co = countryOptions.find((c) => c.code === ch.country_code);
+                        const isAdd = ch.change_type === "added";
+                        return (
+                          <li key={ch.id} className="flex items-start gap-2 text-xs">
+                            {isAdd ? (
+                              <PlusCircle className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                            ) : (
+                              <MinusCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-foreground">
+                                <span className="font-bold">{co?.flag} {co?.name || ch.country_code}</span>
+                                {" • "}
+                                <span className={isAdd ? "text-green-400 font-bold" : "text-destructive font-bold"}>
+                                  {isAdd ? "تمت إضافة" : "تم حذف"} مركز "{ch.center_name}"
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {ch.provider} • {new Date(ch.detected_at).toLocaleDateString("ar")}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {centerChanges.length > 6 && (
+                      <p className="text-[11px] text-muted-foreground mt-2">+ {centerChanges.length - 6} تنبيه آخر</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Live centers per selected country (overrides hardcoded if available) */}
+                {countries.length > 0 && providerCenters && providerCenters.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {countries.map((code) => {
+                      const live = providerCenters.find((p: any) => p.country_code === code.toUpperCase());
+                      const co = countryOptions.find((c) => c.code === code.toUpperCase());
+                      if (!live || !co) return null;
+                      return (
+                        <div key={code} className="flex items-start gap-2 text-[11px] text-muted-foreground rounded-lg bg-muted/20 px-3 py-2">
+                          <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-primary" />
+                          <span>
+                            <span className="font-bold text-foreground">{co.flag} {co.name}</span> — المراكز الحالية: {(live.centers || []).join(" • ") || "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}

@@ -478,6 +478,72 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_center_changes: {
+        Row: {
+          center_name: string
+          change_type: string
+          country_code: string
+          detected_at: string
+          id: string
+          new_centers: string[] | null
+          previous_centers: string[] | null
+          provider: string
+        }
+        Insert: {
+          center_name: string
+          change_type: string
+          country_code: string
+          detected_at?: string
+          id?: string
+          new_centers?: string[] | null
+          previous_centers?: string[] | null
+          provider: string
+        }
+        Update: {
+          center_name?: string
+          change_type?: string
+          country_code?: string
+          detected_at?: string
+          id?: string
+          new_centers?: string[] | null
+          previous_centers?: string[] | null
+          provider?: string
+        }
+        Relationships: []
+      }
+      provider_centers: {
+        Row: {
+          centers: string[]
+          country_code: string
+          created_at: string
+          id: string
+          last_checked_at: string | null
+          provider: string
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          centers?: string[]
+          country_code: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          provider: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          centers?: string[]
+          country_code?: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          provider?: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
