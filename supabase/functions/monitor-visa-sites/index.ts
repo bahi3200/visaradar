@@ -1033,6 +1033,10 @@ Deno.serve(async (req) => {
               inline_keyboard: [
                 [{ text: `🚀 Book now via ${target.provider}`, url: target.officialUrl }],
                 [
+                  { text: `🔕 Stop ${nameEn} alerts`, callback_data: `unsub:${alert.countryCode}` },
+                  { text: '🛠️ Change service', callback_data: 'svc:menu' },
+                ],
+                [
                   { text: '🔔 Notification settings', url: 'https://visaradar.lovable.app/notifications' },
                   { text: '🌐 Open VisaRadar', url: 'https://visaradar.lovable.app' },
                 ],
@@ -1065,6 +1069,10 @@ Deno.serve(async (req) => {
           const markup = {
             inline_keyboard: [
               [{ text: `🚀 احجز الآن عبر ${target.provider}`, url: target.officialUrl }],
+              [
+                { text: `🔕 إيقاف تنبيهات ${target.nameAr}`, callback_data: `unsub:${alert.countryCode}` },
+                { text: '🛠️ تغيير نوع الخدمة', callback_data: 'svc:menu' },
+              ],
               [
                 { text: '🔔 إدارة التنبيهات', url: 'https://visaradar.lovable.app/notifications' },
                 { text: '🌐 فتح VisaRadar', url: 'https://visaradar.lovable.app' },
