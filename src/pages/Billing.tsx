@@ -578,10 +578,40 @@ export default function Billing() {
                   </ul>
                 </>
               ) : (
-                <p className="text-muted-foreground">
-                  {cancelOutcome.message ??
-                    "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء. يرجى المحاولة مجددًا أو التواصل مع الدعم."}
-                </p>
+                <>
+                  <p className="text-muted-foreground">
+                    {cancelOutcome.message ??
+                      "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء."}
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {attempts.cancel < MAX_ATTEMPTS ? (
+                      <button
+                        type="button"
+                        onClick={() => retryAction("cancel")}
+                        disabled={pendingAction !== null}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {pendingAction === "cancel" ? (
+                          <Clock className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                        إعادة المحاولة ({attempts.cancel}/{MAX_ATTEMPTS})
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-destructive font-bold">
+                        تم بلوغ الحد الأقصى ({MAX_ATTEMPTS}). تواصل مع الدعم.
+                      </span>
+                    )}
+                    <Link
+                      to="/contact"
+                      className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      الدعم
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </>
               )}
 
               {cancelOutcome.reason && (
