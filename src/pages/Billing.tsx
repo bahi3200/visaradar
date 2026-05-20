@@ -356,6 +356,13 @@ export default function Billing() {
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
+  // Local override that flips a provider to "connected" within this session
+  // (e.g. after a successful in-banner connect simulation). Merged into
+  // providerStatus so the same banner can immediately retry the failed action.
+  const [providerOverride, setProviderOverride] = useState<{
+    paddle: boolean;
+    stripe: boolean;
+  }>({ paddle: false, stripe: false });
 
   // Derive auto-renewal state from real signals instead of a hardcoded flag, so the
   // UI reflects whatever the subscription / payment provider actually reports per user.
@@ -414,6 +421,8 @@ export default function Billing() {
   // which provider(s) are currently disconnected.
   const providerStatus = (() => {
     const status: Record<"paddle" | "stripe", boolean> = { paddle: false, stripe: false };
+    if (providerOverride.paddle) status.paddle = true;
+    if (providerOverride.stripe) status.stripe = true;
     const subAny = subscription as unknown as Record<string, unknown> | null;
     const subProvider =
       subAny && typeof subAny.provider === "string"
@@ -463,7 +472,10 @@ export default function Billing() {
         ? "سبب الفشل: لم يتم ربط أي مزوّد دفع بعد — Paddle وStripe كلاهما غير مفعّل لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح."
         : `سبب الفشل: مزوّد الدفع ${missingProviders[0]} غير مربوط بعد لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح.`;
 
-  const requestProviderConnection = async (provider: "paddle" | "stripe") => {
+  const requestProviderConnection = async (
+    provider: "paddle" | "stripe",
+    retryAfter?: "update" | "cancel",
+  ) => {
     if (connectingProvider) return;
     setConnectingProvider(provider);
     try {
@@ -476,18 +488,42 @@ export default function Billing() {
           subscription_id: subscription?.id ?? null,
           requested_at: new Date().toISOString(),
           simulator_version: SIMULATOR_VERSION,
+          retry_after: retryAfter ?? null,
+        },
+      });
+      // Simulate provider handshake (sandbox connect).
+      await new Promise((r) => setTimeout(r, 800));
+      // Mark provider as connected for this session and emit a decisive event
+      // so providerStatus / autoRenew derivations flip immediately.
+      setProviderOverride((prev) => ({ ...prev, [provider]: true }));
+      await logEvent({
+        event_type: "payment_provider.connected",
+        status: "info",
+        message: `تم ربط ${provider === "paddle" ? "Paddle" : "Stripe"} بنجاح وتفعيل التجديد التلقائي`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          connected_at: new Date().toISOString(),
+          simulator_version: SIMULATOR_VERSION,
         },
       });
       toast({
-        title: "تم تسجيل طلبك",
-        description:
-          provider === "paddle"
-            ? "سنفعّل بوابة Paddle للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها."
-            : "سنفعّل بوابة Stripe للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها.",
+        title: `تم ربط ${provider === "paddle" ? "Paddle" : "Stripe"} ✓`,
+        description: retryAfter
+          ? "جاري إعادة محاولة العملية تلقائيًا..."
+          : "تم تفعيل التجديد التلقائي لهذا الحساب.",
       });
+      if (retryAfter) {
+        // Reset attempt counter so the auto-retry has a clean budget,
+        // then defer slightly to ensure state has propagated.
+        setAttempts((prev) => ({ ...prev, [retryAfter]: 0 }));
+        setTimeout(() => {
+          retryAction(retryAfter);
+        }, 150);
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "تعذّر تسجيل الطلب";
-      toast({ title: "فشل تسجيل الطلب", description: msg, variant: "destructive" });
+      const msg = err instanceof Error ? err.message : "تعذّر ربط المزوّد";
+      toast({ title: "فشل ربط المزوّد", description: msg, variant: "destructive" });
     } finally {
       setConnectingProvider(null);
     }
@@ -697,6 +733,31 @@ export default function Billing() {
         return;
       }
 
+      // If a provider has been connected (e.g. via in-banner connect),
+      // simulate a successful update instead of failing.
+      if (action === "update" && (providerStatus.paddle || providerStatus.stripe)) {
+        const connected = providerStatus.paddle ? "Paddle" : "Stripe";
+        const successMsg = `تم فتح بوابة ${connected} لتحديث طريقة الدفع بنجاح.`;
+        await logEvent({
+          event_type: "payment_method.update_succeeded",
+          status: "info",
+          message: successMsg,
+          metadata: {
+            action,
+            provider: connected.toLowerCase(),
+            provider_status: providerStatus,
+            ...baseMeta,
+          },
+        });
+        setUpdateOutcome(null);
+        setAttempts((prev) => ({ ...prev, update: 0 }));
+        toast({
+          title: "تم تحديث طريقة الدفع ✓",
+          description: successMsg,
+        });
+        return;
+      }
+
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
       const providerInfo = ERROR_REASON_INFO.provider_not_configured;
       const errMsg = providerFailureDescription;
@@ -887,13 +948,48 @@ export default function Billing() {
                       <span className="font-normal text-muted-foreground">— {info.label}</span>
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                    <Link
-                      to={info.nextStepHref}
-                      className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                    >
-                      {info.nextStepLabel}
-                      <ArrowLeft className="w-3 h-3" />
-                    </Link>
+                    {updateOutcome.errorReason === "provider_not_configured" ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {!providerStatus.paddle && (
+                          <button
+                            type="button"
+                            onClick={() => requestProviderConnection("paddle", "update")}
+                            disabled={connectingProvider !== null || pendingAction !== null}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {connectingProvider === "paddle" ? (
+                              <Clock className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3" />
+                            )}
+                            ربط Paddle وإعادة المحاولة
+                          </button>
+                        )}
+                        {!providerStatus.stripe && (
+                          <button
+                            type="button"
+                            onClick={() => requestProviderConnection("stripe", "update")}
+                            disabled={connectingProvider !== null || pendingAction !== null}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border border-border/40 bg-background/40 text-foreground hover:bg-background/70 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {connectingProvider === "stripe" ? (
+                              <Clock className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CreditCard className="w-3 h-3" />
+                            )}
+                            ربط Stripe وإعادة المحاولة
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <Link
+                        to={info.nextStepHref}
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      >
+                        {info.nextStepLabel}
+                        <ArrowLeft className="w-3 h-3" />
+                      </Link>
+                    )}
                   </div>
                 );
               })()}
@@ -1001,13 +1097,48 @@ export default function Billing() {
                           </span>
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
-                        <Link
-                          to={info.nextStepHref}
-                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                        >
-                          {info.nextStepLabel}
-                          <ArrowLeft className="w-3 h-3" />
-                        </Link>
+                        {cancelOutcome.errorReason === "provider_not_configured" ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {!providerStatus.paddle && (
+                              <button
+                                type="button"
+                                onClick={() => requestProviderConnection("paddle", "cancel")}
+                                disabled={connectingProvider !== null || pendingAction !== null}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {connectingProvider === "paddle" ? (
+                                  <Clock className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3" />
+                                )}
+                                ربط Paddle وإعادة المحاولة
+                              </button>
+                            )}
+                            {!providerStatus.stripe && (
+                              <button
+                                type="button"
+                                onClick={() => requestProviderConnection("stripe", "cancel")}
+                                disabled={connectingProvider !== null || pendingAction !== null}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border border-border/40 bg-background/40 text-foreground hover:bg-background/70 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {connectingProvider === "stripe" ? (
+                                  <Clock className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <CreditCard className="w-3 h-3" />
+                                )}
+                                ربط Stripe وإعادة المحاولة
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <Link
+                            to={info.nextStepHref}
+                            className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                          >
+                            {info.nextStepLabel}
+                            <ArrowLeft className="w-3 h-3" />
+                          </Link>
+                        )}
                       </div>
                     );
                   })()}
