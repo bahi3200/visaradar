@@ -871,7 +871,7 @@ function ReviewDialog({
   serviceType: ServiceType;
   needsCountry: boolean;
   countries: string[];
-  countryOptions: typeof import("./SubscribeRequest")["countryOptions"] extends infer T ? any : any;
+  countryOptions: typeof countryOptions;
   maxCountries: number;
   amount: number;
   isUpgrade: boolean;
