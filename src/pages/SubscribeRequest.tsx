@@ -917,22 +917,36 @@ export default function SubscribeRequestPage() {
               </div>
             )}
 
-            {/* Preparing payment info loader */}
-            {selectedPackageId && isPreparingPayment && (
+            {/* Payment info skeleton while loading */}
+            {showPaymentSkeleton && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="gradient-card rounded-2xl border border-accent/30 p-6 text-center"
+                initial={{ opacity: 1, y: 0 }}
+                animate={{ opacity: 1, y: 1 }}
+                className="gradient-card rounded-2xl border border-accent/20 p-6"
               >
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
-                      <CreditCard className="w-7 h-7 text-accent" />
+                <Skeleton className="h-5 w-32 mb-4" />
+                <Skeleton className="h-3 w-48 mx-auto mb-3" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center gap-3">
+                    <Skeleton className="h-12 w-24" />
+                    <div className="w-full space-y-2">
+                      <Skeleton className="h-3 w-20 mx-auto" />
+                      <Skeleton className="h-5 w-40 mx-auto" />
                     </div>
-                    <Loader2 className="w-5 h-5 text-accent animate-spin absolute -bottom-1 -left-1" />
+                    <Skeleton className="h-3 w-16 mx-auto" />
                   </div>
-                  <p className="text-sm font-bold text-foreground">جاري تحضير معلومات الدفع…</p>
-                  <p className="text-xs text-muted-foreground">سيتم عرض رقم CCP/BaridiMob ثم نفتح لك خانة رفع الوصل تلقائياً</p>
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex flex-col items-center gap-3">
+                    <Skeleton className="h-12 w-24" />
+                    <div className="w-full space-y-2">
+                      <Skeleton className="h-3 w-20 mx-auto" />
+                      <Skeleton className="h-5 w-40 mx-auto" />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-accent/10 border border-accent/20 p-4 space-y-2">
+                  <Skeleton className="h-4 w-56 mx-auto" />
+                  <Skeleton className="h-3 w-64 mx-auto" />
+                  <Skeleton className="h-9 w-40 mx-auto rounded-lg" />
                 </div>
               </motion.div>
             )}
