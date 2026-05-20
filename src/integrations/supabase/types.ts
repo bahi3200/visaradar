@@ -755,6 +755,7 @@ export type Database = {
           moderator_action: string | null
           moderator_action_at: string | null
           moderator_id: string | null
+          monitoring_scopes: Json
           package_id: string
           phone: string | null
           receipt_url: string | null
@@ -778,6 +779,7 @@ export type Database = {
           moderator_action?: string | null
           moderator_action_at?: string | null
           moderator_id?: string | null
+          monitoring_scopes?: Json
           package_id: string
           phone?: string | null
           receipt_url?: string | null
@@ -801,6 +803,7 @@ export type Database = {
           moderator_action?: string | null
           moderator_action_at?: string | null
           moderator_id?: string | null
+          monitoring_scopes?: Json
           package_id?: string
           phone?: string | null
           receipt_url?: string | null
@@ -828,6 +831,7 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          monitoring_scopes: Json
           package_id: string
           service_type: string
           starts_at: string
@@ -841,6 +845,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          monitoring_scopes?: Json
           package_id: string
           service_type?: string
           starts_at?: string
@@ -854,6 +859,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          monitoring_scopes?: Json
           package_id?: string
           service_type?: string
           starts_at?: string
