@@ -296,6 +296,37 @@ export default function Billing() {
   const lastCancelMetaRef = useRef<Record<string, unknown>>({});
   const MAX_ATTEMPTS = 3;
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
+  const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
+
+  const requestProviderConnection = async (provider: "paddle" | "stripe") => {
+    if (connectingProvider) return;
+    setConnectingProvider(provider);
+    try {
+      await logEvent({
+        event_type: "payment_provider.connect_requested",
+        status: "info",
+        message: `طلب تفعيل التجديد التلقائي عبر ${provider === "paddle" ? "Paddle" : "Stripe"}`,
+        metadata: {
+          provider,
+          subscription_id: subscription?.id ?? null,
+          requested_at: new Date().toISOString(),
+          simulator_version: SIMULATOR_VERSION,
+        },
+      });
+      toast({
+        title: "تم تسجيل طلبك",
+        description:
+          provider === "paddle"
+            ? "سنفعّل بوابة Paddle للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها."
+            : "سنفعّل بوابة Stripe للتجديد التلقائي قريبًا، وسنعلمك فور جاهزيتها.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "تعذّر تسجيل الطلب";
+      toast({ title: "فشل تسجيل الطلب", description: msg, variant: "destructive" });
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
   // Synchronous lock to prevent double-execution from rapid clicks
   // (setState is async, so it can't be the sole guard).
   const actionLockRef = useRef<null | "update" | "cancel">(null);
@@ -1084,6 +1115,42 @@ export default function Billing() {
                         ? "سيتم تجديد اشتراكك تلقائيًا في تاريخ التجديد القادم."
                         : "التجديد يدوي حاليًا — مزوّد الدفع غير مفعّل بعد. سنذكّرك قبل انتهاء الاشتراك لتجديده يدويًا."}
                     </p>
+                    {!autoRenew && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => requestProviderConnection("paddle")}
+                          disabled={connectingProvider !== null}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {connectingProvider === "paddle" ? (
+                            <Clock className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3 h-3" />
+                          )}
+                          ربط Paddle وتفعيل التجديد التلقائي
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => requestProviderConnection("stripe")}
+                          disabled={connectingProvider !== null}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border border-border/40 bg-background/40 text-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {connectingProvider === "stripe" ? (
+                            <Clock className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <CreditCard className="w-3 h-3" />
+                          )}
+                          ربط Stripe
+                        </button>
+                        <Link
+                          to="/contact?topic=enable-auto-renew"
+                          className="text-[11px] text-primary hover:underline"
+                        >
+                          أو تواصل مع الدعم
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
 
