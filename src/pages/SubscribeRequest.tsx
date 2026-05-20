@@ -997,6 +997,7 @@ export default function SubscribeRequestPage() {
         countries={countries}
         countryOptions={countryOptions}
         maxCountries={maxCountries}
+        monitoringScopes={monitoringScopes}
         amount={isUpgrade ? priceDifference : (selectedPkg?.price || 0)}
         isUpgrade={isUpgrade}
         isRenewal={isRenewal}
@@ -1018,6 +1019,7 @@ function ReviewDialog({
   countries,
   countryOptions,
   maxCountries,
+  monitoringScopes,
   amount,
   isUpgrade,
   isRenewal,
@@ -1034,6 +1036,7 @@ function ReviewDialog({
   countries: string[];
   countryOptions: Array<{ code: string; flag: string; name: string; provider: string; center: string }>;
   maxCountries: number;
+  monitoringScopes: Record<string, "centers_only" | "all_sites">;
   amount: number;
   isUpgrade: boolean;
   isRenewal: boolean;
@@ -1107,6 +1110,9 @@ function ReviewDialog({
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-foreground">{c.name}</p>
                           <p className="text-[11px] text-muted-foreground">{c.provider} • 📍 {c.center}</p>
+                          <p className="text-[11px] text-primary mt-0.5">
+                            نطاق المراقبة: {(monitoringScopes[code.toUpperCase()] || "all_sites") === "centers_only" ? "🏢 المراكز فقط" : "🌐 كل المواقع"}
+                          </p>
                         </div>
                       </li>
                     );
