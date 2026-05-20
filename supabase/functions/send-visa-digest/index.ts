@@ -6,12 +6,12 @@ const corsHeaders = {
 };
 
 // Country metadata (kept in sync with monitor-visa-sites)
-const COUNTRY_META: Record<string, { nameAr: string; flag: string; provider: string; officialUrl: string }> = {
-  IT: { nameAr: 'إيطاليا', flag: '🇮🇹', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/ita/' },
-  FR: { nameAr: 'فرنسا',  flag: '🇫🇷', provider: 'TLScontact', officialUrl: 'https://visas-fr.tlscontact.com/' },
-  ES: { nameAr: 'إسبانيا', flag: '🇪🇸', provider: 'BLS Spain',  officialUrl: 'https://algeria.blsspainvisa.com/' },
-  DE: { nameAr: 'ألمانيا', flag: '🇩🇪', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/deu/' },
-  GR: { nameAr: 'اليونان', flag: '🇬🇷', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/grc/' },
+const COUNTRY_META: Record<string, { nameAr: string; nameEn: string; flag: string; provider: string; officialUrl: string }> = {
+  IT: { nameAr: 'إيطاليا', nameEn: 'Italy',   flag: '🇮🇹', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/ita/' },
+  FR: { nameAr: 'فرنسا',  nameEn: 'France',  flag: '🇫🇷', provider: 'TLScontact', officialUrl: 'https://visas-fr.tlscontact.com/' },
+  ES: { nameAr: 'إسبانيا', nameEn: 'Spain',   flag: '🇪🇸', provider: 'BLS Spain',  officialUrl: 'https://algeria.blsspainvisa.com/' },
+  DE: { nameAr: 'ألمانيا', nameEn: 'Germany', flag: '🇩🇪', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/deu/' },
+  GR: { nameAr: 'اليونان', nameEn: 'Greece',  flag: '🇬🇷', provider: 'VFS Global',  officialUrl: 'https://visa.vfsglobal.com/dza/ar/grc/' },
 };
 
 Deno.serve(async (req) => {
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     // Fetch users with a digest preference
     let prefsQuery = supabase
       .from('notification_preferences')
-      .select('user_id, digest_frequency, last_digest_sent_at, countries')
+      .select('user_id, digest_frequency, last_digest_sent_at, countries, preferred_language')
       .in('digest_frequency', ['daily', 'weekly']);
     if (frequencyFilter) prefsQuery = prefsQuery.eq('digest_frequency', frequencyFilter);
     const { data: prefsRows, error: prefsErr } = await prefsQuery;
@@ -119,35 +119,61 @@ Deno.serve(async (req) => {
         byCountry.set(e.country_code, cur);
       }
 
-      const periodLabel = freq === 'weekly' ? 'الأسبوعي' : 'اليومي';
+      const lang: 'ar' | 'en' = (pref as any).preferred_language === 'en' ? 'en' : 'ar';
       const totalOpenings = events.length;
       const fmt = (iso: string) =>
-        new Date(iso).toLocaleString('ar-DZ', { dateStyle: 'short', timeStyle: 'short' });
+        new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'ar-DZ', { dateStyle: 'short', timeStyle: 'short' });
 
-      const lines: string[] = [
-        `📊 <b>تلخيص التنبيهات ${periodLabel} ${freq === 'weekly' ? '🗓️' : '☀️'}</b>`,
-        ``,
-        `تم رصد <b>${totalOpenings}</b> فتح للمواعيد خلال الفترة الماضية:`,
-        ``,
-      ];
-
-      for (const [code, info] of byCountry.entries()) {
-        const meta = COUNTRY_META[code];
-        if (!meta) continue;
-        const statusBadge = info.stillOpen ? '🟢 مفتوحة الآن' : '🔴 أُغلقت';
+      const lines: string[] = [];
+      if (lang === 'en') {
+        const periodLabel = freq === 'weekly' ? 'Weekly' : 'Daily';
         lines.push(
-          `${meta.flag} <b>${meta.nameAr}</b> — ${meta.provider}`,
-          `   • فتحات: ${info.count}  |  ${statusBadge}`,
-          `   • آخر تنبيه: ${fmt(info.lastAt)}`,
-          `   🔗 <a href="${meta.officialUrl}">فتح موقع المزود</a>`,
+          `📊 <b>${periodLabel} alerts summary ${freq === 'weekly' ? '🗓️' : '☀️'}</b>`,
+          ``,
+          `<b>${totalOpenings}</b> appointment opening(s) detected in the last period:`,
           ``,
         );
+        for (const [code, info] of byCountry.entries()) {
+          const meta = COUNTRY_META[code];
+          if (!meta) continue;
+          const statusBadge = info.stillOpen ? '🟢 Open now' : '🔴 Closed';
+          lines.push(
+            `${meta.flag} <b>${meta.nameEn}</b> — ${meta.provider}`,
+            `   • Openings: ${info.count}  |  ${statusBadge}`,
+            `   • Last alert: ${fmt(info.lastAt)}`,
+            `   🔗 <a href="${meta.officialUrl}">Open provider site</a>`,
+            ``,
+          );
+        }
+        lines.push(
+          `💡 <i>This is your ${periodLabel.toLowerCase()} digest — switch to instant alerts anytime from notification settings.</i>`,
+          `🤖 <i>VisaRadar</i>`,
+        );
+      } else {
+        const periodLabel = freq === 'weekly' ? 'الأسبوعي' : 'اليومي';
+        lines.push(
+          `📊 <b>تلخيص التنبيهات ${periodLabel} ${freq === 'weekly' ? '🗓️' : '☀️'}</b>`,
+          ``,
+          `تم رصد <b>${totalOpenings}</b> فتح للمواعيد خلال الفترة الماضية:`,
+          ``,
+        );
+        for (const [code, info] of byCountry.entries()) {
+          const meta = COUNTRY_META[code];
+          if (!meta) continue;
+          const statusBadge = info.stillOpen ? '🟢 مفتوحة الآن' : '🔴 أُغلقت';
+          lines.push(
+            `${meta.flag} <b>${meta.nameAr}</b> — ${meta.provider}`,
+            `   • فتحات: ${info.count}  |  ${statusBadge}`,
+            `   • آخر تنبيه: ${fmt(info.lastAt)}`,
+            `   🔗 <a href="${meta.officialUrl}">فتح موقع المزود</a>`,
+            ``,
+          );
+        }
+        lines.push(
+          `💡 <i>هذا التلخيص ${periodLabel} — يمكنك تغييره أو تحويله إلى تنبيهات فورية من إعدادات الإشعارات.</i>`,
+          `🤖 <i>VisaRadar</i>`,
+        );
       }
-
-      lines.push(
-        `💡 <i>هذا التلخيص ${periodLabel} — يمكنك تغييره أو تحويله إلى تنبيهات فورية من إعدادات الإشعارات.</i>`,
-        `🤖 <i>VisaRadar</i>`,
-      );
 
       const text = lines.join('\n');
 

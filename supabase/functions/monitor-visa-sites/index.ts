@@ -951,13 +951,18 @@ Deno.serve(async (req) => {
         new Set((allSubscriptions || []).map((s) => s.user_id).filter(Boolean)),
       );
       let digestUserIds = new Set<string>();
+      let langByUser = new Map<string, 'ar' | 'en'>();
       if (subUserIds.length > 0) {
         const { data: prefs } = await supabase
           .from('notification_preferences')
-          .select('user_id, digest_frequency')
-          .in('user_id', subUserIds)
-          .neq('digest_frequency', 'instant');
-        digestUserIds = new Set((prefs || []).map((p: any) => p.user_id));
+          .select('user_id, digest_frequency, preferred_language')
+          .in('user_id', subUserIds);
+        for (const p of (prefs || []) as any[]) {
+          if (p.digest_frequency && p.digest_frequency !== 'instant') {
+            digestUserIds.add(p.user_id);
+          }
+          langByUser.set(p.user_id, p.preferred_language === 'en' ? 'en' : 'ar');
+        }
       }
 
       for (const alert of openResults) {
@@ -981,73 +986,117 @@ Deno.serve(async (req) => {
         }
         if (!shouldNotify) continue;
 
-        const chatIds = (allSubscriptions || [])
+        const recipients = (allSubscriptions || [])
           .filter((s) =>
             s.telegram_chat_id &&
             (s.countries || []).includes(alert.countryCode) &&
             !digestUserIds.has(s.user_id),
           )
-          .map((s) => s.telegram_chat_id!);
+          .map((s) => ({
+            chatId: s.telegram_chat_id!,
+            lang: (langByUser.get(s.user_id) ?? 'ar') as 'ar' | 'en',
+          }));
 
-        if (chatIds.length === 0) continue;
+        if (recipients.length === 0) continue;
 
         const isRecheck = !alert.changed;
-        const nowStr = new Date().toLocaleString('ar-DZ', {
-          timeZone: 'Africa/Algiers',
-          hour: '2-digit',
-          minute: '2-digit',
-          day: '2-digit',
-          month: '2-digit',
-        });
-        const headerLine = isRecheck
-          ? `🟢 <b>المواعيد لا تزال مفتوحة</b>`
-          : `🚨 <b>تنبيه عاجل — مواعيد مفتوحة الآن</b>`;
-        const statusBadge = isRecheck ? '🟢 مستمرة' : '🆕 جديدة';
+        const COUNTRY_EN: Record<string, string> = {
+          IT: 'Italy', FR: 'France', ES: 'Spain', DE: 'Germany', GR: 'Greece',
+        };
+        const nameEn = COUNTRY_EN[alert.countryCode] ?? alert.countryCode;
 
-        const message = [
-          headerLine,
-          `━━━━━━━━━━━━━━━━━━`,
-          `${target.flag} <b>${target.nameAr}</b>`,
-          ``,
-          `🛂 <b>نوع التأشيرة:</b> 🏖️ سياحة • 🎓 دراسة • 💼 عمل • 👨‍👩‍👧 لمّ شمل`,
-          `🏢 <b>المزود:</b> <code>${target.provider}</code>`,
-          `📌 <b>الحالة:</b> ${statusBadge}`,
-          `🕒 <b>وقت الرصد:</b> ${nowStr}`,
-          `━━━━━━━━━━━━━━━━━━`,
-          `⚡ <i>المواعيد تنفد خلال دقائق — سارِع بالحجز</i>`,
-          ``,
-          `🤖 <i>VisaRadar — تنبيه تلقائي</i>`,
-        ].join('\n');
+        const buildMessage = (lang: 'ar' | 'en') => {
+          if (lang === 'en') {
+            const nowStr = new Date().toLocaleString('en-GB', {
+              timeZone: 'Africa/Algiers',
+              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
+            });
+            const header = isRecheck
+              ? `🟢 <b>Appointments are still open</b>`
+              : `🚨 <b>Urgent — appointments just opened</b>`;
+            const badge = isRecheck ? '🟢 Ongoing' : '🆕 New';
+            const text = [
+              header,
+              `━━━━━━━━━━━━━━━━━━`,
+              `${target.flag} <b>${nameEn}</b>`,
+              ``,
+              `🛂 <b>Visa type:</b> 🏖️ Tourism • 🎓 Study • 💼 Work • 👨‍👩‍👧 Family`,
+              `🏢 <b>Provider:</b> <code>${target.provider}</code>`,
+              `📌 <b>Status:</b> ${badge}`,
+              `🕒 <b>Detected at:</b> ${nowStr}`,
+              `━━━━━━━━━━━━━━━━━━`,
+              `⚡ <i>Slots run out in minutes — book now</i>`,
+              ``,
+              `🤖 <i>VisaRadar — automated alert</i>`,
+            ].join('\n');
+            const markup = {
+              inline_keyboard: [
+                [{ text: `🚀 Book now via ${target.provider}`, url: target.officialUrl }],
+                [
+                  { text: '🔔 Notification settings', url: 'https://visaradar.lovable.app/notifications' },
+                  { text: '🌐 Open VisaRadar', url: 'https://visaradar.lovable.app' },
+                ],
+              ],
+            };
+            return { text, markup };
+          }
+          const nowStr = new Date().toLocaleString('ar-DZ', {
+            timeZone: 'Africa/Algiers',
+            hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
+          });
+          const header = isRecheck
+            ? `🟢 <b>المواعيد لا تزال مفتوحة</b>`
+            : `🚨 <b>تنبيه عاجل — مواعيد مفتوحة الآن</b>`;
+          const badge = isRecheck ? '🟢 مستمرة' : '🆕 جديدة';
+          const text = [
+            header,
+            `━━━━━━━━━━━━━━━━━━`,
+            `${target.flag} <b>${target.nameAr}</b>`,
+            ``,
+            `🛂 <b>نوع التأشيرة:</b> 🏖️ سياحة • 🎓 دراسة • 💼 عمل • 👨‍👩‍👧 لمّ شمل`,
+            `🏢 <b>المزود:</b> <code>${target.provider}</code>`,
+            `📌 <b>الحالة:</b> ${badge}`,
+            `🕒 <b>وقت الرصد:</b> ${nowStr}`,
+            `━━━━━━━━━━━━━━━━━━`,
+            `⚡ <i>المواعيد تنفد خلال دقائق — سارِع بالحجز</i>`,
+            ``,
+            `🤖 <i>VisaRadar — تنبيه تلقائي</i>`,
+          ].join('\n');
+          const markup = {
+            inline_keyboard: [
+              [{ text: `🚀 احجز الآن عبر ${target.provider}`, url: target.officialUrl }],
+              [
+                { text: '🔔 إدارة التنبيهات', url: 'https://visaradar.lovable.app/notifications' },
+                { text: '🌐 فتح VisaRadar', url: 'https://visaradar.lovable.app' },
+              ],
+            ],
+          };
+          return { text, markup };
+        };
 
-        const replyMarkup = {
-          inline_keyboard: [
-            [
-              { text: `🚀 احجز الآن عبر ${target.provider}`, url: target.officialUrl },
-            ],
-            [
-              { text: '🔔 إدارة التنبيهات', url: 'https://visaradar.lovable.app/notifications' },
-              { text: '🌐 فتح VisaRadar', url: 'https://visaradar.lovable.app' },
-            ],
-          ],
+        const payloadByLang = {
+          ar: buildMessage('ar'),
+          en: buildMessage('en'),
         };
 
         let sentCount = 0;
-        for (let i = 0; i < chatIds.length; i += 5) {
-          const batch = chatIds.slice(i, i + 5);
+        for (let i = 0; i < recipients.length; i += 5) {
+          const batch = recipients.slice(i, i + 5);
           const results = await Promise.allSettled(
-            batch.map((chatId) =>
-              fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            batch.map((r) => {
+              const p = payloadByLang[r.lang];
+              return fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  chat_id: chatId,
-                  text: message,
+                  chat_id: r.chatId,
+                  text: p.text,
                   parse_mode: 'HTML',
                   disable_web_page_preview: true,
-                  reply_markup: replyMarkup,
+                  reply_markup: p.markup,
                 }),
-              }).then((res) => res.ok),
-            ),
+              }).then((res) => res.ok);
+            }),
           );
           sentCount += results.filter((r) => r.status === 'fulfilled' && r.value).length;
         }
