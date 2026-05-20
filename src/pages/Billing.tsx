@@ -298,6 +298,10 @@ export default function Billing() {
   const SIMULATOR_VERSION = "billing-sim@1.2.0";
   const [connectingProvider, setConnectingProvider] = useState<null | "paddle" | "stripe">(null);
 
+  // Auto-renewal is currently unavailable globally: provider not yet activated.
+  // Lifted to component scope so messages in notReady() can stay accurate.
+  const autoRenew = false;
+
   const requestProviderConnection = async (provider: "paddle" | "stripe") => {
     if (connectingProvider) return;
     setConnectingProvider(provider);
@@ -502,8 +506,9 @@ export default function Billing() {
       // persistent status banner. No real provider action — but the request
       // is logged for the admin to honor on the renewal date.
       if (action === "cancel") {
-        const message =
-          "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي ولن يتم تجديد الاشتراك تلقائيًا.";
+        const message = autoRenew
+          ? "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي ولن يتم تجديد الاشتراك تلقائيًا بعدها."
+          : "تم تسجيل طلب إلغاء الاشتراك. ستبقى الخدمة فعّالة حتى تاريخ الانتهاء الحالي. التجديد التلقائي غير مُفعّل أصلًا، فلن يتم خصم أي مبلغ بعد ذلك.";
         await logEvent({
           event_type: "subscription.cancel_scheduled",
           status: "info",
@@ -802,8 +807,9 @@ export default function Billing() {
                         {formatDate(cancelOutcome.until)}
                       </span>
                     )}
-                    ، وبعدها سيتم إيقاف التنبيهات ولن يتم تجديده تلقائيًا. لن يتم خصم أي
-                    مبلغ إضافي.
+                    {autoRenew
+                      ? "، وبعدها سيتم إيقاف التنبيهات ولن يتم تجديده تلقائيًا. لن يتم خصم أي مبلغ إضافي."
+                      : "، وبعدها سيتم إيقاف التنبيهات. التجديد التلقائي غير مُفعّل أصلًا، لذلك لن يتم خصم أي مبلغ."}
                   </p>
                   <ul className="mt-2 space-y-1 text-muted-foreground list-disc pr-5">
                     <li>تستمر جميع الميزات في العمل حتى تاريخ الانتهاء.</li>
@@ -987,8 +993,6 @@ export default function Billing() {
             const used = Math.max(0, totalDays - (daysLeft ?? 0));
             const progress = Math.min(100, Math.max(0, (used / totalDays) * 100));
             const price = pkg?.promo_price ?? pkg?.price ?? null;
-            // Auto-renewal is currently unavailable: provider not yet activated
-            const autoRenew = false;
             return (
               <div className="space-y-4">
                 {/* Plan hero */}
