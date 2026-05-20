@@ -274,6 +274,7 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
 
 type CheckResult = {
   countryCode: string;
+  category: string; // 'tourism' | 'study' | 'work'
   status: 'open' | 'closed' | 'error' | 'unknown';
   previousStatus: string | null;
   snippet: string | null;
@@ -285,6 +286,67 @@ type CheckResult = {
   responseTimeMs: number;
   detectionMethod: string; // Which layer detected the status
 };
+
+// ──────────────────────────────────────────────
+// Visa categories (Tourism / Study / Work)
+// Provider-specific parameter mapping for VFS lift-api,
+// TLScontact and BLS check pages.
+// ──────────────────────────────────────────────
+export const VISA_CATEGORIES = [
+  {
+    key: 'tourism',
+    ar: 'سياحة',
+    en: 'Tourism',
+    icon: '🏖️',
+    vfsParam: 'Tourism',
+    tlsParam: 'TOURISM',
+    blsParam: 'tourism',
+  },
+  {
+    key: 'study',
+    ar: 'دراسة',
+    en: 'Study',
+    icon: '🎓',
+    vfsParam: 'Study',
+    tlsParam: 'STUDIES',
+    blsParam: 'student',
+  },
+  {
+    key: 'work',
+    ar: 'عمل',
+    en: 'Work',
+    icon: '💼',
+    vfsParam: 'Work',
+    tlsParam: 'WORK',
+    blsParam: 'work',
+  },
+] as const;
+
+type VisaCategory = typeof VISA_CATEGORIES[number];
+
+function buildCategoryTarget(target: MonitorTarget, cat: VisaCategory): MonitorTarget {
+  const isVfs = /vfsglobal/i.test(target.checkUrl);
+  const isTls = /tlscontact/i.test(target.checkUrl);
+  const isBls = /blsspainvisa/i.test(target.checkUrl);
+
+  const checkUrl = isVfs
+    ? `${target.checkUrl}?visaCategory=${encodeURIComponent(cat.vfsParam)}`
+    : isTls
+      ? `${target.checkUrl}?visa_category=${encodeURIComponent(cat.tlsParam)}`
+      : isBls
+        ? `${target.checkUrl}?category=${encodeURIComponent(cat.blsParam)}`
+        : target.checkUrl;
+
+  const apiEndpoints = (target.apiEndpoints || []).map((ep) => {
+    const sep = ep.url.includes('?') ? '&' : '?';
+    if (isVfs) return { ...ep, url: `${ep.url}${sep}visaCategory=${encodeURIComponent(cat.vfsParam)}` };
+    if (isTls) return { ...ep, url: `${ep.url}${sep}visa_category=${encodeURIComponent(cat.tlsParam)}` };
+    if (isBls) return { ...ep, url: `${ep.url}${sep}category=${encodeURIComponent(cat.blsParam)}` };
+    return ep;
+  });
+
+  return { ...target, checkUrl, apiEndpoints };
+}
 
 // ──────────────────────────────────────────────
 // Layer 1: Keyword-based weighted scoring
