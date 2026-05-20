@@ -219,6 +219,7 @@ export type Database = {
           digest_frequency: string
           id: string
           last_digest_sent_at: string | null
+          preferred_language: string
           sound_enabled: boolean
           updated_at: string
           user_id: string
@@ -230,6 +231,7 @@ export type Database = {
           digest_frequency?: string
           id?: string
           last_digest_sent_at?: string | null
+          preferred_language?: string
           sound_enabled?: boolean
           updated_at?: string
           user_id: string
@@ -241,6 +243,7 @@ export type Database = {
           digest_frequency?: string
           id?: string
           last_digest_sent_at?: string | null
+          preferred_language?: string
           sound_enabled?: boolean
           updated_at?: string
           user_id?: string
