@@ -216,6 +216,17 @@ export default function Billing() {
     details?: string;
     message?: string;
   }>(null);
+  const [updateOutcome, setUpdateOutcome] = useState<null | {
+    status: "failed";
+    at: string;
+    message: string;
+  }>(null);
+  const [attempts, setAttempts] = useState<{ update: number; cancel: number }>({
+    update: 0,
+    cancel: 0,
+  });
+  const lastCancelMetaRef = useRef<Record<string, unknown>>({});
+  const MAX_ATTEMPTS = 3;
   // Synchronous lock to prevent double-execution from rapid clicks
   // (setState is async, so it can't be the sole guard).
   const actionLockRef = useRef<null | "update" | "cancel">(null);
