@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   Activity, CheckCircle, XCircle, AlertTriangle, Clock, Globe,
   Radar, TrendingUp, Timer, RefreshCw, ChevronLeft, ChevronRight,
-  FileDown, FileText, Bell, BellOff,
+  FileDown, FileText, Bell, BellOff, Building2, Network,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -63,6 +63,12 @@ interface OpenEvent {
   duration_minutes: number | null;
 }
 
+type MonitoringScope = "centers_only" | "all_sites";
+const SCOPE_CFG: Record<MonitoringScope, { label: string; icon: typeof Building2; color: string }> = {
+  centers_only: { label: "المراكز فقط", icon: Building2, color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
+  all_sites:    { label: "كل المواقع",  icon: Network,   color: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
+};
+
 export default function SubscriberVisaMonitor() {
   const { user } = useAuth();
   const { isPrivileged } = useIsAdmin();
@@ -101,23 +107,33 @@ export default function SubscriberVisaMonitor() {
     } catch { /* ignore */ }
   };
 
-  // User's active subscription countries (admins see all)
-  const { data: subCountries = [] } = useQuery({
-    queryKey: ["sub-monitor-countries", user?.id],
+  // User's active subscription countries + monitoring scopes (admins see all)
+  const { data: subData } = useQuery({
+    queryKey: ["sub-monitor-data", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase
         .from("subscriptions")
-        .select("countries")
+        .select("countries, monitoring_scopes, package_id, packages(name_ar)")
         .eq("user_id", user!.id)
         .eq("status", "active")
         .gt("expires_at", new Date().toISOString())
         .order("expires_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      return (data?.countries as string[]) || [];
+      return {
+        countries: (data?.countries as string[]) || [],
+        scopes: ((data?.monitoring_scopes as Record<string, MonitoringScope>) || {}),
+        packageName: (data as any)?.packages?.name_ar as string | undefined,
+      };
     },
   });
+  const subCountries = subData?.countries || [];
+  const monitoringScopes = subData?.scopes || {};
+  const packageName = subData?.packageName;
+
+  const scopeFor = (cc: string): MonitoringScope =>
+    (monitoringScopes[cc] as MonitoringScope) || "all_sites";
 
   const countries = useMemo(
     () => (isPrivileged ? [] : subCountries),
