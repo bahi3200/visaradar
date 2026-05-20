@@ -1196,15 +1196,19 @@ export default function Billing() {
                   e.preventDefault();
                   return;
                 }
+                // Keep dialog open while in-flight so spinner is visible and
+                // close is prevented by onOpenChange guard above.
+                e.preventDefault();
                 const reason = cancelReason;
                 const details = cancelReasonDetails.trim();
-                setCancelConfirmOpen(false);
                 notReady("cancel", {
                   cancellation_reason: reason,
                   cancellation_details: details || undefined,
+                }).finally(() => {
+                  setCancelConfirmOpen(false);
+                  setCancelReason("");
+                  setCancelReasonDetails("");
                 });
-                setCancelReason("");
-                setCancelReasonDetails("");
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
