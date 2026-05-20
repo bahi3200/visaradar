@@ -208,6 +208,14 @@ export default function Billing() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>("");
   const [cancelReasonDetails, setCancelReasonDetails] = useState<string>("");
+  const [cancelOutcome, setCancelOutcome] = useState<null | {
+    status: "scheduled" | "failed";
+    at: string;
+    until?: string;
+    reason?: string;
+    details?: string;
+    message?: string;
+  }>(null);
 
   // Invoices / billing transactions (latest 10 subscription requests for this user)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRow[]>({
