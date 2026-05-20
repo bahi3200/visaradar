@@ -51,6 +51,10 @@ export default function SubscribeRequestPage() {
   const [selectedPackageId, setSelectedPackageId] = useState<string>(renewPackageId);
   const initialCountries = (searchParams.get("countries") || "").split(",").map((c) => c.trim()).filter(Boolean);
   const [countries, setCountries] = useState<string[]>(initialCountries);
+  type MonitoringScope = "centers_only" | "all_sites";
+  const [monitoringScopes, setMonitoringScopes] = useState<Record<string, MonitoringScope>>({});
+  const setScope = (code: string, scope: MonitoringScope) =>
+    setMonitoringScopes((prev) => ({ ...prev, [code.toUpperCase()]: scope }));
   // Use stored user data directly - no need to ask again
   const fullName = user?.user_metadata?.full_name || "";
   const phone = user?.user_metadata?.phone || "";
@@ -176,11 +180,19 @@ export default function SubscribeRequestPage() {
 
   const toggleCountry = (code: string) => {
     setCountries((prev) => {
-      if (prev.includes(code)) return prev.filter((c) => c !== code);
+      if (prev.includes(code)) {
+        setMonitoringScopes((m) => {
+          const next = { ...m };
+          delete next[code.toUpperCase()];
+          return next;
+        });
+        return prev.filter((c) => c !== code);
+      }
       if (prev.length >= maxCountries) {
         toast.error(`الحد الأقصى ${maxCountries} دول لهذه الباقة`);
         return prev;
       }
+      setMonitoringScopes((m) => ({ ...m, [code.toUpperCase()]: m[code.toUpperCase()] || "all_sites" }));
       return [...prev, code];
     });
   };
@@ -264,6 +276,11 @@ export default function SubscribeRequestPage() {
           user_id: currentUser.id,
           package_id: selectedPackageId,
           countries: needsCountry ? countries : [],
+          monitoring_scopes: needsCountry
+            ? Object.fromEntries(
+                countries.map((c) => [c.toUpperCase(), monitoringScopes[c.toUpperCase()] || "all_sites"])
+              )
+            : {},
           full_name: fullName,
           phone,
           email: email || currentUser.email,
@@ -716,6 +733,58 @@ export default function SubscribeRequestPage() {
                     })}
                   </div>
                 )}
+
+                {/* Custom monitoring scope per country */}
+                {countries.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <p className="text-xs font-bold text-primary">نطاق المراقبة لكل دولة</p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mb-3">
+                      اختر ما إذا كنت تريد مراقبة المراكز الرسمية فقط أو جميع المواقع المرتبطة بكل دولة.
+                    </p>
+                    <div className="space-y-2">
+                      {countries.map((code) => {
+                        const co = countryOptions.find((c) => c.code === code.toUpperCase());
+                        const current = monitoringScopes[code.toUpperCase()] || "all_sites";
+                        return (
+                          <div key={code} className="rounded-lg bg-background/40 border border-border/40 p-2.5">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-xs font-bold text-foreground">
+                                {co?.flag} {co?.name || code}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setScope(code, "centers_only")}
+                                className={`text-[11px] px-2 py-2 rounded-md border transition-all ${
+                                  current === "centers_only"
+                                    ? "border-primary bg-primary/15 text-primary font-bold"
+                                    : "border-border/40 text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                🏢 المراكز فقط
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScope(code, "all_sites")}
+                                className={`text-[11px] px-2 py-2 rounded-md border transition-all ${
+                                  current === "all_sites"
+                                    ? "border-primary bg-primary/15 text-primary font-bold"
+                                    : "border-border/40 text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                🌐 كل المواقع
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -928,6 +997,7 @@ export default function SubscribeRequestPage() {
         countries={countries}
         countryOptions={countryOptions}
         maxCountries={maxCountries}
+        monitoringScopes={monitoringScopes}
         amount={isUpgrade ? priceDifference : (selectedPkg?.price || 0)}
         isUpgrade={isUpgrade}
         isRenewal={isRenewal}
@@ -949,6 +1019,7 @@ function ReviewDialog({
   countries,
   countryOptions,
   maxCountries,
+  monitoringScopes,
   amount,
   isUpgrade,
   isRenewal,
@@ -965,6 +1036,7 @@ function ReviewDialog({
   countries: string[];
   countryOptions: Array<{ code: string; flag: string; name: string; provider: string; center: string }>;
   maxCountries: number;
+  monitoringScopes: Record<string, "centers_only" | "all_sites">;
   amount: number;
   isUpgrade: boolean;
   isRenewal: boolean;
@@ -1038,6 +1110,9 @@ function ReviewDialog({
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-foreground">{c.name}</p>
                           <p className="text-[11px] text-muted-foreground">{c.provider} • 📍 {c.center}</p>
+                          <p className="text-[11px] text-primary mt-0.5">
+                            نطاق المراقبة: {(monitoringScopes[code.toUpperCase()] || "all_sites") === "centers_only" ? "🏢 المراكز فقط" : "🌐 كل المواقع"}
+                          </p>
                         </div>
                       </li>
                     );
