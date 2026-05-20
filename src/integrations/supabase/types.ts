@@ -1153,6 +1153,57 @@ export type Database = {
         }
         Relationships: []
       }
+      visa_external_signals: {
+        Row: {
+          broadcast_error: string | null
+          broadcast_status: string
+          broadcasted_at: string | null
+          category: string | null
+          country_code: string
+          created_at: string
+          id: string
+          message_ar: string | null
+          posted_by: string
+          recipients_count: number
+          source: string | null
+          source_url: string | null
+          status: string
+          title_ar: string
+        }
+        Insert: {
+          broadcast_error?: string | null
+          broadcast_status?: string
+          broadcasted_at?: string | null
+          category?: string | null
+          country_code: string
+          created_at?: string
+          id?: string
+          message_ar?: string | null
+          posted_by: string
+          recipients_count?: number
+          source?: string | null
+          source_url?: string | null
+          status?: string
+          title_ar: string
+        }
+        Update: {
+          broadcast_error?: string | null
+          broadcast_status?: string
+          broadcasted_at?: string | null
+          category?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          message_ar?: string | null
+          posted_by?: string
+          recipients_count?: number
+          source?: string | null
+          source_url?: string | null
+          status?: string
+          title_ar?: string
+        }
+        Relationships: []
+      }
       visa_monitor_checks: {
         Row: {
           checked_at: string
@@ -1221,6 +1272,7 @@ export type Database = {
       }
       visa_open_events: {
         Row: {
+          category: string | null
           closed_at: string | null
           country_code: string
           created_at: string
@@ -1234,6 +1286,7 @@ export type Database = {
           source_check_id: string | null
         }
         Insert: {
+          category?: string | null
           closed_at?: string | null
           country_code: string
           created_at?: string
@@ -1247,6 +1300,7 @@ export type Database = {
           source_check_id?: string | null
         }
         Update: {
+          category?: string | null
           closed_at?: string | null
           country_code?: string
           created_at?: string
