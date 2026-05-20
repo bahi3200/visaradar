@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Send, MessageCircle, Mail, User } from "lucide-react";
+import { Send, MessageCircle, Mail, User, Inbox } from "lucide-react";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const contactSchema = z.object({
   full_name: z.string().trim().min(2, "الاسم يجب أن يكون حرفين على الأقل").max(100),
@@ -24,6 +26,7 @@ type ContactForm = z.infer<typeof contactSchema>;
 
 export default function ContactUs() {
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
@@ -56,6 +59,16 @@ export default function ContactUs() {
         path="/contact"
       />
       <div className="container max-w-2xl py-12" dir="rtl">
+        {user && (
+          <div className="mb-4 flex justify-end">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link to="/my-messages">
+                <Inbox className="w-4 h-4" />
+                رسائلي وردود الإدارة
+              </Link>
+            </Button>
+          </div>
+        )}
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center space-y-2">
             <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-2">

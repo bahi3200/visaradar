@@ -43,6 +43,19 @@ export default function ContactMessages() {
     },
   });
 
+  const { data: thread = [] } = useQuery({
+    queryKey: ["contact_message_replies", selectedMessage?.id],
+    enabled: !!selectedMessage?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)("contact_message_replies")
+        .select("*")
+        .eq("message_id", selectedMessage.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await (supabase.from as any)("contact_messages")
@@ -59,6 +72,22 @@ export default function ContactMessages() {
 
   const sendReply = useMutation({
     mutationFn: async ({ message, reply }: { message: any; reply: string }) => {
+      // 1) Save in-app reply (visible to the user inside the app)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("غير مصادق");
+
+      if (message.user_id) {
+        const { error: replyError } = await (supabase.from as any)("contact_message_replies")
+          .insert({
+            message_id: message.id,
+            sender_role: "admin",
+            sender_id: user.id,
+            body: reply,
+          });
+        if (replyError) throw replyError;
+      }
+
+      // 2) Also send an email copy (so guests / users not currently online get it too)
       const htmlBody = `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -78,7 +107,6 @@ export default function ContactMessages() {
         </div>
       `;
 
-      // Save reply to email_notifications
       const { error: emailError } = await (supabase.from as any)("email_notifications")
         .insert({
           recipient_email: message.email,
@@ -89,7 +117,7 @@ export default function ContactMessages() {
         });
       if (emailError) throw emailError;
 
-      // Update message status to replied
+      // 3) Update message status to replied
       const { error: statusError } = await (supabase.from as any)("contact_messages")
         .update({ status: "replied" })
         .eq("id", message.id);
@@ -97,6 +125,7 @@ export default function ContactMessages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact_messages"] });
+      queryClient.invalidateQueries({ queryKey: ["contact_message_replies"] });
       toast.success("تم حفظ الرد بنجاح");
       setReplyText("");
       setShowReplyForm(false);
@@ -311,6 +340,35 @@ export default function ContactMessages() {
                   {selectedMessage.message}
                 </div>
               </div>
+
+              {/* Thread */}
+              {thread.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-2">سجل المحادثة</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {thread.map((r: any) => (
+                      <div
+                        key={r.id}
+                        className={`rounded-lg p-3 text-sm whitespace-pre-wrap leading-relaxed border ${
+                          r.sender_role === "admin"
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-muted/50 border-border/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {r.sender_role === "admin" ? "الإدارة" : "المستخدم"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(r.created_at), "d MMM - HH:mm", { locale: ar })}
+                          </span>
+                        </div>
+                        {r.body}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Status buttons */}
               <div className="flex items-center gap-2 pt-2">

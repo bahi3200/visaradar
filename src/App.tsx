@@ -30,6 +30,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ContactUs from "./pages/ContactUs";
 import ContactMessages from "./pages/ContactMessages";
+import MyMessages from "./pages/MyMessages";
 import Profile from "./pages/Profile";
 import PaymentSettings from "./pages/PaymentSettings";
 import VisaMonitorDashboard from "./pages/VisaMonitorDashboard";
@@ -126,6 +127,7 @@ const App = () => (
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
       <Route path="/dashboard/visa-openings" element={<AdminRoute><AdminVisaOpenings /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
+      <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
       <Route path="/subscribe" element={<ProtectedRoute><SubscribeRequest /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
