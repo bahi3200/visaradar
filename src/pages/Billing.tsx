@@ -409,6 +409,60 @@ export default function Billing() {
     return false;
   })();
 
+  // Per-provider connection state, derived from events + subscription metadata.
+  // Used to make the "provider not configured" error message precise about
+  // which provider(s) are currently disconnected.
+  const providerStatus = (() => {
+    const status: Record<"paddle" | "stripe", boolean> = { paddle: false, stripe: false };
+    const subAny = subscription as unknown as Record<string, unknown> | null;
+    const subProvider =
+      subAny && typeof subAny.provider === "string"
+        ? (subAny.provider as string).toLowerCase()
+        : null;
+    if (subProvider === "paddle") status.paddle = true;
+    if (subProvider === "stripe") status.stripe = true;
+
+    const decided = { paddle: status.paddle, stripe: status.stripe };
+    for (const ev of events) {
+      if (decided.paddle && decided.stripe) break;
+      if (ev.status === "rejected" || ev.status === "failed") continue;
+      const evProvider = (ev.provider ?? "").toLowerCase();
+      const targets: ("paddle" | "stripe")[] =
+        evProvider === "paddle" || evProvider === "stripe"
+          ? [evProvider as "paddle" | "stripe"]
+          : ["paddle", "stripe"];
+      for (const p of targets) {
+        if (decided[p]) continue;
+        if (
+          ev.event_type === "payment_provider.connected" ||
+          ev.event_type === "auto_renew.enabled"
+        ) {
+          status[p] = true;
+          decided[p] = true;
+        } else if (
+          ev.event_type === "payment_provider.disconnected" ||
+          ev.event_type === "auto_renew.disabled"
+        ) {
+          status[p] = false;
+          decided[p] = true;
+        }
+      }
+    }
+    return status;
+  })();
+
+  const missingProviders: ("Paddle" | "Stripe")[] = [
+    ...(!providerStatus.paddle ? (["Paddle"] as const) : []),
+    ...(!providerStatus.stripe ? (["Stripe"] as const) : []),
+  ];
+
+  const providerFailureDescription =
+    missingProviders.length === 0
+      ? "تم ربط مزوّدي الدفع، لكن تعذّر تنفيذ العملية لسبب آخر. حدّث الصفحة وحاول مجددًا."
+      : missingProviders.length === 2
+        ? "سبب الفشل: لم يتم ربط أي مزوّد دفع بعد — Paddle وStripe كلاهما غير مفعّل لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح."
+        : `سبب الفشل: مزوّد الدفع ${missingProviders[0]} غير مربوط بعد لهذا الحساب، لذلك تعذّر تنفيذ العملية تلقائيًا من المتصفح.`;
+
   const requestProviderConnection = async (provider: "paddle" | "stripe") => {
     if (connectingProvider) return;
     setConnectingProvider(provider);
@@ -645,13 +699,19 @@ export default function Billing() {
 
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
       const providerInfo = ERROR_REASON_INFO.provider_not_configured;
-      const errMsg = providerInfo.description;
+      const errMsg = providerFailureDescription;
 
       await logEvent({
         event_type: eventType,
         status: "failed",
         message: errMsg,
-        metadata: { reason: "provider_not_configured", action, ...baseMeta },
+        metadata: {
+          reason: "provider_not_configured",
+          action,
+          missing_providers: missingProviders,
+          provider_status: providerStatus,
+          ...baseMeta,
+        },
       });
 
       setUpdateOutcome({
