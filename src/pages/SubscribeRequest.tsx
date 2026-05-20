@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X } from "lucide-react";
+import { Send, ArrowRight, Check, Crown, FileImage, AlertTriangle, Bell, Briefcase, Layers, ArrowUpCircle, TrendingUp, Copy, Shield, RefreshCw, FileText, ClipboardCheck, X, MapPin, PlusCircle, MinusCircle, Building2 } from "lucide-react";
 import baridimobLogo from "@/assets/baridimob-logo.png";
 import ccpLogo from "@/assets/ccp-logo.png";
 import { useState } from "react";
@@ -75,6 +75,37 @@ export default function SubscribeRequestPage() {
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+
+  // Fetch live provider centers + change history for selected countries
+  const { data: providerCenters } = useQuery({
+    queryKey: ["provider-centers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("provider_centers" as any)
+        .select("country_code, provider, centers, last_checked_at, updated_at");
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+  });
+
+  const selectedCountryCodes = countries.map((c) => c.toUpperCase());
+  const { data: centerChanges } = useQuery({
+    queryKey: ["provider-center-changes", selectedCountryCodes.join(",")],
+    queryFn: async () => {
+      if (selectedCountryCodes.length === 0) return [];
+      const sinceIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(); // last 60 days
+      const { data, error } = await supabase
+        .from("provider_center_changes" as any)
+        .select("id, country_code, provider, change_type, center_name, detected_at")
+        .in("country_code", selectedCountryCodes)
+        .gte("detected_at", sinceIso)
+        .order("detected_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+    enabled: selectedCountryCodes.length > 0,
+  });
 
   const { data: packages } = useQuery({
     queryKey: ["packages"],
