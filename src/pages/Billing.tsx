@@ -50,6 +50,71 @@ import type { SubscriptionWithPackage } from "@/types/supabase-extended";
 
 type DerivedStatus = "active" | "expiring" | "expired" | "none";
 
+type ErrorReason =
+  | "provider_not_configured"
+  | "no_subscription"
+  | "client_error"
+  | "max_attempts_reached"
+  | "unknown";
+
+const ERROR_REASON_INFO: Record<
+  ErrorReason,
+  {
+    label: string;
+    title: string;
+    description: string;
+    nextStep: string;
+    nextStepLabel: string;
+    nextStepHref: string;
+  }
+> = {
+  provider_not_configured: {
+    label: "مزوّد الدفع غير مفعّل",
+    title: "بوابة الدفع غير متاحة حاليًا",
+    description:
+      "لم يتم تفعيل مزوّد الدفع الإلكتروني (Paddle/Stripe) بعد، لذلك لا يمكن تنفيذ العملية تلقائيًا.",
+    nextStep:
+      "يمكنك في هذه الأثناء الدفع يدويًا عبر CCP/BaridiMob أو التواصل مع الدعم لإتمام العملية.",
+    nextStepLabel: "الدفع اليدوي",
+    nextStepHref: "/pricing",
+  },
+  no_subscription: {
+    label: "لا يوجد اشتراك نشط",
+    title: "لا يوجد اشتراك نشط مرتبط بحسابك",
+    description:
+      "لم نعثر على اشتراك فعّال يمكن تحديثه أو إلغاؤه في الوقت الحالي.",
+    nextStep: "اختر باقة مناسبة وفعّل اشتراكك من صفحة الباقات للبدء.",
+    nextStepLabel: "تصفّح الباقات",
+    nextStepHref: "/pricing",
+  },
+  client_error: {
+    label: "خطأ من جهة المتصفح",
+    title: "تعذّر إكمال الطلب من المتصفح",
+    description:
+      "حدث خطأ غير متوقع أثناء معالجة الطلب من جهة جهازك (شبكة، جلسة، أو مكوّن واجهة).",
+    nextStep:
+      "حدّث الصفحة وحاول مجددًا. إن استمر الخطأ، تأكّد من اتصالك بالإنترنت ثم تواصل مع الدعم.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+  max_attempts_reached: {
+    label: "تم بلوغ الحد الأقصى",
+    title: "تم بلوغ الحد الأقصى من المحاولات",
+    description: "جرّبت العملية عدة مرات دون نجاح، ولا يمكن المتابعة تلقائيًا.",
+    nextStep: "تواصل مع فريق الدعم لإتمام العملية يدويًا والتحقّق من حسابك.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+  unknown: {
+    label: "خطأ غير معروف",
+    title: "حدث خطأ غير متوقع",
+    description: "لم نتمكن من تحديد سبب الفشل بدقة.",
+    nextStep: "أعد المحاولة بعد قليل، وإن استمر الخطأ تواصل مع الدعم.",
+    nextStepLabel: "تواصل مع الدعم",
+    nextStepHref: "/contact",
+  },
+};
+
 type PaymentEvent = {
   id: string;
   event_type: string;
@@ -215,11 +280,13 @@ export default function Billing() {
     reason?: string;
     details?: string;
     message?: string;
+    errorReason?: ErrorReason;
   }>(null);
   const [updateOutcome, setUpdateOutcome] = useState<null | {
     status: "failed";
     at: string;
     message: string;
+    errorReason?: ErrorReason;
   }>(null);
   const [attempts, setAttempts] = useState<{ update: number; cancel: number }>({
     update: 0,
@@ -315,9 +382,10 @@ export default function Billing() {
     // Enforce max attempts per action
     const currentAttempts = attempts[action];
     if (currentAttempts >= MAX_ATTEMPTS) {
+      const info = ERROR_REASON_INFO.max_attempts_reached;
       toast({
-        title: "تم بلوغ الحد الأقصى للمحاولات",
-        description: `لقد جرّبت ${MAX_ATTEMPTS} مرات. يرجى التواصل مع الدعم لإتمام العملية يدويًا.`,
+        title: info.title,
+        description: `${info.description} ${info.nextStep}`,
         variant: "destructive",
       });
       return;
@@ -344,7 +412,34 @@ export default function Billing() {
 
       // Guard: must have an active subscription
       if (!subscription) {
-        throw new Error("لا يوجد اشتراك نشط مرتبط بحسابك حاليًا.");
+        const info = ERROR_REASON_INFO.no_subscription;
+        await logEvent({
+          event_type: eventType,
+          status: "failed",
+          message: info.description,
+          metadata: { reason: "no_subscription", action, ...baseMeta },
+        });
+        const outcome = {
+          status: "failed" as const,
+          at: new Date().toISOString(),
+          message: info.description,
+          errorReason: "no_subscription" as ErrorReason,
+        };
+        if (action === "cancel") {
+          setCancelOutcome({
+            ...outcome,
+            reason: (extraMeta.cancellation_reason as string) || undefined,
+            details: (extraMeta.cancellation_details as string) || undefined,
+          });
+        } else {
+          setUpdateOutcome(outcome);
+        }
+        toast({
+          title: info.title,
+          description: `${info.description} ${info.nextStep}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       // Cancel path: record a manual cancellation request and surface a
@@ -381,8 +476,8 @@ export default function Billing() {
       }
 
       // Simulation: provider is not connected — treat as a controlled "provider unavailable" failure
-      const errMsg =
-        "تعذّر فتح بوابة تحديث طريقة الدفع: مزوّد الدفع (Paddle/Stripe) غير مفعّل بعد.";
+      const providerInfo = ERROR_REASON_INFO.provider_not_configured;
+      const errMsg = providerInfo.description;
 
       await logEvent({
         event_type: eventType,
@@ -395,15 +490,17 @@ export default function Billing() {
         status: "failed",
         at: new Date().toISOString(),
         message: errMsg,
+        errorReason: "provider_not_configured",
       });
 
       toast({
-        title: `فشل ${friendlyAction}`,
-        description: `${errMsg} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
+        title: providerInfo.title,
+        description: `${errMsg} ${providerInfo.nextStep} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "حدث خطأ غير متوقع.";
+      const clientInfo = ERROR_REASON_INFO.client_error;
       await logEvent({
         event_type: eventType,
         status: "failed",
@@ -417,17 +514,19 @@ export default function Billing() {
           reason: (extraMeta.cancellation_reason as string) || undefined,
           details: (extraMeta.cancellation_details as string) || undefined,
           message,
+          errorReason: "client_error",
         });
       } else {
         setUpdateOutcome({
           status: "failed",
           at: new Date().toISOString(),
           message,
+          errorReason: "client_error",
         });
       }
       toast({
-        title: `فشل ${friendlyAction}`,
-        description: `${message} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
+        title: `فشل ${friendlyAction} — ${clientInfo.label}`,
+        description: `${message} ${clientInfo.nextStep} (المحاولة ${attemptNumber}/${MAX_ATTEMPTS})`,
         variant: "destructive",
       });
     } finally {
@@ -538,7 +637,7 @@ export default function Billing() {
             <div className="flex-1 min-w-0 text-xs leading-relaxed">
               <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
                 <p className="text-sm font-bold text-foreground">
-                  فشل تحديث طريقة الدفع
+                  {ERROR_REASON_INFO[updateOutcome.errorReason ?? "unknown"].title}
                 </p>
                 <button
                   type="button"
@@ -550,6 +649,26 @@ export default function Billing() {
                 </button>
               </div>
               <p className="text-muted-foreground">{updateOutcome.message}</p>
+              {(() => {
+                const info = ERROR_REASON_INFO[updateOutcome.errorReason ?? "unknown"];
+                return (
+                  <div className="mt-2 rounded-lg bg-muted/30 border border-border/40 px-3 py-2">
+                    <p className="text-[11px] font-bold text-foreground inline-flex items-center gap-1">
+                      <Info className="w-3 h-3 text-primary" />
+                      الخطوة التالية
+                      <span className="font-normal text-muted-foreground">— {info.label}</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
+                    <Link
+                      to={info.nextStepHref}
+                      className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    >
+                      {info.nextStepLabel}
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+                );
+              })()}
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 {attempts.update < MAX_ATTEMPTS ? (
                   <button
@@ -606,7 +725,7 @@ export default function Billing() {
                 <p className="text-sm font-bold text-foreground">
                   {cancelOutcome.status === "scheduled"
                     ? "تم تسجيل طلب الإلغاء بنجاح"
-                    : "فشل تسجيل طلب الإلغاء"}
+                    : ERROR_REASON_INFO[cancelOutcome.errorReason ?? "unknown"].title}
                 </p>
                 <button
                   type="button"
@@ -641,6 +760,28 @@ export default function Billing() {
                     {cancelOutcome.message ??
                       "حدث خطأ غير متوقع أثناء تسجيل طلب الإلغاء."}
                   </p>
+                  {(() => {
+                    const info = ERROR_REASON_INFO[cancelOutcome.errorReason ?? "unknown"];
+                    return (
+                      <div className="mt-2 rounded-lg bg-muted/30 border border-border/40 px-3 py-2">
+                        <p className="text-[11px] font-bold text-foreground inline-flex items-center gap-1">
+                          <Info className="w-3 h-3 text-primary" />
+                          الخطوة التالية
+                          <span className="font-normal text-muted-foreground">
+                            — {info.label}
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">{info.nextStep}</p>
+                        <Link
+                          to={info.nextStepHref}
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                        >
+                          {info.nextStepLabel}
+                          <ArrowLeft className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    );
+                  })()}
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     {attempts.cancel < MAX_ATTEMPTS ? (
                       <button
