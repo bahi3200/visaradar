@@ -1,9 +1,20 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,12 +66,17 @@ type PendingAction = {
 } | null;
 
 export default function ManageUsersPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<UserInfo | null>(null);
+  const [msgSubject, setMsgSubject] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [sending, setSending] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     role: "all",
     subscription: "all",
@@ -113,6 +129,49 @@ export default function ManageUsersPage() {
     } finally {
       setActionLoading(false);
       setPendingAction(null);
+    }
+  }
+
+  async function sendMessage() {
+    if (!messageTarget || !currentUser) return;
+    if (!msgSubject.trim() || !msgBody.trim()) {
+      toast.error("الرجاء إدخال الموضوع والرسالة");
+      return;
+    }
+    setSending(true);
+    try {
+      const { data: inserted, error: insertError } = await supabase
+        .from("contact_messages")
+        .insert({
+          user_id: messageTarget.id,
+          full_name: messageTarget.full_name || messageTarget.email,
+          email: messageTarget.email,
+          subject: msgSubject.trim(),
+          message: msgBody.trim(),
+          status: "replied",
+        })
+        .select("id")
+        .single();
+      if (insertError) throw insertError;
+
+      const { error: replyError } = await supabase
+        .from("contact_message_replies")
+        .insert({
+          message_id: inserted.id,
+          sender_role: "admin",
+          sender_id: currentUser.id,
+          body: msgBody.trim(),
+        });
+      if (replyError) throw replyError;
+
+      toast.success(`تم إرسال الرسالة إلى ${messageTarget.full_name || messageTarget.email}`);
+      setMessageTarget(null);
+      setMsgSubject("");
+      setMsgBody("");
+    } catch (err: any) {
+      toast.error(err.message || "فشل إرسال الرسالة");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -442,6 +501,17 @@ export default function ManageUsersPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setMessageTarget(user);
+                              setMsgSubject("");
+                              setMsgBody("");
+                            }}
+                            className="text-primary focus:text-primary gap-2"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            إرسال رسالة
+                          </DropdownMenuItem>
                           {/* Moderator role toggle */}
                           {!user.roles.includes("admin") && (
                             user.roles.includes("moderator") ? (
@@ -534,6 +604,56 @@ export default function ManageUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Send Message Dialog */}
+      <Dialog
+        open={!!messageTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMessageTarget(null);
+            setMsgSubject("");
+            setMsgBody("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">
+              مراسلة {messageTarget?.full_name || messageTarget?.email}
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              سيتم بدء محادثة جديدة. يمكن للمستخدم الرد عبر صفحة "رسائلي".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="الموضوع"
+              value={msgSubject}
+              onChange={(e) => setMsgSubject(e.target.value)}
+              disabled={sending}
+            />
+            <Textarea
+              placeholder="اكتب رسالتك..."
+              value={msgBody}
+              onChange={(e) => setMsgBody(e.target.value)}
+              rows={5}
+              disabled={sending}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setMessageTarget(null)}
+                disabled={sending}
+              >
+                إلغاء
+              </Button>
+              <Button onClick={sendMessage} disabled={sending}>
+                {sending ? "جارٍ الإرسال..." : "إرسال"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
