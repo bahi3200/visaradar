@@ -5,7 +5,6 @@ import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Tr
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +67,6 @@ type PendingAction = {
 
 export default function ManageUsersPage() {
   const { user: currentUser } = useAuth();
-  const navigate = useNavigate();
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
