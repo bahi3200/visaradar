@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply, Sparkles, Loader2 } from "lucide-react";
+import { MessageCircle, Eye, Clock, CheckCircle, XCircle, Search, RefreshCw, Send, Reply, Sparkles, Loader2, Plus } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,24 @@ export default function ContactMessages() {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [aiTone, setAiTone] = useState<"professional" | "friendly" | "apologetic">("professional");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [newChatUserId, setNewChatUserId] = useState<string>("");
+  const [newChatSubject, setNewChatSubject] = useState("رسالة من الإدارة");
+  const [newChatBody, setNewChatBody] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["admin-users-for-chat"],
+    enabled: newChatOpen,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)("profiles")
+        .select("user_id, full_name, phone")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
 
   const { data: messages = [], isLoading, refetch } = useQuery({
     queryKey: ["contact_messages"],
@@ -141,6 +159,58 @@ export default function ContactMessages() {
     sendReply.mutate({ message: selectedMessage, reply: replyText.trim() });
   };
 
+  const startConversation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("غير مصادق");
+      if (!newChatUserId) throw new Error("اختر مستخدماً");
+      if (!newChatBody.trim()) throw new Error("اكتب الرسالة");
+
+      // Lookup target profile for name (email isn't stored in profiles; allow blank)
+      const target = users.find((u: any) => u.user_id === newChatUserId);
+      const fullName = target?.full_name || "مستخدم";
+
+      const { data: inserted, error } = await (supabase.from as any)("contact_messages")
+        .insert({
+          user_id: newChatUserId,
+          full_name: fullName,
+          email: "",
+          subject: newChatSubject.trim() || "رسالة من الإدارة",
+          message: newChatBody.trim(),
+          status: "replied",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Also log it as an admin reply so the thread shows it as sent by admin
+      const { error: rErr } = await (supabase.from as any)("contact_message_replies").insert({
+        message_id: inserted.id,
+        sender_role: "admin",
+        sender_id: user.id,
+        body: newChatBody.trim(),
+      });
+      if (rErr) throw rErr;
+      return inserted;
+    },
+    onSuccess: () => {
+      toast.success("تم بدء المحادثة");
+      queryClient.invalidateQueries({ queryKey: ["contact_messages"] });
+      setNewChatOpen(false);
+      setNewChatUserId("");
+      setNewChatBody("");
+      setNewChatSubject("رسالة من الإدارة");
+      setUserSearch("");
+    },
+    onError: (e: any) => toast.error(e?.message || "فشل بدء المحادثة"),
+  });
+
+  const filteredUsers = users.filter((u: any) => {
+    if (!userSearch.trim()) return true;
+    const q = userSearch.toLowerCase();
+    return (u.full_name || "").toLowerCase().includes(q) || (u.phone || "").toLowerCase().includes(q);
+  });
+
   const handleSuggestReply = async () => {
     if (!selectedMessage) return;
     setIsGenerating(true);
@@ -231,6 +301,9 @@ export default function ContactMessages() {
         </Select>
         <Button variant="outline" size="icon" onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4" />
+        </Button>
+        <Button onClick={() => setNewChatOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" /> محادثة جديدة
         </Button>
       </div>
 
