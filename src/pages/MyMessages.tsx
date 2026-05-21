@@ -4,13 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { MessageCircle, Send, ArrowRight, Clock, CheckCircle, Eye } from "lucide-react";
+import { MessageCircle, Send, ArrowRight, Clock, CheckCircle, Eye, Plus } from "lucide-react";
 import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 
@@ -26,6 +28,9 @@ export default function MyMessages() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
+  const [newSubject, setNewSubject] = useState("");
+  const [newBody, setNewBody] = useState("");
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["my-contact-messages", user?.id],
@@ -92,6 +97,36 @@ export default function MyMessages() {
     onError: (e: any) => toast.error(e?.message || "فشل إرسال الرد"),
   });
 
+  const startConversation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("غير مصادق");
+      if (!newSubject.trim()) throw new Error("اكتب الموضوع");
+      if (!newBody.trim()) throw new Error("اكتب الرسالة");
+      const { data, error } = await (supabase.from as any)("contact_messages")
+        .insert({
+          user_id: user.id,
+          full_name: (user.user_metadata as any)?.full_name || user.email || "مستخدم",
+          email: user.email || "",
+          subject: newSubject.trim(),
+          message: newBody.trim(),
+          status: "new",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast.success("تم إرسال الرسالة للإدارة");
+      queryClient.invalidateQueries({ queryKey: ["my-contact-messages", user?.id] });
+      setNewOpen(false);
+      setNewSubject("");
+      setNewBody("");
+      if (data?.id) setSelectedId(data.id);
+    },
+    onError: (e: any) => toast.error(e?.message || "فشل إرسال الرسالة"),
+  });
+
   return (
     <Layout>
       <SEO title="رسائلي — VisaRadar" description="عرض رسائل التواصل والردود من الإدارة" path="/my-messages" />
@@ -103,10 +138,8 @@ export default function MyMessages() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">رسائلك مع فريق الدعم وردودهم.</p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/contact" className="gap-1">
-              رسالة جديدة <ArrowRight className="w-4 h-4 rotate-180" />
-            </Link>
+          <Button onClick={() => setNewOpen(true)} size="sm" className="gap-1">
+            <Plus className="w-4 h-4" /> رسالة جديدة
           </Button>
         </div>
 
@@ -118,7 +151,7 @@ export default function MyMessages() {
               ) : messages.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   لا توجد رسائل بعد.{" "}
-                  <Link to="/contact" className="text-primary underline">أرسل أول رسالة</Link>
+                  <button onClick={() => setNewOpen(true)} className="text-primary underline">أرسل أول رسالة</button>
                 </div>
               ) : (
                 <ul className="divide-y divide-border/40">
@@ -215,6 +248,44 @@ export default function MyMessages() {
             </CardContent>
           </Card>
         )}
+
+        <Dialog open={newOpen} onOpenChange={setNewOpen}>
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-primary" /> رسالة جديدة للإدارة
+              </DialogTitle>
+              <DialogDescription>
+                اكتب رسالتك وسيرد عليك فريق الدعم في أقرب وقت.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Input
+                placeholder="الموضوع"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+              />
+              <Textarea
+                placeholder="اكتب رسالتك هنا..."
+                value={newBody}
+                onChange={(e) => setNewBody(e.target.value)}
+                rows={6}
+                className="resize-none"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setNewOpen(false)}>إلغاء</Button>
+                <Button
+                  onClick={() => startConversation.mutate()}
+                  disabled={!newSubject.trim() || !newBody.trim() || startConversation.isPending}
+                  className="gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  {startConversation.isPending ? "جارٍ الإرسال..." : "إرسال"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
