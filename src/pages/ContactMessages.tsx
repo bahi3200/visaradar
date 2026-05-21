@@ -566,6 +566,70 @@ export default function ContactMessages() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* New conversation Dialog */}
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              بدء محادثة جديدة مع مستخدم
+            </DialogTitle>
+            <DialogDescription>
+              اختر المستخدم واكتب الرسالة. ستظهر له داخل صفحة «رسائلي» ويمكنه الرد.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="ابحث بالاسم أو رقم الهاتف..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
+            <div className="max-h-48 overflow-y-auto border border-border/40 rounded-md divide-y divide-border/40">
+              {filteredUsers.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">لا يوجد مستخدمون</div>
+              ) : (
+                filteredUsers.map((u: any) => (
+                  <button
+                    key={u.user_id}
+                    type="button"
+                    onClick={() => setNewChatUserId(u.user_id)}
+                    className={`w-full text-right p-2 text-sm hover:bg-muted/40 transition ${
+                      newChatUserId === u.user_id ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <div className="font-medium">{u.full_name || "بدون اسم"}</div>
+                    {u.phone && <div className="text-xs text-muted-foreground" dir="ltr">{u.phone}</div>}
+                  </button>
+                ))
+              )}
+            </div>
+            <Input
+              placeholder="الموضوع"
+              value={newChatSubject}
+              onChange={(e) => setNewChatSubject(e.target.value)}
+            />
+            <Textarea
+              placeholder="اكتب رسالتك للمستخدم..."
+              value={newChatBody}
+              onChange={(e) => setNewChatBody(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setNewChatOpen(false)}>إلغاء</Button>
+              <Button
+                onClick={() => startConversation.mutate()}
+                disabled={!newChatUserId || !newChatBody.trim() || startConversation.isPending}
+                className="gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {startConversation.isPending ? "جارٍ الإرسال..." : "إرسال"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
