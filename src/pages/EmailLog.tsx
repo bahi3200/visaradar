@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,13 +7,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Search, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Mail, Search, Clock, CheckCircle, AlertCircle, Send, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 export default function EmailLog() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; email: string; full_name: string } | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const qc = useQueryClient();
+
+  const { data: users } = useQuery({
+    queryKey: ["admin-users-list"],
+    queryFn: async () => {
+      const res = await supabase.functions.invoke("list-users");
+      if (res.error) throw res.error;
+      return (res.data || []) as Array<{ id: string; email: string; full_name?: string }>;
+    },
+    enabled: composeOpen,
+  });
 
   const { data: emails, isLoading } = useQuery({
     queryKey: ["email-notifications"],
@@ -26,6 +49,46 @@ export default function EmailLog() {
       return data;
     },
   });
+
+  const resetCompose = () => {
+    setSelectedUser(null);
+    setSubject("");
+    setBody("");
+  };
+
+  const handleSend = async () => {
+    if (!selectedUser) {
+      toast.error("اختر مستخدمًا");
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("يرجى تعبئة العنوان والمحتوى");
+      return;
+    }
+    setSending(true);
+    try {
+      const html = `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;line-height:1.7;color:#111">${body
+        .split("\n")
+        .map((l) => `<p>${l.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`)
+        .join("")}</div>`;
+      const { error } = await supabase.from("email_notifications").insert({
+        recipient_email: selectedUser.email,
+        recipient_name: selectedUser.full_name || "",
+        subject: subject.trim(),
+        html_body: html,
+        status: "pending",
+      });
+      if (error) throw error;
+      toast.success("تمت إضافة الرسالة إلى قائمة الإرسال");
+      qc.invalidateQueries({ queryKey: ["email-notifications"] });
+      resetCompose();
+      setComposeOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "فشل الإرسال");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const filtered = emails?.filter((e) => {
     const matchesSearch =
@@ -56,6 +119,13 @@ export default function EmailLog() {
 
   return (
     <AdminLayout title="سجل الإشعارات البريدية" subtitle="متابعة جميع رسائل البريد الإلكتروني المرسلة">
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setComposeOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          رسالة جديدة
+        </Button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
@@ -136,6 +206,67 @@ export default function EmailLog() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) resetCompose(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>إرسال رسالة بريدية</DialogTitle>
+            <DialogDescription>اختر المستخدم واكتب الرسالة. ستُضاف إلى قائمة الإرسال.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">المستخدم</label>
+              <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    {selectedUser ? `${selectedUser.full_name || selectedUser.email} — ${selectedUser.email}` : "اختر مستخدمًا..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="بحث بالاسم أو البريد..." />
+                    <CommandList>
+                      <CommandEmpty>لا نتائج</CommandEmpty>
+                      <CommandGroup>
+                        {(users || []).map((u) => (
+                          <CommandItem
+                            key={u.id}
+                            value={`${u.full_name || ""} ${u.email}`}
+                            onSelect={() => {
+                              setSelectedUser({ id: u.id, email: u.email, full_name: u.full_name || "" });
+                              setUserPickerOpen(false);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">{u.full_name || "—"}</span>
+                              <span className="text-xs text-muted-foreground">{u.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">العنوان</label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="عنوان الرسالة" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">المحتوى</label>
+              <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="نص الرسالة..." rows={6} />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => setComposeOpen(false)} disabled={sending}>إلغاء</Button>
+              <Button onClick={handleSend} disabled={sending} className="gap-2">
+                <Send className="w-4 h-4" />
+                {sending ? "جارٍ الإرسال..." : "إرسال"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
