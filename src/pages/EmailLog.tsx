@@ -56,6 +56,14 @@ export default function EmailLog() {
     setSelectedUser(null);
     setSubject("");
     setBody("");
+    setPreviewHtml("");
+  };
+
+  const buildHtml = (text: string) => {
+    return `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;line-height:1.7;color:#111">${text
+      .split("\n")
+      .map((l) => `<p>${l.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`)
+      .join("")}</div>`;
   };
 
   const handleSend = async () => {
