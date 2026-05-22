@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Search, Clock, CheckCircle, AlertCircle, Send, Plus, Eye } from "lucide-react";
+import { Mail, Search, Clock, CheckCircle, AlertCircle, Send, Plus, Eye, RotateCw } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,7 @@ export default function EmailLog() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [templateId, setTemplateId] = useState<string>("");
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const { data: users } = useQuery({
@@ -154,6 +155,26 @@ export default function EmailLog() {
     }
     setPreviewHtml(buildHtml(body));
     setPreviewOpen(true);
+  };
+
+  const handleResend = async (email: any) => {
+    setResendingId(email.id);
+    try {
+      const { error } = await supabase.from("email_notifications").insert({
+        recipient_email: email.recipient_email,
+        recipient_name: email.recipient_name || "",
+        subject: email.subject,
+        html_body: email.html_body,
+        status: "pending",
+      });
+      if (error) throw error;
+      toast.success("تمت إعادة إضافة الرسالة إلى قائمة الإرسال");
+      qc.invalidateQueries({ queryKey: ["email-notifications"] });
+    } catch (err: any) {
+      toast.error(err.message || "فشل إعادة الإرسال");
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const filtered = emails?.filter((e) => {
@@ -249,6 +270,7 @@ export default function EmailLog() {
                   <TableHead className="text-right">العنوان</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
                   <TableHead className="text-right">التاريخ</TableHead>
+                  <TableHead className="text-right">إجراء</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -264,6 +286,20 @@ export default function EmailLog() {
                     <TableCell>{statusBadge(email.status)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {format(new Date(email.created_at), "dd MMM yyyy HH:mm", { locale: ar })}
+                    </TableCell>
+                    <TableCell>
+                      {(email.status === "pending" || email.status !== "sent") && email.status !== "sent" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 h-8"
+                          disabled={resendingId === email.id}
+                          onClick={() => handleResend(email)}
+                        >
+                          <RotateCw className={`w-3 h-3 ${resendingId === email.id ? "animate-spin" : ""}`} />
+                          {resendingId === email.id ? "..." : "إعادة إرسال"}
+                        </Button>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}
