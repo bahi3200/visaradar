@@ -97,6 +97,15 @@ export default function EmailLog() {
     }
   };
 
+  const handlePreview = () => {
+    if (!body.trim()) {
+      toast.error("اكتب محتوى الرسالة أولاً");
+      return;
+    }
+    setPreviewHtml(buildHtml(body));
+    setPreviewOpen(true);
+  };
+
   const filtered = emails?.filter((e) => {
     const matchesSearch =
       !search ||
