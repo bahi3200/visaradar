@@ -206,6 +206,67 @@ export default function EmailLog() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) resetCompose(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>إرسال رسالة بريدية</DialogTitle>
+            <DialogDescription>اختر المستخدم واكتب الرسالة. ستُضاف إلى قائمة الإرسال.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">المستخدم</label>
+              <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    {selectedUser ? `${selectedUser.full_name || selectedUser.email} — ${selectedUser.email}` : "اختر مستخدمًا..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="بحث بالاسم أو البريد..." />
+                    <CommandList>
+                      <CommandEmpty>لا نتائج</CommandEmpty>
+                      <CommandGroup>
+                        {(users || []).map((u) => (
+                          <CommandItem
+                            key={u.id}
+                            value={`${u.full_name || ""} ${u.email}`}
+                            onSelect={() => {
+                              setSelectedUser({ id: u.id, email: u.email, full_name: u.full_name || "" });
+                              setUserPickerOpen(false);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">{u.full_name || "—"}</span>
+                              <span className="text-xs text-muted-foreground">{u.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">العنوان</label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="عنوان الرسالة" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">المحتوى</label>
+              <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="نص الرسالة..." rows={6} />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => setComposeOpen(false)} disabled={sending}>إلغاء</Button>
+              <Button onClick={handleSend} disabled={sending} className="gap-2">
+                <Send className="w-4 h-4" />
+                {sending ? "جارٍ الإرسال..." : "إرسال"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
