@@ -275,10 +275,40 @@ export default function EmailLog() {
             </div>
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => setComposeOpen(false)} disabled={sending}>إلغاء</Button>
+              <Button variant="secondary" onClick={handlePreview} disabled={sending} className="gap-2">
+                <Eye className="w-4 h-4" />
+                معاينة
+              </Button>
               <Button onClick={handleSend} disabled={sending} className="gap-2">
                 <Send className="w-4 h-4" />
                 {sending ? "جارٍ الإرسال..." : "إرسال"}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>معاينة الرسالة</DialogTitle>
+            <DialogDescription>هكذا ستظهر الرسالة للمستلم.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="border rounded-md p-3 bg-muted/40">
+              <p className="text-xs text-muted-foreground mb-1">العنوان</p>
+              <p className="text-sm font-medium text-foreground">{subject || "(بدون عنوان)"}</p>
+            </div>
+            <div className="border rounded-md p-0 overflow-hidden bg-white">
+              <iframe
+                title="معاينة الرسالة"
+                srcDoc={`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body{margin:0;padding:16px;font-family:Cairo,Arial,sans-serif;}</style></head><body>${previewHtml}</body></html>`}
+                className="w-full h-64 bg-white"
+                sandbox=""
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setPreviewOpen(false)}>إغلاق</Button>
             </div>
           </div>
         </DialogContent>
