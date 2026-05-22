@@ -17,6 +17,45 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 
+const EMAIL_TEMPLATES: Array<{ id: string; label: string; subject: string; body: string }> = [
+  {
+    id: "welcome",
+    label: "ترحيب بالمستخدم",
+    subject: "مرحبًا بك في VisaRadar",
+    body: "مرحبًا،\n\nنرحب بك في منصة VisaRadar. نحن سعداء بانضمامك إلينا، وفريقنا جاهز لمساعدتك في كل ما تحتاجه.\n\nبالتوفيق،\nفريق VisaRadar",
+  },
+  {
+    id: "subscription_approved",
+    label: "تأكيد تفعيل الاشتراك",
+    subject: "تم تفعيل اشتراكك بنجاح",
+    body: "مرحبًا،\n\nيسرّنا إعلامك بأنه تم تفعيل اشتراكك بنجاح. يمكنك الآن الاستفادة من جميع خدمات المتابعة والإشعارات.\n\nشكرًا لثقتك،\nفريق VisaRadar",
+  },
+  {
+    id: "payment_received",
+    label: "إشعار استلام الدفعة",
+    subject: "تم استلام دفعتك",
+    body: "مرحبًا،\n\nنؤكد استلام دفعتك بنجاح. سيتم تفعيل اشتراكك خلال وقت قصير بعد المراجعة.\n\nشكرًا لك،\nفريق VisaRadar",
+  },
+  {
+    id: "payment_rejected",
+    label: "رفض إيصال الدفع",
+    subject: "تعذّر التحقق من إيصال الدفع",
+    body: "مرحبًا،\n\nنأسف لإبلاغك بأنه تعذّر التحقق من إيصال الدفع المرفق. يرجى إعادة إرسال إيصال واضح يتضمن المبلغ والمرجع والتاريخ.\n\nنحن في الخدمة،\nفريق VisaRadar",
+  },
+  {
+    id: "expiry_reminder",
+    label: "تذكير بانتهاء الاشتراك",
+    subject: "اشتراكك على وشك الانتهاء",
+    body: "مرحبًا،\n\nنود تذكيرك بأن اشتراكك سينتهي قريبًا. يمكنك تجديده الآن لضمان استمرار حصولك على الإشعارات دون انقطاع.\n\nمع تحياتنا،\nفريق VisaRadar",
+  },
+  {
+    id: "support_followup",
+    label: "متابعة طلب الدعم",
+    subject: "متابعة بشأن طلبك",
+    body: "مرحبًا،\n\nنتابع معك بخصوص طلبك الأخير. يرجى الرد على هذه الرسالة بأي معلومات إضافية تساعدنا على خدمتك بشكل أفضل.\n\nشكرًا لتعاونك،\nفريق VisaRadar",
+  },
+];
+
 export default function EmailLog() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -28,6 +67,7 @@ export default function EmailLog() {
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [templateId, setTemplateId] = useState<string>("");
   const qc = useQueryClient();
 
   const { data: users } = useQuery({
@@ -56,6 +96,16 @@ export default function EmailLog() {
     setSelectedUser(null);
     setSubject("");
     setBody("");
+    setPreviewHtml("");
+    setTemplateId("");
+  };
+
+  const applyTemplate = (id: string) => {
+    const t = EMAIL_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    setTemplateId(id);
+    setSubject(t.subject);
+    setBody(t.body);
     setPreviewHtml("");
   };
 
@@ -230,6 +280,19 @@ export default function EmailLog() {
             <DialogDescription>اختر المستخدم واكتب الرسالة. ستُضاف إلى قائمة الإرسال.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">قالب جاهز (اختياري)</label>
+              <Select value={templateId} onValueChange={applyTemplate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر قالبًا لتعبئة الحقول تلقائيًا..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMAIL_TEMPLATES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">المستخدم</label>
               <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
