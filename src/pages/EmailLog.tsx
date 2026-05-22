@@ -77,10 +77,7 @@ export default function EmailLog() {
     }
     setSending(true);
     try {
-      const html = `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;line-height:1.7;color:#111">${body
-        .split("\n")
-        .map((l) => `<p>${l.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`)
-        .join("")}</div>`;
+      const html = buildHtml(body);
       const { error } = await supabase.from("email_notifications").insert({
         recipient_email: selectedUser.email,
         recipient_name: selectedUser.full_name || "",
