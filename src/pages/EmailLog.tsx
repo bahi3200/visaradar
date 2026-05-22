@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Search, Clock, CheckCircle, AlertCircle, Send, Plus } from "lucide-react";
+import { Mail, Search, Clock, CheckCircle, AlertCircle, Send, Plus, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ export default function EmailLog() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
   const qc = useQueryClient();
 
   const { data: users } = useQuery({
@@ -54,6 +56,14 @@ export default function EmailLog() {
     setSelectedUser(null);
     setSubject("");
     setBody("");
+    setPreviewHtml("");
+  };
+
+  const buildHtml = (text: string) => {
+    return `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;line-height:1.7;color:#111">${text
+      .split("\n")
+      .map((l) => `<p>${l.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`)
+      .join("")}</div>`;
   };
 
   const handleSend = async () => {
@@ -67,10 +77,7 @@ export default function EmailLog() {
     }
     setSending(true);
     try {
-      const html = `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;line-height:1.7;color:#111">${body
-        .split("\n")
-        .map((l) => `<p>${l.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`)
-        .join("")}</div>`;
+      const html = buildHtml(body);
       const { error } = await supabase.from("email_notifications").insert({
         recipient_email: selectedUser.email,
         recipient_name: selectedUser.full_name || "",
@@ -88,6 +95,15 @@ export default function EmailLog() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handlePreview = () => {
+    if (!body.trim()) {
+      toast.error("اكتب محتوى الرسالة أولاً");
+      return;
+    }
+    setPreviewHtml(buildHtml(body));
+    setPreviewOpen(true);
   };
 
   const filtered = emails?.filter((e) => {
@@ -259,10 +275,40 @@ export default function EmailLog() {
             </div>
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => setComposeOpen(false)} disabled={sending}>إلغاء</Button>
+              <Button variant="secondary" onClick={handlePreview} disabled={sending} className="gap-2">
+                <Eye className="w-4 h-4" />
+                معاينة
+              </Button>
               <Button onClick={handleSend} disabled={sending} className="gap-2">
                 <Send className="w-4 h-4" />
                 {sending ? "جارٍ الإرسال..." : "إرسال"}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>معاينة الرسالة</DialogTitle>
+            <DialogDescription>هكذا ستظهر الرسالة للمستلم.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="border rounded-md p-3 bg-muted/40">
+              <p className="text-xs text-muted-foreground mb-1">العنوان</p>
+              <p className="text-sm font-medium text-foreground">{subject || "(بدون عنوان)"}</p>
+            </div>
+            <div className="border rounded-md p-0 overflow-hidden bg-white">
+              <iframe
+                title="معاينة الرسالة"
+                srcDoc={`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body{margin:0;padding:16px;font-family:Cairo,Arial,sans-serif;}</style></head><body>${previewHtml}</body></html>`}
+                className="w-full h-64 bg-white"
+                sandbox=""
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setPreviewOpen(false)}>إغلاق</Button>
             </div>
           </div>
         </DialogContent>
