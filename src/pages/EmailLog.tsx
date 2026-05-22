@@ -26,6 +26,8 @@ export default function EmailLog() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
   const qc = useQueryClient();
 
   const { data: users } = useQuery({
