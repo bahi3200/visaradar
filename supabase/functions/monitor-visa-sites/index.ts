@@ -37,6 +37,23 @@ function randomDelay(minMs: number, maxMs: number): Promise<void> {
 }
 
 // ──────────────────────────────────────────────
+// Optional proxy through ScraperAPI / ScrapingBee to bypass Cloudflare/CAPTCHA.
+// Enabled automatically when SCRAPER_API_KEY env var is set.
+// ──────────────────────────────────────────────
+function proxiedUrl(url: string, render = false): string {
+  const key = Deno.env.get('SCRAPER_API_KEY');
+  if (!key) return url;
+  const params = new URLSearchParams({
+    api_key: key,
+    url,
+    country_code: 'eu',
+    keep_headers: 'true',
+  });
+  if (render) params.set('render', 'true');
+  return `https://api.scraperapi.com/?${params.toString()}`;
+}
+
+// ──────────────────────────────────────────────
 // Monitor targets with multi-layer detection
 // ──────────────────────────────────────────────
 interface MonitorTarget {
