@@ -530,6 +530,14 @@ export async function probeApiEndpoints(
         
         // Common API patterns for availability
         if (typeof json === 'object' && json !== null) {
+          // ── Strong tracking: extract dates / slot counts / center names ──
+          try {
+            const found = extractDatesFromAny(json, ep.url);
+            if (found.dates.length) extractedDates.push(...found.dates);
+            if (found.slotCount > 0) slotCount += found.slotCount;
+            for (const c of found.centers) centersOpen.add(c);
+          } catch { /* ignore extraction errors */ }
+
           // Check for direct availability flags
           if ('available' in json) {
             if (json.available === true) { openScore += 6; apiResults.push('  → available: true'); }
@@ -585,7 +593,88 @@ export async function probeApiEndpoints(
     }
   }
 
-  return { openScore, closedScore, apiResults };
+  return { openScore, closedScore, apiResults, extractedDates, slotCount, centersOpen: Array.from(centersOpen) };
+}
+
+// ──────────────────────────────────────────────
+// Deep-extract appointment dates, slot counts, and center names from any JSON shape
+// ──────────────────────────────────────────────
+const DATE_KEY_RE = /^(date|day|appointment_?date|slot_?date|available_?date|start|when)$/i;
+const CENTER_KEY_RE = /^(center|centre|location|city|office|branch|center_?name)$/i;
+const SLOT_KEY_RE = /^(slot|slots|appointments|available|count|total|total_?slots|available_?count)$/i;
+const ISO_DATE_RE = /\b(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])\b/g;
+
+export function extractDatesFromAny(
+  node: any,
+  source: string,
+  out: { dates: { date: string; center?: string; source: string }[]; slotCount: number; centers: Set<string> } = { dates: [], slotCount: 0, centers: new Set() },
+  ctxCenter?: string,
+  depth = 0,
+): { dates: { date: string; center?: string; source: string }[]; slotCount: number; centers: Set<string> } {
+  if (depth > 6 || node == null) return out;
+
+  if (typeof node === 'string') {
+    let m: RegExpExecArray | null;
+    while ((m = ISO_DATE_RE.exec(node)) !== null) {
+      const iso = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+      const d = new Date(iso);
+      // Only future dates within next 365 days are meaningful appointments
+      const now = Date.now();
+      if (!isNaN(d.getTime()) && d.getTime() >= now - 86400000 && d.getTime() <= now + 365 * 86400000) {
+        out.dates.push({ date: iso, center: ctxCenter, source });
+      }
+    }
+    return out;
+  }
+
+  if (Array.isArray(node)) {
+    for (const item of node) extractDatesFromAny(item, source, out, ctxCenter, depth + 1);
+    return out;
+  }
+
+  if (typeof node === 'object') {
+    // Capture center context for nested children
+    let center = ctxCenter;
+    for (const [k, v] of Object.entries(node)) {
+      if (CENTER_KEY_RE.test(k) && typeof v === 'string' && v.length > 1 && v.length < 80) {
+        center = v;
+        out.centers.add(v);
+      }
+    }
+    for (const [k, v] of Object.entries(node)) {
+      if (DATE_KEY_RE.test(k) && typeof v === 'string') {
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      } else if (SLOT_KEY_RE.test(k) && typeof v === 'number') {
+        if (v > 0) out.slotCount += v;
+      } else if (typeof v === 'object') {
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      } else if (typeof v === 'string') {
+        // Strings inside might carry dates too
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      }
+    }
+  }
+  return out;
+}
+
+// Stable signal hash — only changes when meaningful structure changes
+export function computeSignalHash(input: {
+  slotCount: number;
+  earliestDate: string | null;
+  centersOpen: string[];
+  dates: string[];
+}): string {
+  const norm = {
+    s: input.slotCount,
+    e: input.earliestDate || '',
+    c: [...input.centersOpen].sort(),
+    d: [...new Set(input.dates)].sort(),
+  };
+  const str = JSON.stringify(norm);
+  // Lightweight non-crypto hash (djb2) — fine for change detection
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16);
 }
 
 // ──────────────────────────────────────────────
