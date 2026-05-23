@@ -1153,6 +1153,96 @@ export type Database = {
         }
         Relationships: []
       }
+      visa_content_signals: {
+        Row: {
+          captured_at: string
+          category: string
+          center_name: string | null
+          centers_open: string[] | null
+          country_code: string
+          earliest_date: string | null
+          extracted_dates: Json | null
+          id: string
+          provider: string
+          raw_signal: Json | null
+          signal_hash: string
+          slot_count: number | null
+        }
+        Insert: {
+          captured_at?: string
+          category?: string
+          center_name?: string | null
+          centers_open?: string[] | null
+          country_code: string
+          earliest_date?: string | null
+          extracted_dates?: Json | null
+          id?: string
+          provider: string
+          raw_signal?: Json | null
+          signal_hash: string
+          slot_count?: number | null
+        }
+        Update: {
+          captured_at?: string
+          category?: string
+          center_name?: string | null
+          centers_open?: string[] | null
+          country_code?: string
+          earliest_date?: string | null
+          extracted_dates?: Json | null
+          id?: string
+          provider?: string
+          raw_signal?: Json | null
+          signal_hash?: string
+          slot_count?: number | null
+        }
+        Relationships: []
+      }
+      visa_early_signals: {
+        Row: {
+          category: string
+          center_name: string | null
+          confidence: number
+          confirmed: boolean | null
+          confirmed_at: string | null
+          country_code: string
+          created_at: string
+          details: Json | null
+          id: string
+          notified_count: number | null
+          provider: string
+          signal_type: string
+        }
+        Insert: {
+          category?: string
+          center_name?: string | null
+          confidence?: number
+          confirmed?: boolean | null
+          confirmed_at?: string | null
+          country_code: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          notified_count?: number | null
+          provider: string
+          signal_type: string
+        }
+        Update: {
+          category?: string
+          center_name?: string | null
+          confidence?: number
+          confirmed?: boolean | null
+          confirmed_at?: string | null
+          country_code?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          notified_count?: number | null
+          provider?: string
+          signal_type?: string
+        }
+        Relationships: []
+      }
       visa_external_signals: {
         Row: {
           broadcast_error: string | null
@@ -1207,41 +1297,53 @@ export type Database = {
       visa_monitor_checks: {
         Row: {
           category: string
+          center_name: string | null
           checked_at: string
           country_code: string
           detection_method: string | null
+          earliest_date: string | null
           error_message: string | null
+          extracted_dates: Json | null
           id: string
           notified: boolean
           previous_status: string | null
           provider: string
           response_snippet: string | null
+          slot_count: number | null
           status: string
         }
         Insert: {
           category?: string
+          center_name?: string | null
           checked_at?: string
           country_code: string
           detection_method?: string | null
+          earliest_date?: string | null
           error_message?: string | null
+          extracted_dates?: Json | null
           id?: string
           notified?: boolean
           previous_status?: string | null
           provider: string
           response_snippet?: string | null
+          slot_count?: number | null
           status?: string
         }
         Update: {
           category?: string
+          center_name?: string | null
           checked_at?: string
           country_code?: string
           detection_method?: string | null
+          earliest_date?: string | null
           error_message?: string | null
+          extracted_dates?: Json | null
           id?: string
           notified?: boolean
           previous_status?: string | null
           provider?: string
           response_snippet?: string | null
+          slot_count?: number | null
           status?: string
         }
         Relationships: []
@@ -1279,11 +1381,14 @@ export type Database = {
       visa_open_events: {
         Row: {
           category: string | null
+          center_name: string | null
           closed_at: string | null
           country_code: string
           created_at: string
           detection_method: string | null
           duration_minutes: number | null
+          earliest_date: string | null
+          extracted_dates: Json | null
           id: string
           opened_at: string
           previous_status: string | null
@@ -1293,11 +1398,14 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          center_name?: string | null
           closed_at?: string | null
           country_code: string
           created_at?: string
           detection_method?: string | null
           duration_minutes?: number | null
+          earliest_date?: string | null
+          extracted_dates?: Json | null
           id?: string
           opened_at?: string
           previous_status?: string | null
@@ -1307,11 +1415,14 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          center_name?: string | null
           closed_at?: string | null
           country_code?: string
           created_at?: string
           detection_method?: string | null
           duration_minutes?: number | null
+          earliest_date?: string | null
+          extracted_dates?: Json | null
           id?: string
           opened_at?: string
           previous_status?: string | null
