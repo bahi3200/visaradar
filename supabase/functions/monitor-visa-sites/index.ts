@@ -316,6 +316,12 @@ type CheckResult = {
   httpStatus: number | null;
   responseTimeMs: number;
   detectionMethod: string; // Which layer detected the status
+  // ── Strong-tracking fields ──
+  extractedDates: { date: string; center?: string; source: string }[];
+  earliestDate: string | null;
+  slotCount: number;
+  centersOpen: string[];
+  signalHash: string;
 };
 
 // ──────────────────────────────────────────────
@@ -473,12 +479,23 @@ export function analyzeScriptData(
 // ──────────────────────────────────────────────
 export async function probeApiEndpoints(
   endpoints: MonitorTarget['apiEndpoints'],
-): Promise<{ openScore: number; closedScore: number; apiResults: string[] }> {
-  if (!endpoints || endpoints.length === 0) return { openScore: 0, closedScore: 0, apiResults: [] };
+): Promise<{
+  openScore: number;
+  closedScore: number;
+  apiResults: string[];
+  extractedDates: { date: string; center?: string; source: string }[];
+  slotCount: number;
+  centersOpen: string[];
+}> {
+  if (!endpoints || endpoints.length === 0)
+    return { openScore: 0, closedScore: 0, apiResults: [], extractedDates: [], slotCount: 0, centersOpen: [] };
 
   let openScore = 0;
   let closedScore = 0;
   const apiResults: string[] = [];
+  const extractedDates: { date: string; center?: string; source: string }[] = [];
+  let slotCount = 0;
+  const centersOpen = new Set<string>();
 
   for (const ep of endpoints) {
     const controller = new AbortController();
@@ -513,6 +530,14 @@ export async function probeApiEndpoints(
         
         // Common API patterns for availability
         if (typeof json === 'object' && json !== null) {
+          // ── Strong tracking: extract dates / slot counts / center names ──
+          try {
+            const found = extractDatesFromAny(json, ep.url);
+            if (found.dates.length) extractedDates.push(...found.dates);
+            if (found.slotCount > 0) slotCount += found.slotCount;
+            for (const c of found.centers) centersOpen.add(c);
+          } catch { /* ignore extraction errors */ }
+
           // Check for direct availability flags
           if ('available' in json) {
             if (json.available === true) { openScore += 6; apiResults.push('  → available: true'); }
@@ -568,7 +593,88 @@ export async function probeApiEndpoints(
     }
   }
 
-  return { openScore, closedScore, apiResults };
+  return { openScore, closedScore, apiResults, extractedDates, slotCount, centersOpen: Array.from(centersOpen) };
+}
+
+// ──────────────────────────────────────────────
+// Deep-extract appointment dates, slot counts, and center names from any JSON shape
+// ──────────────────────────────────────────────
+const DATE_KEY_RE = /^(date|day|appointment_?date|slot_?date|available_?date|start|when)$/i;
+const CENTER_KEY_RE = /^(center|centre|location|city|office|branch|center_?name)$/i;
+const SLOT_KEY_RE = /^(slot|slots|appointments|available|count|total|total_?slots|available_?count)$/i;
+const ISO_DATE_RE = /\b(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])\b/g;
+
+export function extractDatesFromAny(
+  node: any,
+  source: string,
+  out: { dates: { date: string; center?: string; source: string }[]; slotCount: number; centers: Set<string> } = { dates: [], slotCount: 0, centers: new Set() },
+  ctxCenter?: string,
+  depth = 0,
+): { dates: { date: string; center?: string; source: string }[]; slotCount: number; centers: Set<string> } {
+  if (depth > 6 || node == null) return out;
+
+  if (typeof node === 'string') {
+    let m: RegExpExecArray | null;
+    while ((m = ISO_DATE_RE.exec(node)) !== null) {
+      const iso = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+      const d = new Date(iso);
+      // Only future dates within next 365 days are meaningful appointments
+      const now = Date.now();
+      if (!isNaN(d.getTime()) && d.getTime() >= now - 86400000 && d.getTime() <= now + 365 * 86400000) {
+        out.dates.push({ date: iso, center: ctxCenter, source });
+      }
+    }
+    return out;
+  }
+
+  if (Array.isArray(node)) {
+    for (const item of node) extractDatesFromAny(item, source, out, ctxCenter, depth + 1);
+    return out;
+  }
+
+  if (typeof node === 'object') {
+    // Capture center context for nested children
+    let center = ctxCenter;
+    for (const [k, v] of Object.entries(node)) {
+      if (CENTER_KEY_RE.test(k) && typeof v === 'string' && v.length > 1 && v.length < 80) {
+        center = v;
+        out.centers.add(v);
+      }
+    }
+    for (const [k, v] of Object.entries(node)) {
+      if (DATE_KEY_RE.test(k) && typeof v === 'string') {
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      } else if (SLOT_KEY_RE.test(k) && typeof v === 'number') {
+        if (v > 0) out.slotCount += v;
+      } else if (typeof v === 'object') {
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      } else if (typeof v === 'string') {
+        // Strings inside might carry dates too
+        extractDatesFromAny(v, source, out, center, depth + 1);
+      }
+    }
+  }
+  return out;
+}
+
+// Stable signal hash — only changes when meaningful structure changes
+export function computeSignalHash(input: {
+  slotCount: number;
+  earliestDate: string | null;
+  centersOpen: string[];
+  dates: string[];
+}): string {
+  const norm = {
+    s: input.slotCount,
+    e: input.earliestDate || '',
+    c: [...input.centersOpen].sort(),
+    d: [...new Set(input.dates)].sort(),
+  };
+  const str = JSON.stringify(norm);
+  // Lightweight non-crypto hash (djb2) — fine for change detection
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16);
 }
 
 // ──────────────────────────────────────────────
@@ -764,6 +870,7 @@ export async function checkSite(
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
         detectionMethod: 'blocked',
+        extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'blocked',
       };
     }
 
@@ -812,12 +919,28 @@ export async function checkSite(
       console.log(`[${countryCode}/${category.key}] Script data:`, scriptResult.detectedData.join(' | '));
     }
 
+    // ── Strong tracking: aggregate dates + hash ──
+    const allDates = (apiResult.extractedDates || []).map((d) => d.date);
+    const uniqueDates = Array.from(new Set(allDates)).sort();
+    const earliestDate = uniqueDates[0] || null;
+    const signalHash = computeSignalHash({
+      slotCount: apiResult.slotCount,
+      earliestDate,
+      centersOpen: apiResult.centersOpen,
+      dates: uniqueDates,
+    });
+
     return {
       countryCode, category: category.key, status, previousStatus: null,
       snippet, error: null, changed: false,
       openScore: totalOpen, closedScore: totalClosed,
       httpStatus: response.status, responseTimeMs: durationMs,
       detectionMethod,
+      extractedDates: apiResult.extractedDates,
+      earliestDate,
+      slotCount: apiResult.slotCount,
+      centersOpen: apiResult.centersOpen,
+      signalHash,
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -828,6 +951,7 @@ export async function checkSite(
       openScore: 0, closedScore: 0,
       httpStatus: null, responseTimeMs: 0,
       detectionMethod: 'error',
+      extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'error',
     };
   }
 }
@@ -927,10 +1051,187 @@ Deno.serve(async (req) => {
         error_message: result.error,
         detection_method: result.detectionMethod,
         notified: false,
+        extracted_dates: result.extractedDates || [],
+        slot_count: result.slotCount || 0,
+        earliest_date: result.earliestDate,
+        center_name: result.centersOpen?.[0] || null,
       };
     });
 
     await supabase.from('visa_monitor_checks').insert(insertData);
+
+    // ──────────────────────────────────────────────
+    // Strong tracking: persist content signals + diff detection + early warnings
+    // ──────────────────────────────────────────────
+    const signalRows = siteResults
+      .filter((r) => r.status !== 'error')
+      .map((r) => {
+        const target = MONITOR_TARGETS[r.countryCode];
+        return {
+          country_code: r.countryCode,
+          provider: target.provider,
+          category: r.category,
+          center_name: r.centersOpen?.[0] || null,
+          signal_hash: r.signalHash,
+          slot_count: r.slotCount,
+          centers_open: r.centersOpen || [],
+          extracted_dates: r.extractedDates || [],
+          earliest_date: r.earliestDate,
+          raw_signal: { openScore: r.openScore, closedScore: r.closedScore, status: r.status },
+        };
+      });
+    if (signalRows.length > 0) {
+      await supabase.from('visa_content_signals').insert(signalRows);
+    }
+
+    // Diff detection: compare with the previous signal row per (country, category)
+    const earlySignalsToInsert: any[] = [];
+    const earlyAlertsToSend: { result: CheckResult; reason: string; details: any }[] = [];
+    for (const r of siteResults) {
+      if (r.status === 'error') continue;
+      const { data: prevSignals } = await supabase
+        .from('visa_content_signals')
+        .select('signal_hash, slot_count, extracted_dates, centers_open, earliest_date, captured_at')
+        .eq('country_code', r.countryCode)
+        .eq('category', r.category)
+        .order('captured_at', { ascending: false })
+        .limit(2);
+      const prev = (prevSignals || [])[1]; // [0] is the row we just inserted
+      if (!prev) continue;
+
+      const prevDates = new Set(((prev.extracted_dates as any[]) || []).map((d: any) => d?.date).filter(Boolean));
+      const currDates = new Set((r.extractedDates || []).map((d) => d.date));
+      const newDates = [...currDates].filter((d) => !prevDates.has(d));
+      const newCenters = (r.centersOpen || []).filter((c) => !((prev.centers_open as string[]) || []).includes(c));
+      const slotJump = (r.slotCount || 0) > (prev.slot_count || 0) && (r.slotCount || 0) - (prev.slot_count || 0) >= 1;
+      const hashChanged = prev.signal_hash !== r.signalHash;
+
+      if (!hashChanged) continue;
+
+      let signalType: string | null = null;
+      let confidence = 50;
+      if (newDates.length > 0) { signalType = 'date_appeared'; confidence = 85; }
+      else if (newCenters.length > 0) { signalType = 'partial_open'; confidence = 75; }
+      else if (slotJump) { signalType = 'partial_open'; confidence = 70; }
+      else { signalType = 'diff_detected'; confidence = 40; }
+
+      // Skip noisy low-confidence diffs when nothing concrete changed
+      if (confidence < 60 && r.status !== 'open') continue;
+
+      const target = MONITOR_TARGETS[r.countryCode];
+      const details = {
+        newDates,
+        newCenters,
+        slotDelta: (r.slotCount || 0) - (prev.slot_count || 0),
+        prevHash: prev.signal_hash,
+        currHash: r.signalHash,
+        earliestDate: r.earliestDate,
+      };
+      earlySignalsToInsert.push({
+        country_code: r.countryCode,
+        provider: target.provider,
+        category: r.category,
+        center_name: r.centersOpen?.[0] || null,
+        signal_type: signalType,
+        confidence,
+        details,
+        confirmed: r.status === 'open',
+        confirmed_at: r.status === 'open' ? new Date().toISOString() : null,
+      });
+
+      // Send EARLY warning to subscribers if confidence is high enough and status is not already 'open'
+      // (the main "open" alert flow below handles the confirmed case)
+      if (confidence >= 70 && r.status !== 'open') {
+        earlyAlertsToSend.push({ result: r, reason: signalType, details });
+      }
+    }
+    if (earlySignalsToInsert.length > 0) {
+      await supabase.from('visa_early_signals').insert(earlySignalsToInsert);
+    }
+
+    // Deliver early warnings (lightweight Telegram ping — distinct from full "open" alert)
+    let earlySent = 0;
+    if (earlyAlertsToSend.length > 0 && TELEGRAM_BOT_TOKEN) {
+      // Dedupe with a 20-min window
+      const EARLY_COOLDOWN_MIN = 20;
+      const { data: allSubs } = await supabase
+        .from('subscriptions')
+        .select('user_id, telegram_chat_id, countries, service_type')
+        .eq('status', 'active')
+        .in('service_type', ['visa', 'both']);
+
+      for (const ea of earlyAlertsToSend) {
+        const r = ea.result;
+        const target = MONITOR_TARGETS[r.countryCode];
+        const { data: lastEarly } = await supabase
+          .from('visa_early_signals')
+          .select('created_at')
+          .eq('country_code', r.countryCode)
+          .eq('category', r.category)
+          .eq('notified_count', 1)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lastEarly?.created_at) {
+          const ageMin = (Date.now() - new Date(lastEarly.created_at).getTime()) / 60000;
+          if (ageMin < EARLY_COOLDOWN_MIN) continue;
+        }
+
+        const recipients = (allSubs || [])
+          .filter((s) => s.telegram_chat_id && (s.countries || []).includes(r.countryCode))
+          .map((s) => s.telegram_chat_id!);
+        if (recipients.length === 0) continue;
+
+        const catInfo = VISA_CATEGORIES.find((c) => c.key === r.category);
+        const catAr = catInfo ? `${catInfo.icon} ${catInfo.ar}` : 'مواعيد';
+        const newDatesLine = ea.details.newDates?.length
+          ? `📅 <b>تواريخ جديدة:</b> ${ea.details.newDates.slice(0, 5).join('، ')}`
+          : '';
+        const newCentersLine = ea.details.newCenters?.length
+          ? `🏢 <b>مراكز جديدة:</b> ${ea.details.newCenters.slice(0, 3).join('، ')}`
+          : '';
+        const text = [
+          `⚡ <b>إشارة مبكرة — تغيّر مرصود</b>`,
+          `━━━━━━━━━━━━━━━━━━`,
+          `${target.flag} <b>${target.nameAr}</b> — ${catAr}`,
+          `🔍 <b>النوع:</b> ${ea.reason === 'date_appeared' ? 'تواريخ جديدة ظهرت' : ea.reason === 'partial_open' ? 'فتح جزئي محتمل' : 'تغيّر في المحتوى'}`,
+          `📊 <b>الثقة:</b> ${ea.details.slotDelta > 0 ? `+${ea.details.slotDelta} مواعيد` : 'تغيّر مرصود'}`,
+          newDatesLine,
+          newCentersLine,
+          `━━━━━━━━━━━━━━━━━━`,
+          `⚠️ <i>إشارة أولية — قد تحتاج لتأكيد. افتح الموقع فوراً.</i>`,
+          `🔗 <a href="${target.officialUrl}">رابط المزود</a>`,
+        ].filter(Boolean).join('\n');
+
+        for (let i = 0; i < recipients.length; i += 10) {
+          const batch = recipients.slice(i, i + 10);
+          const results = await Promise.allSettled(
+            batch.map((chatId) =>
+              fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true,
+                  reply_markup: {
+                    inline_keyboard: [[{ text: `🚀 افتح الموقع الآن`, url: target.officialUrl }]],
+                  },
+                }),
+              }).then((res) => res.ok),
+            ),
+          );
+          earlySent += results.filter((x) => x.status === 'fulfilled' && x.value).length;
+        }
+
+        // Mark this signal as notified
+        await supabase
+          .from('visa_early_signals')
+          .update({ notified_count: 1 })
+          .eq('country_code', r.countryCode)
+          .eq('category', r.category)
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
+    }
 
     // ──────────────────────────────────────────────
     // Admin alerts: repeated failures or sudden response changes
@@ -1270,6 +1571,7 @@ Deno.serve(async (req) => {
           detectionMethod: r.detectionMethod,
         })),
         alertsSent: totalSent,
+        earlyAlertsSent: typeof earlySent === 'number' ? earlySent : 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
