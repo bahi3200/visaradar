@@ -479,12 +479,23 @@ export function analyzeScriptData(
 // ──────────────────────────────────────────────
 export async function probeApiEndpoints(
   endpoints: MonitorTarget['apiEndpoints'],
-): Promise<{ openScore: number; closedScore: number; apiResults: string[] }> {
-  if (!endpoints || endpoints.length === 0) return { openScore: 0, closedScore: 0, apiResults: [] };
+): Promise<{
+  openScore: number;
+  closedScore: number;
+  apiResults: string[];
+  extractedDates: { date: string; center?: string; source: string }[];
+  slotCount: number;
+  centersOpen: string[];
+}> {
+  if (!endpoints || endpoints.length === 0)
+    return { openScore: 0, closedScore: 0, apiResults: [], extractedDates: [], slotCount: 0, centersOpen: [] };
 
   let openScore = 0;
   let closedScore = 0;
   const apiResults: string[] = [];
+  const extractedDates: { date: string; center?: string; source: string }[] = [];
+  let slotCount = 0;
+  const centersOpen = new Set<string>();
 
   for (const ep of endpoints) {
     const controller = new AbortController();
