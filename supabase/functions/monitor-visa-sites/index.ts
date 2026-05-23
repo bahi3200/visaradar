@@ -316,6 +316,12 @@ type CheckResult = {
   httpStatus: number | null;
   responseTimeMs: number;
   detectionMethod: string; // Which layer detected the status
+  // ── Strong-tracking fields ──
+  extractedDates: { date: string; center?: string; source: string }[];
+  earliestDate: string | null;
+  slotCount: number;
+  centersOpen: string[];
+  signalHash: string;
 };
 
 // ──────────────────────────────────────────────
