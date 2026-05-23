@@ -870,6 +870,7 @@ export async function checkSite(
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
         detectionMethod: 'blocked',
+        extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'blocked',
       };
     }
 
@@ -918,12 +919,28 @@ export async function checkSite(
       console.log(`[${countryCode}/${category.key}] Script data:`, scriptResult.detectedData.join(' | '));
     }
 
+    // ── Strong tracking: aggregate dates + hash ──
+    const allDates = (apiResult.extractedDates || []).map((d) => d.date);
+    const uniqueDates = Array.from(new Set(allDates)).sort();
+    const earliestDate = uniqueDates[0] || null;
+    const signalHash = computeSignalHash({
+      slotCount: apiResult.slotCount,
+      earliestDate,
+      centersOpen: apiResult.centersOpen,
+      dates: uniqueDates,
+    });
+
     return {
       countryCode, category: category.key, status, previousStatus: null,
       snippet, error: null, changed: false,
       openScore: totalOpen, closedScore: totalClosed,
       httpStatus: response.status, responseTimeMs: durationMs,
       detectionMethod,
+      extractedDates: apiResult.extractedDates,
+      earliestDate,
+      slotCount: apiResult.slotCount,
+      centersOpen: apiResult.centersOpen,
+      signalHash,
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -934,6 +951,7 @@ export async function checkSite(
       openScore: 0, closedScore: 0,
       httpStatus: null, responseTimeMs: 0,
       detectionMethod: 'error',
+      extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'error',
     };
   }
 }
