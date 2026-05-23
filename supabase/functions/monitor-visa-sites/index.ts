@@ -484,7 +484,7 @@ export async function probeApiEndpoints(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const resp = await fetch(ep.url, {
+      const resp = await fetch(proxiedUrl(ep.url, false), {
         method: ep.method || 'GET',
         headers: {
           'User-Agent': randomPick(USER_AGENTS),
@@ -687,7 +687,7 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
     try {
       if (attempt > 0) await randomDelay(1500, 4000);
       const start = Date.now();
-      const response = await fetch(url, {
+      const response = await fetch(proxiedUrl(url, true), {
         headers: {
           'User-Agent': randomPick(USER_AGENTS),
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
