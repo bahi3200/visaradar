@@ -37,6 +37,23 @@ function randomDelay(minMs: number, maxMs: number): Promise<void> {
 }
 
 // ──────────────────────────────────────────────
+// Optional proxy through ScraperAPI / ScrapingBee to bypass Cloudflare/CAPTCHA.
+// Enabled automatically when SCRAPER_API_KEY env var is set.
+// ──────────────────────────────────────────────
+function proxiedUrl(url: string, render = false): string {
+  const key = Deno.env.get('SCRAPER_API_KEY');
+  if (!key) return url;
+  const params = new URLSearchParams({
+    api_key: key,
+    url,
+    country_code: 'eu',
+    keep_headers: 'true',
+  });
+  if (render) params.set('render', 'true');
+  return `https://api.scraperapi.com/?${params.toString()}`;
+}
+
+// ──────────────────────────────────────────────
 // Monitor targets with multi-layer detection
 // ──────────────────────────────────────────────
 interface MonitorTarget {
@@ -68,6 +85,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/ita', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/ita/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/ita', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/ita', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/ita/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
@@ -115,6 +135,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     officialUrl: 'https://visas-fr.tlscontact.com/',
     apiEndpoints: [
       { url: 'https://visas-fr.tlscontact.com/services/availability/fr/dz', method: 'GET' },
+      { url: 'https://visas-fr.tlscontact.com/services/v1/appointments/availability/dz', method: 'GET' },
+      { url: 'https://visas-fr.tlscontact.com/api/v1/centers/dz/slots', method: 'GET' },
+      { url: 'https://fr.capago.net/api/v1/availability/dz', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
@@ -158,6 +181,8 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     officialUrl: 'https://algeria.blsspainvisa.com/',
     apiEndpoints: [
       { url: 'https://algeria.blsspainvisa.com/api/check_availability.php', method: 'GET' },
+      { url: 'https://algeria.blsspainvisa.com/api/slots_availability.php', method: 'GET' },
+      { url: 'https://algeria.blsspainvisa.com/appointment/check_slot.php', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
@@ -194,6 +219,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/deu', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/deu/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/deu', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/deu', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/deu/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
@@ -239,6 +267,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/grc', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/grc/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/grc', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/grc', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/grc/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
@@ -453,7 +484,7 @@ export async function probeApiEndpoints(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const resp = await fetch(ep.url, {
+      const resp = await fetch(proxiedUrl(ep.url, false), {
         method: ep.method || 'GET',
         headers: {
           'User-Agent': randomPick(USER_AGENTS),
@@ -633,14 +664,29 @@ export function determineStatus(
 
   const detectionMethod = contributing.length > 0 ? contributing.join(', ') : 'none';
 
-  // Strong closed signal
-  if (totalClosed >= 4) return { status: 'closed', totalOpen, totalClosed, detectionMethod };
-  // Strong open signal
-  if (totalOpen >= 4 && totalOpen > totalClosed) return { status: 'open', totalOpen, totalClosed, detectionMethod };
-  // Moderate signals
-  if (totalClosed >= 2 && totalOpen === 0) return { status: 'closed', totalOpen, totalClosed, detectionMethod };
-  if (totalOpen >= 2 && totalClosed === 0) return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  // Confidence rules — tuned to minimise false "open" alerts while not missing real
+  // openings. The single biggest source of noise was generic keywords ("available",
+  // "appointment") matching menu/SEO copy on closed pages, so we require either
+  // a clear margin OR a strong API/script signal.
 
+  // 1) High-confidence OPEN: needs strong absolute score AND clearly outweighs closed.
+  //    API or script layers (weights 4-6) are what reliably push a true opening past this bar.
+  if (totalOpen >= 6 && totalOpen >= totalClosed * 2) {
+    return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  }
+  // 2) High-confidence CLOSED.
+  if (totalClosed >= 5 && totalClosed > totalOpen) {
+    return { status: 'closed', totalOpen, totalClosed, detectionMethod };
+  }
+  // 3) Clear closed with no opposing open signal.
+  if (totalClosed >= 3 && totalOpen === 0) {
+    return { status: 'closed', totalOpen, totalClosed, detectionMethod };
+  }
+  // 4) Clear open with no opposing closed signal.
+  if (totalOpen >= 4 && totalClosed === 0) {
+    return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  }
+  // 5) Ambiguous / weak — stay "unknown" instead of guessing.
   return { status: 'unknown', totalOpen, totalClosed, detectionMethod };
 }
 
@@ -656,7 +702,7 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
     try {
       if (attempt > 0) await randomDelay(1500, 4000);
       const start = Date.now();
-      const response = await fetch(url, {
+      const response = await fetch(proxiedUrl(url, true), {
         headers: {
           'User-Agent': randomPick(USER_AGENTS),
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -727,7 +773,7 @@ export async function checkSite(
     ]);
 
     const keywordResult = analyzeKeywords(
-      html + ' ' + bodyText,
+      bodyText,
       target.openIndicators,
       target.closedIndicators,
     );
