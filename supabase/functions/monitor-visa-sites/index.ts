@@ -758,7 +758,7 @@ export async function checkSite(
     ]);
 
     const keywordResult = analyzeKeywords(
-      html + ' ' + bodyText,
+      bodyText,
       target.openIndicators,
       target.closedIndicators,
     );
