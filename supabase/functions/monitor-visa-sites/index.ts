@@ -1571,6 +1571,7 @@ Deno.serve(async (req) => {
           detectionMethod: r.detectionMethod,
         })),
         alertsSent: totalSent,
+        earlyAlertsSent: typeof earlySent === 'number' ? earlySent : 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
