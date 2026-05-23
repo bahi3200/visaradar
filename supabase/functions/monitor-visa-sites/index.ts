@@ -664,14 +664,29 @@ export function determineStatus(
 
   const detectionMethod = contributing.length > 0 ? contributing.join(', ') : 'none';
 
-  // Strong closed signal
-  if (totalClosed >= 4) return { status: 'closed', totalOpen, totalClosed, detectionMethod };
-  // Strong open signal
-  if (totalOpen >= 4 && totalOpen > totalClosed) return { status: 'open', totalOpen, totalClosed, detectionMethod };
-  // Moderate signals
-  if (totalClosed >= 2 && totalOpen === 0) return { status: 'closed', totalOpen, totalClosed, detectionMethod };
-  if (totalOpen >= 2 && totalClosed === 0) return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  // Confidence rules — tuned to minimise false "open" alerts while not missing real
+  // openings. The single biggest source of noise was generic keywords ("available",
+  // "appointment") matching menu/SEO copy on closed pages, so we require either
+  // a clear margin OR a strong API/script signal.
 
+  // 1) High-confidence OPEN: needs strong absolute score AND clearly outweighs closed.
+  //    API or script layers (weights 4-6) are what reliably push a true opening past this bar.
+  if (totalOpen >= 6 && totalOpen >= totalClosed * 2) {
+    return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  }
+  // 2) High-confidence CLOSED.
+  if (totalClosed >= 5 && totalClosed > totalOpen) {
+    return { status: 'closed', totalOpen, totalClosed, detectionMethod };
+  }
+  // 3) Clear closed with no opposing open signal.
+  if (totalClosed >= 3 && totalOpen === 0) {
+    return { status: 'closed', totalOpen, totalClosed, detectionMethod };
+  }
+  // 4) Clear open with no opposing closed signal.
+  if (totalOpen >= 4 && totalClosed === 0) {
+    return { status: 'open', totalOpen, totalClosed, detectionMethod };
+  }
+  // 5) Ambiguous / weak — stay "unknown" instead of guessing.
   return { status: 'unknown', totalOpen, totalClosed, detectionMethod };
 }
 
