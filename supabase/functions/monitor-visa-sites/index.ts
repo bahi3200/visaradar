@@ -68,6 +68,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/ita', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/ita/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/ita', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/ita', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/ita/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
@@ -115,6 +118,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     officialUrl: 'https://visas-fr.tlscontact.com/',
     apiEndpoints: [
       { url: 'https://visas-fr.tlscontact.com/services/availability/fr/dz', method: 'GET' },
+      { url: 'https://visas-fr.tlscontact.com/services/v1/appointments/availability/dz', method: 'GET' },
+      { url: 'https://visas-fr.tlscontact.com/api/v1/centers/dz/slots', method: 'GET' },
+      { url: 'https://fr.capago.net/api/v1/availability/dz', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
@@ -158,6 +164,8 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     officialUrl: 'https://algeria.blsspainvisa.com/',
     apiEndpoints: [
       { url: 'https://algeria.blsspainvisa.com/api/check_availability.php', method: 'GET' },
+      { url: 'https://algeria.blsspainvisa.com/api/slots_availability.php', method: 'GET' },
+      { url: 'https://algeria.blsspainvisa.com/appointment/check_slot.php', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'appointment available', weight: 3 },
@@ -194,6 +202,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/deu', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/deu/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/deu', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/deu', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/deu/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
@@ -239,6 +250,9 @@ const MONITOR_TARGETS: Record<string, MonitorTarget> = {
     apiEndpoints: [
       { url: 'https://lift-api.vfsglobal.com/appointment/slots/dza/grc', method: 'GET' },
       { url: 'https://visa.vfsglobal.com/dza/ar/grc/api/appointment-availability', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/slots-list/dza/grc', method: 'GET' },
+      { url: 'https://lift-api.vfsglobal.com/appointment/available-dates/dza/grc', method: 'GET' },
+      { url: 'https://visa.vfsglobal.com/dza/ar/grc/api/v1/slot-availability', method: 'GET' },
     ],
     openIndicators: [
       { keyword: 'book appointment', weight: 3 },
