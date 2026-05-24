@@ -142,36 +142,47 @@ function fingerprintHeaders(ua: string): Record<string, string> {
   };
 }
 
-// Fetch wrapper that rotates through DB proxy pool; falls back to direct/ScraperAPI.
-// Auto-records success/failure stats for health monitoring.
+// Fetch wrapper that rotates through DB proxy pool; retries with a different
+// proxy on failure, then falls back to direct/ScraperAPI as last resort.
+// Auto-records success/failure stats for health monitoring + logging.
 async function antiDetectFetch(
   rawUrl: string,
   init: RequestInit,
-  opts: { render?: boolean; country?: string; usedFor: string } = { usedFor: 'monitor' },
-): Promise<{ response: Response; durationMs: number; viaProxy: boolean }> {
-  const proxy = await pickProxy(opts.country);
-  const start = Date.now();
+  opts: { render?: boolean; country?: string; usedFor: string; maxProxyRetries?: number } = { usedFor: 'monitor' },
+): Promise<{ response: Response; durationMs: number; viaProxy: boolean; proxyId?: string }> {
+  const maxRetries = Math.max(1, opts.maxProxyRetries ?? 2);
+  const tried = new Set<string>();
 
-  if (proxy) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const proxy = await pickProxy(opts.country);
+    if (!proxy || tried.has(proxy.id)) break;
+    tried.add(proxy.id);
+    const start = Date.now();
     try {
       // @ts-ignore Deno-specific HTTP client with proxy support
       const client = (Deno as any).createHttpClient?.({ proxy: { url: buildProxyUrl(proxy) } });
       const response = await fetch(rawUrl, { ...init, client } as any);
       const durationMs = Date.now() - start;
       try { client?.close?.(); } catch { /* noop */ }
-      // Treat 2xx/3xx as success for proxy health
       const ok = response.status < 400;
       recordProxy(proxy.id, ok, durationMs, response.status, ok ? null : `HTTP ${response.status}`, opts.usedFor);
-      return { response, durationMs, viaProxy: true };
+      console.log(`[proxy] attempt=${attempt + 1} id=${proxy.id} host=${proxy.host}:${proxy.port} status=${response.status} ${durationMs}ms used_for=${opts.usedFor}`);
+      // Retry on hard block / captcha-like statuses if budget left
+      if (!ok && (response.status === 403 || response.status === 407 || response.status === 429 || response.status === 502 || response.status === 503) && attempt < maxRetries - 1) {
+        continue;
+      }
+      return { response, durationMs, viaProxy: true, proxyId: proxy.id };
     } catch (err) {
       const durationMs = Date.now() - start;
       recordProxy(proxy.id, false, durationMs, null, (err as Error).message, opts.usedFor);
-      // fall through to direct/ScraperAPI
+      console.warn(`[proxy] attempt=${attempt + 1} id=${proxy.id} FAILED ${(err as Error).message} — retrying with different proxy`);
+      // try next proxy
     }
   }
 
   const start2 = Date.now();
   const response = await fetch(proxiedUrl(rawUrl, opts.render === true), init);
+  console.log(`[proxy] fallback direct/scraperapi status=${response.status}`);
   return { response, durationMs: Date.now() - start2, viaProxy: false };
 }
 
