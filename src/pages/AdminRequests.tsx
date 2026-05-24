@@ -171,6 +171,18 @@ export default function AdminRequestsPage() {
             if (isUpgradeRequest) {
               toast.info(`تمت ترقية اشتراك ${request.full_name} — الاشتراك القديم يبقى نشطاً`);
             }
+            // Auto-grant referral rewards (no-op if user wasn't referred)
+            try {
+              const { data: rewardRes } = await supabase.functions.invoke("auto-grant-referral", {
+                body: { referred_user_id: request.user_id },
+              });
+              const granted = (rewardRes as any)?.results?.filter((r: any) => r.applied) ?? [];
+              if (granted.length > 0) {
+                toast.success(`🎁 تم منح مكافأة الإحالة تلقائياً (${granted.length} مستفيدين)`);
+              }
+            } catch (e) {
+              console.error("auto-grant-referral failed", e);
+            }
           }
         }
       }
