@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
 
   const cutoff = new Date(Date.now() + RENEWAL_WINDOW_DAYS * 86400000).toISOString();
 
+  // Load loyalty discount settings (applied to auto-renewals only)
+  const { data: settings } = await supabase
+    .from("site_settings")
+    .select("key, value")
+    .in("key", ["renewal_loyalty_discount_enabled", "renewal_loyalty_discount_pct"]);
+  const settingsMap = Object.fromEntries((settings ?? []).map((s: any) => [s.key, s.value]));
+  const discountEnabled = (settingsMap["renewal_loyalty_discount_enabled"] ?? "true") === "true";
+  const discountPct = Math.max(0, Math.min(100, Number(settingsMap["renewal_loyalty_discount_pct"] ?? "10")));
+
   const { data: subs, error } = await supabase
     .from("subscriptions")
     .select("id, user_id, package_id, countries, service_type, expires_at, telegram_chat_id, renewal_request_created_at, packages(name_ar, price, promo_price, duration_months)")
@@ -73,6 +82,22 @@ Deno.serve(async (req) => {
     const { data: userResp } = await supabase.auth.admin.getUserById(sub.user_id);
     const email = userResp?.user?.email ?? "";
 
+    const pkg = Array.isArray(sub.packages) ? sub.packages[0] : sub.packages;
+    const basePrice = Number(pkg?.promo_price ?? pkg?.price ?? 0);
+    const discountAmount = discountEnabled && discountPct > 0
+      ? Math.round((basePrice * discountPct) / 100)
+      : 0;
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+
+    const noteParts = [
+      `طلب تجديد تلقائي للاشتراك المنتهي في ${new Date(sub.expires_at).toLocaleDateString("ar-DZ")}`,
+    ];
+    if (discountAmount > 0) {
+      noteParts.push(
+        `🎁 خصم وفاء ${discountPct}%: ${basePrice.toLocaleString()} → ${finalPrice.toLocaleString()} د.ج (وفّر ${discountAmount.toLocaleString()} د.ج)`,
+      );
+    }
+
     const { error: insertErr } = await supabase.from("subscription_requests").insert({
       user_id: sub.user_id,
       package_id: sub.package_id,
@@ -85,7 +110,7 @@ Deno.serve(async (req) => {
       status: "pending",
       is_auto_renewal: true,
       renewing_subscription_id: sub.id,
-      admin_notes: `طلب تجديد تلقائي للاشتراك المنتهي في ${new Date(sub.expires_at).toLocaleDateString("ar-DZ")}`,
+      admin_notes: noteParts.join("\n"),
     });
 
     if (insertErr) {
@@ -100,19 +125,28 @@ Deno.serve(async (req) => {
 
     // Notify via Telegram if linked
     if (sub.telegram_chat_id) {
-      const pkg = Array.isArray(sub.packages) ? sub.packages[0] : sub.packages;
-      const price = pkg?.promo_price ?? pkg?.price ?? 0;
       const daysLeft = Math.ceil((new Date(sub.expires_at).getTime() - Date.now()) / 86400000);
-      const msg = [
+      const lines = [
         `🔔 <b>تذكير تجديد اشتراكك</b>`,
         ``,
         `📦 الباقة: <b>${pkg?.name_ar ?? "—"}</b>`,
         `⏰ ينتهي خلال: <b>${daysLeft} يوم</b>`,
-        `💰 المبلغ: <b>${price.toLocaleString()} د.ج</b>`,
+      ];
+      if (discountAmount > 0) {
+        lines.push(
+          `💰 السعر الأصلي: <s>${basePrice.toLocaleString()} د.ج</s>`,
+          `🎁 <b>خصم وفاء ${discountPct}%</b> (وفّر ${discountAmount.toLocaleString()} د.ج)`,
+          `✅ المبلغ المطلوب: <b>${finalPrice.toLocaleString()} د.ج</b>`,
+        );
+      } else {
+        lines.push(`💰 المبلغ: <b>${basePrice.toLocaleString()} د.ج</b>`);
+      }
+      lines.push(
         ``,
         `تم إنشاء طلب تجديد جاهز — ادفع عبر CCP/BaridiMob وارفع الإيصال:`,
         `🔗 https://visaradar.lovable.app/my-requests`,
-      ].join("\n");
+      );
+      const msg = lines.join("\n");
 
       try {
         await supabase.functions.invoke("telegram-send-message", {
