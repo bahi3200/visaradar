@@ -107,6 +107,117 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_delivery_log: {
+        Row: {
+          alert_id: string | null
+          attempts: number
+          chat_id: string
+          country_code: string | null
+          delivered_at: string
+          dispatched_at: string | null
+          e2e_latency_ms: number | null
+          enqueued_at: string
+          error: string | null
+          id: number
+          priority: number
+          provider: string | null
+          success: boolean
+          worker_id: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          attempts?: number
+          chat_id: string
+          country_code?: string | null
+          delivered_at?: string
+          dispatched_at?: string | null
+          e2e_latency_ms?: number | null
+          enqueued_at: string
+          error?: string | null
+          id?: number
+          priority: number
+          provider?: string | null
+          success: boolean
+          worker_id?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          attempts?: number
+          chat_id?: string
+          country_code?: string | null
+          delivered_at?: string
+          dispatched_at?: string | null
+          e2e_latency_ms?: number | null
+          enqueued_at?: string
+          error?: string | null
+          id?: number
+          priority?: number
+          provider?: string | null
+          success?: boolean
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
+      alert_queue: {
+        Row: {
+          alert_key: string | null
+          attempts: number
+          chat_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          country_code: string | null
+          enqueued_at: string
+          expires_at: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          payload: Json
+          priority: number
+          provider: string | null
+          sent_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          alert_key?: string | null
+          attempts?: number
+          chat_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          country_code?: string | null
+          enqueued_at?: string
+          expires_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          payload: Json
+          priority?: number
+          provider?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          alert_key?: string | null
+          attempts?: number
+          chat_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          country_code?: string | null
+          enqueued_at?: string
+          expires_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          provider?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ban_events: {
         Row: {
           country_code: string
@@ -2776,6 +2887,19 @@ export type Database = {
       }
     }
     Functions: {
+      claim_alerts: {
+        Args: { _limit?: number; _worker_id: string }
+        Returns: {
+          attempts: number
+          chat_id: string
+          country_code: string
+          enqueued_at: string
+          id: string
+          payload: Json
+          priority: number
+          provider: string
+        }[]
+      }
       claim_scan_tasks: {
         Args: { _limit?: number; _worker_id: string }
         Returns: {
@@ -2786,6 +2910,15 @@ export type Database = {
           priority: number
           provider: string
         }[]
+      }
+      complete_alert: {
+        Args: {
+          _error?: string
+          _id: string
+          _success: boolean
+          _worker_id: string
+        }
+        Returns: undefined
       }
       complete_scan_task: {
         Args: {
@@ -2799,6 +2932,22 @@ export type Database = {
       compute_predictive_windows: { Args: { _days?: number }; Returns: number }
       count_active_devices: { Args: { _user_id: string }; Returns: number }
       enqueue_scan_tasks: { Args: { _burst?: boolean }; Returns: number }
+      get_alert_delivery_stats: {
+        Args: never
+        Returns: {
+          active_workers: number
+          delivered_last_minute: number
+          failed_last_minute: number
+          failure_rate_pct: number
+          p50_latency_ms: number
+          p95_latency_ms: number
+          p99_latency_ms: number
+          pending_p0: number
+          pending_p1: number
+          pending_total: number
+          sends_per_second: number
+        }[]
+      }
       get_open_heatmap: {
         Args: { _country?: string; _days?: number; _provider?: string }
         Returns: {
