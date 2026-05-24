@@ -1039,6 +1039,23 @@ export async function checkSite(
       detectionMethod = `${detectionMethod} | spa-shell-no-signal`;
     }
 
+    // Quality guard: weak HTTP-only / keyword-only signals are unreliable on modern
+    // SPA visa sites (VFS/TLS/BLS render via JS). If the ONLY contributing layers
+    // are http / keywords (no API, no scriptData, no meta), demote to 'unknown'
+    // unless the API or browser_verifications layer confirms later.
+    const strongLayers = ['api', 'scriptData'];
+    const hasStrong = layers.some(l => strongLayers.includes(l.name) && (l.openScore > 0 || l.closedScore > 0));
+    const weakOnly = !hasStrong &&
+      layers.every(l => (l.openScore === 0 && l.closedScore === 0) || l.name === 'http' || l.name === 'keywords' || l.name === 'meta');
+    if (status === 'open' && weakOnly) {
+      status = 'unknown';
+      detectionMethod = `${detectionMethod} | weak-only-demoted`;
+    }
+    if (status === 'closed' && weakOnly && !hasReadableBody) {
+      status = 'unknown';
+      detectionMethod = `${detectionMethod} | weak-shell-demoted`;
+    }
+
     console.log(`[${countryCode}/${category.key}] Detection: ${detectionMethod} → ${status} (open:${totalOpen} closed:${totalClosed})`);
     if (apiResult.apiResults.length > 0) {
       console.log(`[${countryCode}/${category.key}] API probes:`, apiResult.apiResults.join(' | '));
