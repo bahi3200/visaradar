@@ -1552,6 +1552,138 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_shards: {
+        Row: {
+          countries: string[]
+          created_at: string
+          id: string
+          is_active: boolean
+          providers: string[]
+          shard_key: string
+          strategy: string
+          weight: number
+        }
+        Insert: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          providers?: string[]
+          shard_key: string
+          strategy?: string
+          weight?: number
+        }
+        Update: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          providers?: string[]
+          shard_key?: string
+          strategy?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      scan_tasks: {
+        Row: {
+          attempts: number
+          category: string | null
+          claimed_at: string | null
+          claimed_by: string | null
+          country_code: string
+          enqueued_at: string
+          error: string | null
+          expires_at: string
+          finished_at: string | null
+          id: string
+          is_burst: boolean
+          latency_ms: number | null
+          priority: number
+          provider: string | null
+          shard_key: string | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          category?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          country_code: string
+          enqueued_at?: string
+          error?: string | null
+          expires_at?: string
+          finished_at?: string | null
+          id?: string
+          is_burst?: boolean
+          latency_ms?: number | null
+          priority?: number
+          provider?: string | null
+          shard_key?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          category?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          country_code?: string
+          enqueued_at?: string
+          error?: string | null
+          expires_at?: string
+          finished_at?: string | null
+          id?: string
+          is_burst?: boolean
+          latency_ms?: number | null
+          priority?: number
+          provider?: string | null
+          shard_key?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      scan_workers: {
+        Row: {
+          current_load: number
+          id: string
+          last_heartbeat: string
+          max_concurrency: number
+          region: string | null
+          started_at: string
+          status: string
+          tasks_completed: number
+          tasks_failed: number
+          worker_id: string
+        }
+        Insert: {
+          current_load?: number
+          id?: string
+          last_heartbeat?: string
+          max_concurrency?: number
+          region?: string | null
+          started_at?: string
+          status?: string
+          tasks_completed?: number
+          tasks_failed?: number
+          worker_id: string
+        }
+        Update: {
+          current_load?: number
+          id?: string
+          last_heartbeat?: string
+          max_concurrency?: number
+          region?: string | null
+          started_at?: string
+          status?: string
+          tasks_completed?: number
+          tasks_failed?: number
+          worker_id?: string
+        }
+        Relationships: []
+      }
       settings_audit_log: {
         Row: {
           changed_by: string
@@ -2644,8 +2776,29 @@ export type Database = {
       }
     }
     Functions: {
+      claim_scan_tasks: {
+        Args: { _limit?: number; _worker_id: string }
+        Returns: {
+          category: string
+          country_code: string
+          id: string
+          is_burst: boolean
+          priority: number
+          provider: string
+        }[]
+      }
+      complete_scan_task: {
+        Args: {
+          _error?: string
+          _latency_ms?: number
+          _success: boolean
+          _task_id: string
+        }
+        Returns: undefined
+      }
       compute_predictive_windows: { Args: { _days?: number }; Returns: number }
       count_active_devices: { Args: { _user_id: string }; Returns: number }
+      enqueue_scan_tasks: { Args: { _burst?: boolean }; Returns: number }
       get_open_heatmap: {
         Args: { _country?: string; _days?: number; _provider?: string }
         Returns: {
@@ -2662,6 +2815,19 @@ export type Database = {
           ccp_key: string
           ccp_number: string
           rip_number: string
+        }[]
+      }
+      get_scan_throughput_stats: {
+        Args: never
+        Returns: {
+          active_workers: number
+          avg_latency_ms: number
+          burst_active_tasks: number
+          done_last_minute: number
+          failed_last_minute: number
+          p95_latency_ms: number
+          pending_tasks: number
+          running_tasks: number
         }[]
       }
       has_role: {

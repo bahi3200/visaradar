@@ -1264,6 +1264,14 @@ Deno.serve(async (req) => {
 
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
+    // ── Distributed sharding: accept a subset of countries via body.countries
+    const shardCountries: string[] | null = Array.isArray(bodyData?.countries) && bodyData.countries.length > 0
+      ? bodyData.countries.map((c: string) => String(c).toUpperCase())
+      : null;
+    const shardProvider: string | null = typeof bodyData?.provider === 'string' ? bodyData.provider : null;
+    const taskId: string | null = typeof bodyData?.task_id === 'string' ? bodyData.task_id : null;
+    const distributedScan = !!(shardCountries || shardProvider || taskId);
+
     // ── Respect scan_priorities cooldown_until: skip countries currently cooling down
     const { data: priorities } = await supabase
       .from('scan_priorities')
@@ -1303,7 +1311,7 @@ Deno.serve(async (req) => {
         .map((t: any) => t.provider),
     );
     const providerSkip = new Set<string>();
-    const finalActiveCountries = activeCountryCodes.filter((code) => {
+    let finalActiveCountries = activeCountryCodes.filter((code) => {
       const prov = MONITOR_TARGETS[code]?.provider;
       if (prov && throttledProviders.has(prov)) {
         providerSkip.add(code);
@@ -1311,6 +1319,13 @@ Deno.serve(async (req) => {
       }
       return true;
     });
+    if (shardCountries) {
+      const shardSet = new Set(shardCountries);
+      finalActiveCountries = finalActiveCountries.filter((c) => shardSet.has(c));
+    }
+    if (shardProvider) {
+      finalActiveCountries = finalActiveCountries.filter((c) => MONITOR_TARGETS[c]?.provider === shardProvider);
+    }
     if (providerSkip.size > 0) {
       console.warn(`[throttle] skipping ${providerSkip.size} countries — providers in cooldown: ${[...throttledProviders].join(', ')}`);
     }
