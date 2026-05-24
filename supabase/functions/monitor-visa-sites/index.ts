@@ -1311,7 +1311,7 @@ Deno.serve(async (req) => {
         .map((t: any) => t.provider),
     );
     const providerSkip = new Set<string>();
-    const finalActiveCountries = activeCountryCodes.filter((code) => {
+    let finalActiveCountries = activeCountryCodes.filter((code) => {
       const prov = MONITOR_TARGETS[code]?.provider;
       if (prov && throttledProviders.has(prov)) {
         providerSkip.add(code);
@@ -1319,6 +1319,13 @@ Deno.serve(async (req) => {
       }
       return true;
     });
+    if (shardCountries) {
+      const shardSet = new Set(shardCountries);
+      finalActiveCountries = finalActiveCountries.filter((c) => shardSet.has(c));
+    }
+    if (shardProvider) {
+      finalActiveCountries = finalActiveCountries.filter((c) => MONITOR_TARGETS[c]?.provider === shardProvider);
+    }
     if (providerSkip.size > 0) {
       console.warn(`[throttle] skipping ${providerSkip.size} countries — providers in cooldown: ${[...throttledProviders].join(', ')}`);
     }
