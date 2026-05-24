@@ -66,6 +66,7 @@ import AdminAntiFalsePositive from "./pages/AdminAntiFalsePositive";
 import AdminSmartBan from "./pages/AdminSmartBan";
 import AdminHistoricalIntel from "./pages/AdminHistoricalIntel";
 import AdminProxyIntelligence from "./pages/AdminProxyIntelligence";
+import AdminDistributedScan from "./pages/AdminDistributedScan";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -144,6 +145,7 @@ const App = () => (
       <Route path="/dashboard/smart-ban" element={<AdminRoute adminOnly><AdminSmartBan /></AdminRoute>} />
       <Route path="/dashboard/historical-intelligence" element={<AdminRoute adminOnly><AdminHistoricalIntel /></AdminRoute>} />
       <Route path="/dashboard/proxy-intelligence" element={<AdminRoute adminOnly><AdminProxyIntelligence /></AdminRoute>} />
+      <Route path="/dashboard/distributed-scan" element={<AdminRoute adminOnly><AdminDistributedScan /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
