@@ -54,6 +54,128 @@ function proxiedUrl(url: string, render = false): string {
 }
 
 // ──────────────────────────────────────────────
+// Phase 6 — Anti-Detection layer
+// 1) Residential / datacenter proxy rotation via DB pool
+// 2) Browser fingerprint headers (sec-ch-ua) per UA family
+// ──────────────────────────────────────────────
+
+const DEFAULT_PROXY_POOL = Deno.env.get('PROXY_POOL_NAME') || 'residential-eu';
+
+let _sbProxyClient: ReturnType<typeof createClient> | null = null;
+function getSbForProxy() {
+  if (_sbProxyClient) return _sbProxyClient;
+  const url = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) return null;
+  _sbProxyClient = createClient(url, key);
+  return _sbProxyClient;
+}
+
+type PickedProxy = {
+  id: string;
+  protocol: string;
+  host: string;
+  port: number;
+  username: string | null;
+  password: string | null;
+};
+
+async function pickProxy(country?: string, pool: string = DEFAULT_PROXY_POOL): Promise<PickedProxy | null> {
+  const sb = getSbForProxy();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.rpc('pick_next_proxy', {
+      _pool_name: pool,
+      _country: country ?? null,
+    });
+    if (error || !data || !data.length) return null;
+    return data[0] as PickedProxy;
+  } catch { return null; }
+}
+
+async function recordProxy(id: string, success: boolean, latencyMs: number | null, status: number | null, err: string | null, usedFor: string) {
+  const sb = getSbForProxy();
+  if (!sb) return;
+  try {
+    await sb.rpc('record_proxy_result', {
+      _proxy_id: id,
+      _success: success,
+      _latency_ms: latencyMs,
+      _status_code: status,
+      _error: err,
+      _used_for: usedFor,
+    });
+  } catch { /* swallow */ }
+}
+
+function buildProxyUrl(p: PickedProxy): string {
+  const auth = p.username
+    ? `${encodeURIComponent(p.username)}${p.password ? ':' + encodeURIComponent(p.password) : ''}@`
+    : '';
+  return `${p.protocol}://${auth}${p.host}:${p.port}`;
+}
+
+// Browser fingerprint hints derived from UA family
+function fingerprintHeaders(ua: string): Record<string, string> {
+  const isChrome = /Chrome\/(\d+)/.test(ua) && !/Edg\//.test(ua) && !/Firefox/.test(ua);
+  const isEdge = /Edg\//.test(ua);
+  const isFirefox = /Firefox/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+  const isMobile = /Mobile|iPhone|iPad|Android/.test(ua);
+  const platform = /Windows/.test(ua) ? '"Windows"'
+    : /Macintosh|Mac OS X/.test(ua) ? '"macOS"'
+    : /iPhone|iPad/.test(ua) ? '"iOS"'
+    : /Android/.test(ua) ? '"Android"'
+    : '"Linux"';
+
+  if (isFirefox || isSafari) {
+    return { 'sec-ch-ua-mobile': isMobile ? '?1' : '?0', 'sec-ch-ua-platform': platform };
+  }
+  const ver = ua.match(/Chrome\/(\d+)/)?.[1] || '126';
+  const brand = isEdge
+    ? `"Microsoft Edge";v="${ver}", "Chromium";v="${ver}", "Not.A/Brand";v="24"`
+    : `"Google Chrome";v="${ver}", "Chromium";v="${ver}", "Not.A/Brand";v="24"`;
+  return {
+    'sec-ch-ua': brand,
+    'sec-ch-ua-mobile': isMobile ? '?1' : '?0',
+    'sec-ch-ua-platform': platform,
+  };
+}
+
+// Fetch wrapper that rotates through DB proxy pool; falls back to direct/ScraperAPI.
+// Auto-records success/failure stats for health monitoring.
+async function antiDetectFetch(
+  rawUrl: string,
+  init: RequestInit,
+  opts: { render?: boolean; country?: string; usedFor: string } = { usedFor: 'monitor' },
+): Promise<{ response: Response; durationMs: number; viaProxy: boolean }> {
+  const proxy = await pickProxy(opts.country);
+  const start = Date.now();
+
+  if (proxy) {
+    try {
+      // @ts-ignore Deno-specific HTTP client with proxy support
+      const client = (Deno as any).createHttpClient?.({ proxy: { url: buildProxyUrl(proxy) } });
+      const response = await fetch(rawUrl, { ...init, client } as any);
+      const durationMs = Date.now() - start;
+      try { client?.close?.(); } catch { /* noop */ }
+      // Treat 2xx/3xx as success for proxy health
+      const ok = response.status < 400;
+      recordProxy(proxy.id, ok, durationMs, response.status, ok ? null : `HTTP ${response.status}`, opts.usedFor);
+      return { response, durationMs, viaProxy: true };
+    } catch (err) {
+      const durationMs = Date.now() - start;
+      recordProxy(proxy.id, false, durationMs, null, (err as Error).message, opts.usedFor);
+      // fall through to direct/ScraperAPI
+    }
+  }
+
+  const start2 = Date.now();
+  const response = await fetch(proxiedUrl(rawUrl, opts.render === true), init);
+  return { response, durationMs: Date.now() - start2, viaProxy: false };
+}
+
+// ──────────────────────────────────────────────
 // Monitor targets with multi-layer detection
 // ──────────────────────────────────────────────
 interface MonitorTarget {
