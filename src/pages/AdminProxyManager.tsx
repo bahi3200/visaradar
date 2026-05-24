@@ -507,7 +507,7 @@ export default function AdminProxyManager() {
               <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
                 <p className="font-semibold mb-1">ملاحظات:</p>
                 <ul className="list-disc pr-4 space-y-0.5">
-                  <li>سيتم استخدام الـ proxies تلقائياً في فحص API + provider adapters.</li>
+                  <li>لتفعيل Decodo كـ pool افتراضي لكل فحوصات API: أضف secret باسم <code className="font-mono">PROXY_POOL_NAME</code> بقيمة <code className="font-mono">decodo-residential</code>.</li>
                   <li>عند فشل proxy، يتم تجربة proxy آخر تلقائياً (retry).</li>
                   <li>كل scan يسجّل proxy_id + latency في <code>proxy_health_log</code>.</li>
                   <li>لتشغيل Decodo داخل Playwright (vps-worker)، أضف <code className="font-mono">DECODO_PROXY=http://user:pass@gate.decodo.com:7000</code> في <code>.env</code> الخاص بالـ VPS.</li>
