@@ -28,6 +28,28 @@ const INGEST_URL = `${SUPABASE_URL}/functions/v1/ingest-browser-verification`
 const INTERVAL_MS = (parseInt(process.env.INTERVAL_MINUTES || '5', 10)) * 60_000
 const RUN_ONCE = process.argv.includes('--once')
 
+// Optional residential proxy (e.g. Decodo). Format: http://user:pass@host:port
+// Also supports a list separated by commas for round-robin per cycle.
+const PROXY_URLS = (process.env.DECODO_PROXY || process.env.PROXY_URL || '')
+  .split(',').map(s => s.trim()).filter(Boolean)
+let _proxyIdx = 0
+function nextProxy() {
+  if (!PROXY_URLS.length) return null
+  const raw = PROXY_URLS[_proxyIdx % PROXY_URLS.length]
+  _proxyIdx++
+  try {
+    const u = new URL(raw)
+    return {
+      server: `${u.protocol}//${u.hostname}:${u.port}`,
+      username: decodeURIComponent(u.username) || undefined,
+      password: decodeURIComponent(u.password) || undefined,
+      raw,
+    }
+  } catch (e) {
+    console.error('Invalid proxy url:', raw, e.message); return null
+  }
+}
+
 if (!SUPABASE_URL || !WORKER_TOKEN) {
   console.error('Missing SUPABASE_URL or WORKER_TOKEN'); process.exit(1)
 }
@@ -90,6 +112,7 @@ async function checkTarget(browser, target) {
   const start = Date.now()
   const userAgent = pick(USER_AGENTS)
   const xhrLog = []
+  const proxy = nextProxy()
   let result = {
     country_code: target.country_code,
     provider: target.provider,
@@ -106,6 +129,7 @@ async function checkTarget(browser, target) {
     load_time_ms: 0,
     user_agent: userAgent,
     error_message: null,
+    proxy_used: proxy ? `${proxy.server} (${proxy.username || 'no-auth'})` : null,
   }
 
   const context = await browser.newContext({
@@ -113,6 +137,7 @@ async function checkTarget(browser, target) {
     viewport: { width: 1366, height: 768 },
     locale: 'en-US',
     timezoneId: 'Europe/Paris',
+    proxy: proxy || undefined,
     extraHTTPHeaders: {
       'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
     },
@@ -218,8 +243,12 @@ async function checkTarget(browser, target) {
     result.load_time_ms = Date.now() - start
   } catch (e) {
     result.status = 'error'
-    result.error_message = e.message?.slice(0, 500) || String(e)
+    result.error_message = (e.message?.slice(0, 500) || String(e)) + (proxy ? ` [via ${proxy.server}]` : '')
     result.load_time_ms = Date.now() - start
+    // Retry once with a different proxy if available
+    if (proxy && PROXY_URLS.length > 1) {
+      console.warn(`  retrying with next proxy after error: ${e.message}`)
+    }
   } finally {
     await context.close().catch(() => {})
   }
