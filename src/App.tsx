@@ -65,6 +65,7 @@ import AdminBrowserVerifications from "./pages/AdminBrowserVerifications";
 import AdminAntiFalsePositive from "./pages/AdminAntiFalsePositive";
 import AdminSmartBan from "./pages/AdminSmartBan";
 import AdminHistoricalIntel from "./pages/AdminHistoricalIntel";
+import AdminProxyIntelligence from "./pages/AdminProxyIntelligence";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
