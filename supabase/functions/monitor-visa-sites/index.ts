@@ -1079,21 +1079,30 @@ export async function checkSite(
     const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
     const snippet = bodyText.substring(0, 500);
 
-    // Detect blocking / CAPTCHA
-    const isBlocked =
-      /captcha|challenge|blocked|access denied|403 forbidden|cf-browser/i.test(html) &&
-      bodyText.length < 200;
-
-    if (isBlocked) {
+    // Smart Ban & CAPTCHA classification
+    const ban = classifyBlock(response.status, response.headers, html, bodyText);
+    if (ban) {
+      const cooldown = await recordBanEvent(
+        countryCode, target.provider, ban,
+        response.status, snippet || html.substring(0, 500), target.checkUrl,
+      );
+      console.warn(
+        `[BAN/${ban.reason}] ${countryCode} via ${target.provider} (status=${response.status}` +
+        `${ban.retryAfterSeconds ? `, retry-after=${ban.retryAfterSeconds}s` : ''}` +
+        `${cooldown ? `, cooldown until ${cooldown.toISOString()}` : ''})`,
+      );
       return {
         countryCode, category: category.key, status: 'error', previousStatus: null,
-        snippet: '[Blocked/CAPTCHA detected]', error: 'Anti-bot protection detected',
+        snippet: `[Blocked: ${ban.reason}]`, error: `Blocked by anti-bot: ${ban.reason}`,
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
-        detectionMethod: 'blocked',
+        detectionMethod: `blocked:${ban.reason}`,
         extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'blocked',
       };
     }
+
+    // Clean response → reset provider throttle
+    recordProviderSuccess(target.provider);
 
     // Run all detection layers in parallel
     const [apiResult] = await Promise.all([
