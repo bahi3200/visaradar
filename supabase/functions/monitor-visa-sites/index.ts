@@ -625,16 +625,18 @@ export async function probeApiEndpoints(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const resp = await fetch(proxiedUrl(ep.url, false), {
+      const ua = randomPick(USER_AGENTS);
+      const { response: resp } = await antiDetectFetch(ep.url, {
         method: ep.method || 'GET',
         headers: {
-          'User-Agent': randomPick(USER_AGENTS),
+          'User-Agent': ua,
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': randomPick(ACCEPT_LANGUAGES),
+          ...fingerprintHeaders(ua),
           ...ep.headers,
         },
         signal: controller.signal,
-      });
+      }, { render: false, usedFor: 'api-probe' });
       const text = await resp.text();
       apiResults.push(`API ${ep.url} → HTTP ${resp.status}, ${text.length} bytes`);
 
