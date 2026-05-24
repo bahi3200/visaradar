@@ -176,6 +176,101 @@ async function antiDetectFetch(
 }
 
 // ──────────────────────────────────────────────
+// Smart Ban & CAPTCHA Detection
+// Classifies a fetched response into a ban reason (or null = clean).
+// ──────────────────────────────────────────────
+export type BanClassification = {
+  reason: 'captcha' | 'cloudflare' | 'rate_limit' | 'temp_ban' | 'forbidden' | 'unknown';
+  severity: 'low' | 'medium' | 'high';
+  retryAfterSeconds: number | null;
+} | null;
+
+export function classifyBlock(status: number, headers: Headers, html: string, bodyText: string): BanClassification {
+  const retryAfterRaw = headers.get('retry-after');
+  let retryAfter: number | null = null;
+  if (retryAfterRaw) {
+    const n = parseInt(retryAfterRaw, 10);
+    if (!isNaN(n)) retryAfter = n;
+    else {
+      const d = Date.parse(retryAfterRaw);
+      if (!isNaN(d)) retryAfter = Math.max(0, Math.round((d - Date.now()) / 1000));
+    }
+  }
+
+  const cfRay = headers.get('cf-ray');
+  const server = (headers.get('server') || '').toLowerCase();
+  const cfMitigated = headers.get('cf-mitigated');
+
+  // 1) Rate-limit / Too Many Requests
+  if (status === 429) {
+    return { reason: 'rate_limit', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 2) Service overload — often masks throttling
+  if (status === 503 && (cfRay || server.includes('cloudflare'))) {
+    return { reason: 'cloudflare', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 3) CAPTCHA / browser challenge
+  if (/cf[-_]chl|cf-browser-verification|hcaptcha|recaptcha|g-recaptcha|challenge-platform|__cf_chl|just a moment/i.test(html)) {
+    return { reason: 'captcha', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 4) Cloudflare block / Access denied
+  if (status === 403 && (cfRay || cfMitigated || /cloudflare|attention required|access denied|sorry, you have been blocked/i.test(html))) {
+    return { reason: 'cloudflare', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 5) Temporary ban patterns
+  if (/temporarily (banned|blocked|unavailable)|too many requests|ip.{0,10}banned|access (has been )?denied for security/i.test(html)) {
+    return { reason: 'temp_ban', severity: 'medium', retryAfterSeconds: retryAfter };
+  }
+  // 6) Generic 403 with small body
+  if (status === 403 && bodyText.length < 400) {
+    return { reason: 'forbidden', severity: 'medium', retryAfterSeconds: retryAfter };
+  }
+  // 7) Generic blocked text on tiny body
+  if (bodyText.length < 200 && /captcha|challenge|blocked|access denied|forbidden/i.test(html)) {
+    return { reason: 'unknown', severity: 'low', retryAfterSeconds: retryAfter };
+  }
+  return null;
+}
+
+async function recordBanEvent(
+  country: string, provider: string, c: NonNullable<BanClassification>,
+  httpStatus: number, snippet: string, sourceUrl: string,
+): Promise<Date | null> {
+  const sb = getSbForProxy();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.rpc('record_ban_event', {
+      _country: country, _provider: provider, _reason: c.reason, _severity: c.severity,
+      _http_status: httpStatus, _retry_after: c.retryAfterSeconds,
+      _snippet: snippet, _source_url: sourceUrl,
+    });
+    return data ? new Date(data as string) : null;
+  } catch (e) {
+    console.error('[ban] recordBanEvent failed:', e);
+    return null;
+  }
+}
+
+async function recordProviderSuccess(provider: string) {
+  const sb = getSbForProxy();
+  if (!sb) return;
+  try { await sb.rpc('record_provider_success', { _provider: provider }); } catch { /* swallow */ }
+}
+
+async function isProviderThrottled(provider: string): Promise<Date | null> {
+  const sb = getSbForProxy();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.from('provider_throttle').select('cooldown_until').eq('provider', provider).maybeSingle();
+    if (data?.cooldown_until) {
+      const d = new Date(data.cooldown_until);
+      if (d.getTime() > Date.now()) return d;
+    }
+  } catch { /* swallow */ }
+  return null;
+}
+
+// ──────────────────────────────────────────────
 // Monitor targets with multi-layer detection
 // ──────────────────────────────────────────────
 interface MonitorTarget {
