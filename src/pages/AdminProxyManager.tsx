@@ -1,0 +1,390 @@
+import { useEffect, useState } from "react";
+import AdminLayout from "@/components/AdminLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { Plus, Play, Trash2, RefreshCw, CheckCircle2, XCircle, Clock as ClockIcon } from "lucide-react";
+
+type Pool = {
+  id: string;
+  name: string;
+  provider: string | null;
+  pool_type: string;
+  rotation_strategy: string;
+  is_active: boolean;
+  target_countries: string[] | null;
+};
+
+type Endpoint = {
+  id: string;
+  pool_id: string;
+  protocol: string;
+  host: string;
+  port: number;
+  username: string | null;
+  geo_country: string | null;
+  status: string;
+  success_count: number;
+  failure_count: number;
+  consecutive_failures: number;
+  avg_latency_ms: number | null;
+  cooldown_until: string | null;
+  last_used_at: string | null;
+  last_error: string | null;
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-500/15 text-green-600 border-green-500/30",
+  banned: "bg-red-500/15 text-red-600 border-red-500/30",
+  cooldown: "bg-yellow-500/15 text-yellow-600 border-yellow-500/30",
+  disabled: "bg-muted text-muted-foreground",
+  testing: "bg-blue-500/15 text-blue-600 border-blue-500/30",
+};
+
+export default function AdminProxyManager() {
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
+  const [selectedPool, setSelectedPool] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [poolDialogOpen, setPoolDialogOpen] = useState(false);
+  const [epDialogOpen, setEpDialogOpen] = useState(false);
+
+  // Pool form
+  const [poolForm, setPoolForm] = useState({ name: "", provider: "", pool_type: "residential", rotation_strategy: "round_robin" });
+
+  // Endpoint form
+  const [epForm, setEpForm] = useState({ protocol: "http", host: "", port: "8080", username: "", password: "", geo_country: "" });
+
+  // Bulk import textarea
+  const [bulkText, setBulkText] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: p }, { data: e }] = await Promise.all([
+      supabase.from("proxy_pools").select("*").order("created_at", { ascending: false }),
+      supabase.from("proxy_endpoints").select("*").order("last_used_at", { ascending: false, nullsFirst: true }),
+    ]);
+    setPools((p as Pool[]) || []);
+    setEndpoints((e as Endpoint[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  // Realtime
+  useEffect(() => {
+    const ch = supabase
+      .channel("proxy-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "proxy_endpoints" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "proxy_pools" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const createPool = async () => {
+    if (!poolForm.name.trim()) { toast.error("اسم الـ pool مطلوب"); return; }
+    const { error } = await supabase.from("proxy_pools").insert({
+      name: poolForm.name.trim(),
+      provider: poolForm.provider || null,
+      pool_type: poolForm.pool_type,
+      rotation_strategy: poolForm.rotation_strategy,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم إنشاء الـ pool");
+    setPoolDialogOpen(false);
+    setPoolForm({ name: "", provider: "", pool_type: "residential", rotation_strategy: "round_robin" });
+    load();
+  };
+
+  const deletePool = async (id: string) => {
+    if (!confirm("حذف الـ pool وكل proxies بداخله؟")) return;
+    const { error } = await supabase.from("proxy_pools").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم الحذف");
+    if (selectedPool === id) setSelectedPool(null);
+  };
+
+  const togglePool = async (p: Pool) => {
+    await supabase.from("proxy_pools").update({ is_active: !p.is_active }).eq("id", p.id);
+  };
+
+  const createEndpoint = async () => {
+    if (!selectedPool) { toast.error("اختر pool أولاً"); return; }
+    if (!epForm.host || !epForm.port) { toast.error("الـ host و port مطلوبان"); return; }
+    const { error } = await supabase.from("proxy_endpoints").insert({
+      pool_id: selectedPool,
+      protocol: epForm.protocol,
+      host: epForm.host.trim(),
+      port: parseInt(epForm.port),
+      username: epForm.username || null,
+      password: epForm.password || null,
+      geo_country: epForm.geo_country || null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم إضافة الـ proxy");
+    setEpDialogOpen(false);
+    setEpForm({ protocol: "http", host: "", port: "8080", username: "", password: "", geo_country: "" });
+  };
+
+  // Bulk import: lines like "host:port:user:pass" or "protocol://user:pass@host:port"
+  const bulkImport = async () => {
+    if (!selectedPool) { toast.error("اختر pool أولاً"); return; }
+    const lines = bulkText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    const rows: any[] = [];
+    for (const line of lines) {
+      try {
+        if (line.includes("://")) {
+          const u = new URL(line);
+          rows.push({
+            pool_id: selectedPool,
+            protocol: u.protocol.replace(":", "") || "http",
+            host: u.hostname,
+            port: parseInt(u.port) || 8080,
+            username: decodeURIComponent(u.username) || null,
+            password: decodeURIComponent(u.password) || null,
+          });
+        } else {
+          const [host, port, user, pass] = line.split(":");
+          if (!host || !port) continue;
+          rows.push({
+            pool_id: selectedPool,
+            protocol: "http",
+            host,
+            port: parseInt(port),
+            username: user || null,
+            password: pass || null,
+          });
+        }
+      } catch { /* skip */ }
+    }
+    if (!rows.length) { toast.error("لم يتم تحليل أي سطر"); return; }
+    const { error } = await supabase.from("proxy_endpoints").insert(rows);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`تم استيراد ${rows.length} proxy`);
+    setBulkText("");
+  };
+
+  const deleteEndpoint = async (id: string) => {
+    if (!confirm("حذف هذا الـ proxy؟")) return;
+    await supabase.from("proxy_endpoints").delete().eq("id", id);
+  };
+
+  const resetCooldown = async (id: string) => {
+    await supabase.from("proxy_endpoints").update({
+      status: "active",
+      cooldown_until: null,
+      consecutive_failures: 0,
+    }).eq("id", id);
+    toast.success("تم إعادة التفعيل");
+  };
+
+  const testProxy = async (proxy_id?: string, pool_id?: string) => {
+    const t = toast.loading("جاري الاختبار...");
+    try {
+      const { data, error } = await supabase.functions.invoke("test-proxy", {
+        body: { proxy_id, pool_id },
+      });
+      toast.dismiss(t);
+      if (error) { toast.error(error.message); return; }
+      const results = (data as any)?.results || [];
+      const ok = results.filter((r: any) => r.ok).length;
+      toast.success(`${ok}/${results.length} نجحت`);
+    } catch (err: any) {
+      toast.dismiss(t);
+      toast.error(err.message);
+    }
+  };
+
+  const filteredEndpoints = selectedPool
+    ? endpoints.filter(e => e.pool_id === selectedPool)
+    : endpoints;
+
+  const stats = {
+    total: endpoints.length,
+    active: endpoints.filter(e => e.status === "active").length,
+    banned: endpoints.filter(e => e.status === "banned").length,
+    cooldown: endpoints.filter(e => e.cooldown_until && new Date(e.cooldown_until) > new Date()).length,
+  };
+
+  return (
+    <AdminLayout title="إدارة الـ Proxies" subtitle="Residential / Datacenter Pools + Health Monitoring">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold">{stats.total}</div><div className="text-xs text-muted-foreground">إجمالي</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-green-600">{stats.active}</div><div className="text-xs text-muted-foreground">نشط</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-yellow-600">{stats.cooldown}</div><div className="text-xs text-muted-foreground">في cooldown</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-red-600">{stats.banned}</div><div className="text-xs text-muted-foreground">محظور</div></CardContent></Card>
+      </div>
+
+      <Tabs defaultValue="pools" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pools">المجمّعات (Pools)</TabsTrigger>
+          <TabsTrigger value="endpoints">العناوين (Endpoints)</TabsTrigger>
+          <TabsTrigger value="bulk">استيراد جماعي</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pools">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">إنشاء مجمّعات منطقية للـ proxies حسب المزوّد أو المنطقة الجغرافية.</p>
+            <Dialog open={poolDialogOpen} onOpenChange={setPoolDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="w-4 h-4 ml-1" /> Pool جديد</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>إنشاء Pool جديد</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>الاسم *</Label><Input value={poolForm.name} onChange={e => setPoolForm({ ...poolForm, name: e.target.value })} placeholder="مثال: bright-data-eu" /></div>
+                  <div><Label>المزوّد</Label><Input value={poolForm.provider} onChange={e => setPoolForm({ ...poolForm, provider: e.target.value })} placeholder="Bright Data / Oxylabs / Smartproxy..." /></div>
+                  <div><Label>النوع</Label>
+                    <Select value={poolForm.pool_type} onValueChange={v => setPoolForm({ ...poolForm, pool_type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="residential">Residential</SelectItem>
+                        <SelectItem value="datacenter">Datacenter</SelectItem>
+                        <SelectItem value="mobile">Mobile</SelectItem>
+                        <SelectItem value="isp">ISP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>استراتيجية التدوير</Label>
+                    <Select value={poolForm.rotation_strategy} onValueChange={v => setPoolForm({ ...poolForm, rotation_strategy: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="round_robin">Round Robin</SelectItem>
+                        <SelectItem value="random">عشوائي</SelectItem>
+                        <SelectItem value="least_used">الأقل استخداماً</SelectItem>
+                        <SelectItem value="sticky">ثابت (Sticky)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={createPool} className="w-full">إنشاء</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid gap-3">
+            {pools.map(p => (
+              <Card key={p.id} className={selectedPool === p.id ? "ring-2 ring-primary" : ""}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="flex-1 cursor-pointer" onClick={() => setSelectedPool(p.id)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold">{p.name}</h3>
+                      <Badge variant="outline" className="text-xs">{p.pool_type}</Badge>
+                      <Badge variant="outline" className="text-xs">{p.rotation_strategy}</Badge>
+                      {!p.is_active && <Badge variant="destructive" className="text-xs">معطّل</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{p.provider || "—"} · {endpoints.filter(e => e.pool_id === p.id).length} proxies</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => testProxy(undefined, p.id)}><Play className="w-3.5 h-3.5" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => togglePool(p)}>{p.is_active ? "تعطيل" : "تفعيل"}</Button>
+                  <Button size="sm" variant="destructive" onClick={() => deletePool(p.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                </CardContent>
+              </Card>
+            ))}
+            {!pools.length && <p className="text-center text-muted-foreground py-8">لا يوجد pools. أنشئ واحداً للبدء.</p>}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="endpoints">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <div className="text-sm text-muted-foreground">
+              {selectedPool ? `العناوين في: ${pools.find(p => p.id === selectedPool)?.name}` : "جميع العناوين"}
+              {selectedPool && <Button size="sm" variant="ghost" onClick={() => setSelectedPool(null)} className="mr-2">عرض الكل</Button>}
+            </div>
+            <Dialog open={epDialogOpen} onOpenChange={setEpDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" disabled={!selectedPool}><Plus className="w-4 h-4 ml-1" /> Proxy جديد</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>إضافة Proxy</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label>البروتوكول</Label>
+                      <Select value={epForm.protocol} onValueChange={v => setEpForm({ ...epForm, protocol: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="http">HTTP</SelectItem>
+                          <SelectItem value="https">HTTPS</SelectItem>
+                          <SelectItem value="socks5">SOCKS5</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2"><Label>Host *</Label><Input value={epForm.host} onChange={e => setEpForm({ ...epForm, host: e.target.value })} placeholder="proxy.example.com" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>Port *</Label><Input type="number" value={epForm.port} onChange={e => setEpForm({ ...epForm, port: e.target.value })} /></div>
+                    <div><Label>الدولة (ISO)</Label><Input value={epForm.geo_country} onChange={e => setEpForm({ ...epForm, geo_country: e.target.value.toUpperCase() })} placeholder="FR" maxLength={2} /></div>
+                  </div>
+                  <div><Label>Username</Label><Input value={epForm.username} onChange={e => setEpForm({ ...epForm, username: e.target.value })} /></div>
+                  <div><Label>Password</Label><Input type="password" value={epForm.password} onChange={e => setEpForm({ ...epForm, password: e.target.value })} /></div>
+                  <Button onClick={createEndpoint} className="w-full">إضافة</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="space-y-2">
+            {filteredEndpoints.map(e => {
+              const successRate = e.success_count + e.failure_count > 0
+                ? Math.round((e.success_count / (e.success_count + e.failure_count)) * 100)
+                : null;
+              return (
+                <Card key={e.id}>
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <Badge className={STATUS_COLORS[e.status]} variant="outline">{e.status}</Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-sm truncate">{e.protocol}://{e.host}:{e.port}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
+                        {e.geo_country && <span>📍 {e.geo_country}</span>}
+                        <span><CheckCircle2 className="w-3 h-3 inline ml-1" />{e.success_count}</span>
+                        <span><XCircle className="w-3 h-3 inline ml-1" />{e.failure_count}</span>
+                        {successRate !== null && <span>{successRate}% نجاح</span>}
+                        {e.avg_latency_ms && <span>{e.avg_latency_ms}ms</span>}
+                        {e.cooldown_until && new Date(e.cooldown_until) > new Date() && (
+                          <span className="text-yellow-600"><ClockIcon className="w-3 h-3 inline ml-1" />cooldown</span>
+                        )}
+                      </div>
+                      {e.last_error && <div className="text-xs text-destructive truncate mt-0.5">{e.last_error}</div>}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => testProxy(e.id)}><Play className="w-3.5 h-3.5" /></Button>
+                    {(e.status !== "active" || e.cooldown_until) && (
+                      <Button size="sm" variant="outline" onClick={() => resetCooldown(e.id)}><RefreshCw className="w-3.5 h-3.5" /></Button>
+                    )}
+                    <Button size="sm" variant="destructive" onClick={() => deleteEndpoint(e.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {!filteredEndpoints.length && <p className="text-center text-muted-foreground py-8">لا توجد proxies.</p>}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bulk">
+          <Card>
+            <CardHeader><CardTitle className="text-base">استيراد جماعي إلى: {selectedPool ? pools.find(p => p.id === selectedPool)?.name : <span className="text-destructive">اختر pool من التبويب الأول</span>}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">سطر واحد لكل proxy. الصيغ المدعومة:</p>
+              <pre className="text-xs bg-muted p-2 rounded font-mono">host:port:user:pass{"\n"}http://user:pass@host:port{"\n"}socks5://user:pass@host:port</pre>
+              <textarea
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+                rows={10}
+                className="w-full font-mono text-xs p-3 border rounded bg-background"
+                placeholder="proxy1.example.com:8080:user:pass&#10;http://u:p@proxy2.example.com:3128"
+              />
+              <Button onClick={bulkImport} disabled={!selectedPool}>استيراد</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </AdminLayout>
+  );
+}
