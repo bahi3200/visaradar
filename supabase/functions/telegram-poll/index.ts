@@ -11,8 +11,17 @@ const MIN_REMAINING_MS = 3_000;
 interface TgUpdate {
   update_id: number;
   message?: {
+    message_id?: number;
+    date?: number;
     chat: { id: number; first_name?: string; last_name?: string; username?: string };
     text?: string;
+  };
+  channel_post?: {
+    message_id?: number;
+    date?: number;
+    chat: { id: number; title?: string; username?: string; type?: string };
+    text?: string;
+    caption?: string;
   };
   callback_query?: {
     id: string;
@@ -29,6 +38,139 @@ async function tg(method: string, body: Record<string, unknown>, token: string) 
     body: JSON.stringify(body),
   });
   return r.json();
+}
+
+// Country detection heuristics (Arabic + English + French + flag emojis)
+const COUNTRY_HINTS: Array<{ code: string; patterns: RegExp[] }> = [
+  { code: "IT", patterns: [/إيطاليا|ايطاليا|italie|italy|italia|🇮🇹/i] },
+  { code: "FR", patterns: [/فرنسا|france|🇫🇷/i] },
+  { code: "ES", patterns: [/إسبانيا|اسبانيا|espagne|spain|españa|🇪🇸/i] },
+  { code: "DE", patterns: [/ألمانيا|المانيا|allemagne|germany|deutschland|🇩🇪/i] },
+  { code: "GR", patterns: [/اليونان|grèce|grece|greece|🇬🇷/i] },
+  { code: "PT", patterns: [/البرتغال|portugal|🇵🇹/i] },
+  { code: "NL", patterns: [/هولندا|pays-bas|netherlands|🇳🇱/i] },
+  { code: "BE", patterns: [/بلجيكا|belgique|belgium|🇧🇪/i] },
+  { code: "GB", patterns: [/بريطانيا|royaume-uni|uk|britain|🇬🇧/i] },
+  { code: "CA", patterns: [/كندا|canada|🇨🇦/i] },
+];
+
+function detectCountry(text: string): string | null {
+  for (const c of COUNTRY_HINTS) {
+    if (c.patterns.some((p) => p.test(text))) return c.code;
+  }
+  return null;
+}
+
+function findMatchedKeywords(text: string, keywords: string[]): string[] {
+  const lower = text.toLowerCase();
+  return keywords.filter((kw) => lower.includes(kw.toLowerCase()));
+}
+
+async function handleMonitoredPost(
+  supabase: any,
+  chatId: string,
+  messageId: number,
+  text: string,
+  postedAt: Date,
+  raw: unknown,
+) {
+  // Look up source
+  const { data: source } = await supabase
+    .from("monitored_telegram_sources")
+    .select("id, country_code, category, keywords, is_active, auto_broadcast, title")
+    .eq("chat_id", chatId)
+    .maybeSingle();
+
+  if (!source || !source.is_active) return false;
+
+  const matched = findMatchedKeywords(text, source.keywords || []);
+  const isSignal = matched.length > 0;
+  const detectedCountry = source.country_code || detectCountry(text);
+
+  // Insert post (idempotent by unique chat_id+message_id)
+  const { data: inserted, error: insErr } = await supabase
+    .from("telegram_channel_posts")
+    .upsert(
+      {
+        source_id: source.id,
+        chat_id: chatId,
+        message_id: messageId,
+        text: text.slice(0, 4000),
+        matched_keywords: matched,
+        detected_country: detectedCountry,
+        detected_category: source.category,
+        is_signal: isSignal,
+        posted_at: postedAt.toISOString(),
+        raw,
+      },
+      { onConflict: "chat_id,message_id" },
+    )
+    .select("id, broadcasted")
+    .maybeSingle();
+
+  if (insErr) {
+    console.error("channel_post insert error:", insErr);
+    return false;
+  }
+
+  // Update source stats
+  await supabase
+    .from("monitored_telegram_sources")
+    .update({
+      last_post_at: postedAt.toISOString(),
+      posts_captured: (await supabase
+        .from("telegram_channel_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("source_id", source.id)).count ?? undefined,
+    })
+    .eq("id", source.id);
+
+  // Auto-broadcast if enabled, is_signal, country detected, and not already broadcasted
+  if (
+    isSignal &&
+    source.auto_broadcast &&
+    detectedCountry &&
+    inserted &&
+    !inserted.broadcasted
+  ) {
+    const { data: signal, error: sigErr } = await supabase
+      .from("visa_external_signals")
+      .insert({
+        country_code: detectedCountry,
+        category: source.category || "all",
+        status: "open",
+        title_ar: `🟢 موعد محتمل — ${source.title}`,
+        message_ar: text.slice(0, 1500),
+        source: `Telegram: ${source.title}`,
+        source_url: null,
+        broadcast_status: "pending",
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (!sigErr && signal) {
+      await supabase
+        .from("telegram_channel_posts")
+        .update({ broadcasted: true, broadcast_signal_id: signal.id })
+        .eq("id", inserted.id);
+
+      // Fire broadcast edge function (service role auth)
+      try {
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-visa-signal`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ signal_id: signal.id }),
+        });
+      } catch (e) {
+        console.error("broadcast invoke error:", e);
+      }
+    }
+  }
+
+  return true;
 }
 
 Deno.serve(async (req) => {
