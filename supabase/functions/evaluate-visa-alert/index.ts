@@ -54,7 +54,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { country_code, provider, category = null, title, message, source_url } = body
+    const {
+      country_code, provider, category = null,
+      title, message, source_url,
+      check_only = false,
+    } = body
     if (!country_code || !provider) {
       return new Response(JSON.stringify({ error: 'country_code and provider required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -191,7 +195,9 @@ Deno.serve(async (req) => {
       block_reason = `Score ${confidence_score} < threshold ${settings.threshold}`
     } else {
       // SEND
-      try {
+      if (check_only) {
+        decision = 'sent'
+      } else try {
         const { data: alertResp, error: alertErr } = await admin.functions.invoke('send-visa-notification', {
           body: { country_code, provider, category, title, message, source_url, confidence_score }
         })
