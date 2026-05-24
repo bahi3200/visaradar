@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Replay, ChevronRight, Image as ImageIcon, Code2, Network, Activity, FileText, Search } from "lucide-react";
+import { Rewind, ChevronRight, Image as ImageIcon, Code2, Network, Activity, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,7 +133,7 @@ export default function AdminDetectionReplay() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Replay className="h-7 w-7" /> Detection Replay System
+            <Rewind className="h-7 w-7" /> Detection Replay System
           </h1>
           <p className="text-muted-foreground mt-1">
             إعادة عرض أي كشف سابق لتحليل false positives وتحسين منطق الكشف.
