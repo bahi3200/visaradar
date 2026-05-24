@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { RefreshCw, Check, Loader2, ArrowLeft, Info } from "lucide-react";
+import { RefreshCw, Check, Loader2, ArrowLeft, Info, Gift } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,21 @@ export default function AutoRenewCard() {
     enabled: !!sub?.id,
   });
 
+  const { data: loyalty } = useQuery({
+    queryKey: ["renewal-loyalty-discount"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["renewal_loyalty_discount_enabled", "renewal_loyalty_discount_pct"]);
+      const map = Object.fromEntries((data ?? []).map((s: any) => [s.key, s.value]));
+      return {
+        enabled: (map["renewal_loyalty_discount_enabled"] ?? "true") === "true",
+        pct: Math.max(0, Math.min(100, Number(map["renewal_loyalty_discount_pct"] ?? "10"))),
+      };
+    },
+  });
+
   if (!sub) return null;
 
   const toggle = async (next: boolean) => {
@@ -72,7 +87,10 @@ export default function AutoRenewCard() {
   };
 
   const pkg = Array.isArray(sub.packages) ? sub.packages[0] : sub.packages;
-  const price = pkg?.promo_price ?? pkg?.price ?? 0;
+  const basePrice = Number(pkg?.promo_price ?? pkg?.price ?? 0);
+  const discountActive = !!loyalty?.enabled && (loyalty?.pct ?? 0) > 0;
+  const discountAmount = discountActive ? Math.round((basePrice * (loyalty?.pct ?? 0)) / 100) : 0;
+  const finalPrice = Math.max(0, basePrice - discountAmount);
 
   return (
     <div className="gradient-card rounded-xl border border-primary/30 p-4 mb-4">
@@ -103,8 +121,25 @@ export default function AutoRenewCard() {
           <div>
             <span className="font-bold text-foreground">مفعّل</span> — الباقة:{" "}
             <span className="font-bold">{pkg?.name_ar ?? "—"}</span> ·{" "}
-            <span className="font-bold">{price.toLocaleString()} د.ج</span>
+            {discountActive ? (
+              <>
+                <span className="line-through opacity-60">{basePrice.toLocaleString()}</span>{" "}
+                <span className="font-bold text-primary">{finalPrice.toLocaleString()} د.ج</span>
+              </>
+            ) : (
+              <span className="font-bold">{basePrice.toLocaleString()} د.ج</span>
+            )}
           </div>
+        </div>
+      )}
+
+      {discountActive && (
+        <div className="mt-2 rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-[11px] flex items-center gap-2">
+          <Gift className="w-3.5 h-3.5 text-accent shrink-0" />
+          <span className="text-foreground">
+            <b>خصم وفاء {loyalty?.pct}%</b> يُطبَّق تلقائياً على طلب التجديد — وفّر{" "}
+            <b className="text-accent">{discountAmount.toLocaleString()} د.ج</b>
+          </span>
         </div>
       )}
 
