@@ -933,10 +933,10 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
     const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       if (attempt > 0) await randomDelay(1500, 4000);
-      const start = Date.now();
-      const response = await fetch(proxiedUrl(url, true), {
+      const ua = randomPick(USER_AGENTS);
+      const { response, durationMs } = await antiDetectFetch(url, {
         headers: {
-          'User-Agent': randomPick(USER_AGENTS),
+          'User-Agent': ua,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': randomPick(ACCEPT_LANGUAGES),
           'Accept-Encoding': 'gzip, deflate, br',
@@ -948,11 +948,11 @@ async function fetchWithRetry(url: string, maxRetries = 2): Promise<{ response: 
           'Sec-Fetch-User': '?1',
           'Upgrade-Insecure-Requests': '1',
           'DNT': '1',
+          ...fingerprintHeaders(ua),
         },
         signal: controller.signal,
         redirect: 'follow',
-      });
-      const durationMs = Date.now() - start;
+      }, { render: true, usedFor: 'html-fetch' });
       return { response, durationMs };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
