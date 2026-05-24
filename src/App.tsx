@@ -143,6 +143,7 @@ const App = () => (
       <Route path="/dashboard/anti-false-positive" element={<AdminRoute adminOnly><AdminAntiFalsePositive /></AdminRoute>} />
       <Route path="/dashboard/smart-ban" element={<AdminRoute adminOnly><AdminSmartBan /></AdminRoute>} />
       <Route path="/dashboard/historical-intelligence" element={<AdminRoute adminOnly><AdminHistoricalIntel /></AdminRoute>} />
+      <Route path="/dashboard/proxy-intelligence" element={<AdminRoute adminOnly><AdminProxyIntelligence /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
