@@ -1,0 +1,17 @@
+{
+  "name": "visaradar-browser-worker",
+  "version": "1.0.0",
+  "description": "Playwright-based real browser verification worker for VisaRadar (runs on VPS).",
+  "type": "module",
+  "scripts": {
+    "start": "node worker.js",
+    "once": "node worker.js --once",
+    "install-browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "playwright": "^1.48.0",
+    "dotenv": "^16.4.5"
+  }
+}
