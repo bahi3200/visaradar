@@ -322,6 +322,8 @@ type CheckResult = {
   slotCount: number;
   centersOpen: string[];
   signalHash: string;
+  signalBreakdown?: Record<string, { open: number; closed: number }>;
+  htmlSnapshot?: string;
 };
 
 // ──────────────────────────────────────────────
@@ -899,6 +901,8 @@ export async function checkSite(
     ];
 
     let { status, totalOpen, totalClosed, detectionMethod } = determineStatus(layers);
+    const signalBreakdown: Record<string, { open: number; closed: number }> = {};
+    for (const l of layers) signalBreakdown[l.name] = { open: l.openScore, closed: l.closedScore };
 
     // Safety net: if the page is an empty SPA shell (no readable body text)
     // AND no layer produced ANY signal (open or closed), do NOT report "closed".
@@ -941,6 +945,8 @@ export async function checkSite(
       slotCount: apiResult.slotCount,
       centersOpen: apiResult.centersOpen,
       signalHash,
+      signalBreakdown,
+      htmlSnapshot: status === 'open' ? html.substring(0, 20000) : undefined,
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -977,6 +983,15 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // ── Worker health: register heartbeat
+    const workerId = `edge-${crypto.randomUUID().slice(0, 8)}`;
+    const workerStartedAt = Date.now();
+    const { data: workerRow } = await supabase
+      .from('worker_health')
+      .insert({ worker_id: workerId, status: 'running', started_at: new Date().toISOString() })
+      .select('id')
+      .maybeSingle();
+
     // Check if auto-monitoring is enabled (skip check for manual invocations with force=true)
     const url = new URL(req.url);
     const force = url.searchParams.get('force') === 'true';
@@ -1004,9 +1019,21 @@ Deno.serve(async (req) => {
 
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
+    // ── Respect scan_priorities cooldown_until: skip countries currently cooling down
+    const { data: priorities } = await supabase
+      .from('scan_priorities')
+      .select('country_code, cooldown_until')
+      .in('country_code', countryCodes);
+    const cooldownSkip = new Set(
+      (priorities || [])
+        .filter((p: any) => p.cooldown_until && new Date(p.cooldown_until).getTime() > Date.now())
+        .map((p: any) => p.country_code),
+    );
+    const activeCountryCodes = countryCodes.filter((c) => !cooldownSkip.has(c));
+
     // Stagger checks with random delays — across every (country × category) pair
     const siteResults: CheckResult[] = [];
-    for (const code of countryCodes) {
+    for (const code of activeCountryCodes) {
       for (const cat of VISA_CATEGORIES) {
         if (siteResults.length > 0) await randomDelay(600, 2000);
         const result = await checkSite(code, MONITOR_TARGETS[code], cat);
@@ -1041,6 +1068,12 @@ Deno.serve(async (req) => {
     // Batch insert
     const insertData = siteResults.map((result) => {
       const target = MONITOR_TARGETS[result.countryCode];
+      const denom = result.openScore + result.closedScore;
+      const winScore =
+        result.status === 'open' ? result.openScore :
+        result.status === 'closed' ? result.closedScore :
+        Math.max(result.openScore, result.closedScore);
+      const confidence_score = denom === 0 ? 0 : Math.min(100, Math.round((winScore / denom) * 100));
       return {
         country_code: result.countryCode,
         provider: target.provider,
@@ -1055,10 +1088,71 @@ Deno.serve(async (req) => {
         slot_count: result.slotCount || 0,
         earliest_date: result.earliestDate,
         center_name: result.centersOpen?.[0] || null,
+        confidence_score,
+        signal_breakdown: result.signalBreakdown || {},
+        worker_id: workerId,
       };
     });
 
-    await supabase.from('visa_monitor_checks').insert(insertData);
+    const { data: insertedChecks } = await supabase
+      .from('visa_monitor_checks')
+      .insert(insertData)
+      .select('id, country_code, category, status');
+    const checkIdByKey = new Map<string, string>();
+    for (const c of (insertedChecks || []) as any[]) {
+      checkIdByKey.set(`${c.country_code}:${c.category}`, c.id);
+    }
+
+    // ── Persist detection_evidence for open / changed results
+    const evidenceRows = siteResults
+      .filter((r) => r.status === 'open' || (r.changed && r.status !== 'error'))
+      .map((r) => ({
+        check_id: checkIdByKey.get(`${r.countryCode}:${r.category}`)!,
+        country_code: r.countryCode,
+        provider: MONITOR_TARGETS[r.countryCode].provider,
+        evidence_type: r.htmlSnapshot ? 'html_snapshot' : 'detection_summary',
+        url: MONITOR_TARGETS[r.countryCode].checkUrl,
+        content: r.htmlSnapshot || (r.snippet ?? ''),
+        metadata: {
+          status: r.status,
+          confidence_score:
+            (r.openScore + r.closedScore) === 0
+              ? 0
+              : Math.round((Math.max(r.openScore, r.closedScore) / (r.openScore + r.closedScore)) * 100),
+          signal_breakdown: r.signalBreakdown,
+          extracted_dates: r.extractedDates,
+          centers_open: r.centersOpen,
+          slot_count: r.slotCount,
+          earliest_date: r.earliestDate,
+          http_status: r.httpStatus,
+        },
+      }))
+      .filter((e) => e.check_id);
+    if (evidenceRows.length > 0) {
+      await supabase.from('detection_evidence').insert(evidenceRows);
+    }
+
+    // ── Update scan_priorities (mark scanned, track failures, ban cooldown)
+    for (const r of siteResults) {
+      const isFailure = r.status === 'error' || r.detectionMethod === 'blocked';
+      const banDetected = r.detectionMethod === 'blocked' || r.httpStatus === 403;
+      const update: any = { last_scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      if (isFailure) {
+        const { data: pri } = await supabase
+          .from('scan_priorities').select('consecutive_failures, ban_detected_count')
+          .eq('country_code', r.countryCode).maybeSingle();
+        update.consecutive_failures = (pri?.consecutive_failures || 0) + 1;
+        if (banDetected) {
+          update.ban_detected_count = (pri?.ban_detected_count || 0) + 1;
+          // 15-minute cooldown after ban
+          update.cooldown_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        }
+      } else {
+        update.consecutive_failures = 0;
+        update.cooldown_until = null;
+      }
+      await supabase.from('scan_priorities').update(update).eq('country_code', r.countryCode);
+    }
 
     // ──────────────────────────────────────────────
     // Strong tracking: persist content signals + diff detection + early warnings
@@ -1570,6 +1664,8 @@ Deno.serve(async (req) => {
           responseTimeMs: r.responseTimeMs,
           detectionMethod: r.detectionMethod,
         })),
+        workerId,
+        skippedCooldown: Array.from(cooldownSkip),
         alertsSent: totalSent,
         earlyAlertsSent: typeof earlySent === 'number' ? earlySent : 0,
       }),
@@ -1578,6 +1674,18 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     console.error('Monitor error:', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const sb = createClient(supabaseUrl, supabaseServiceKey);
+      await sb.from('worker_health').insert({
+        worker_id: `edge-failed-${Date.now()}`,
+        status: 'crashed',
+        error_message: msg.substring(0, 500),
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+      });
+    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
