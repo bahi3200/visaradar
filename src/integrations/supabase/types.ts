@@ -853,6 +853,172 @@ export type Database = {
         }
         Relationships: []
       }
+      proxy_endpoints: {
+        Row: {
+          avg_latency_ms: number | null
+          consecutive_failures: number
+          cooldown_until: string | null
+          created_at: string
+          failure_count: number
+          geo_city: string | null
+          geo_country: string | null
+          host: string
+          id: string
+          last_error: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          last_used_at: string | null
+          notes: string | null
+          password: string | null
+          pool_id: string
+          port: number
+          protocol: string
+          status: string
+          success_count: number
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          consecutive_failures?: number
+          cooldown_until?: string | null
+          created_at?: string
+          failure_count?: number
+          geo_city?: string | null
+          geo_country?: string | null
+          host: string
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          last_used_at?: string | null
+          notes?: string | null
+          password?: string | null
+          pool_id: string
+          port: number
+          protocol?: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          consecutive_failures?: number
+          cooldown_until?: string | null
+          created_at?: string
+          failure_count?: number
+          geo_city?: string | null
+          geo_country?: string | null
+          host?: string
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          last_used_at?: string | null
+          notes?: string | null
+          password?: string | null
+          pool_id?: string
+          port?: number
+          protocol?: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proxy_endpoints_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "proxy_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proxy_health_log: {
+        Row: {
+          checked_at: string
+          error_message: string | null
+          id: number
+          latency_ms: number | null
+          proxy_id: string
+          status_code: number | null
+          success: boolean
+          test_url: string | null
+          used_for: string | null
+        }
+        Insert: {
+          checked_at?: string
+          error_message?: string | null
+          id?: number
+          latency_ms?: number | null
+          proxy_id: string
+          status_code?: number | null
+          success: boolean
+          test_url?: string | null
+          used_for?: string | null
+        }
+        Update: {
+          checked_at?: string
+          error_message?: string | null
+          id?: number
+          latency_ms?: number | null
+          proxy_id?: string
+          status_code?: number | null
+          success?: boolean
+          test_url?: string | null
+          used_for?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proxy_health_log_proxy_id_fkey"
+            columns: ["proxy_id"]
+            isOneToOne: false
+            referencedRelation: "proxy_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proxy_pools: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          pool_type: string
+          provider: string | null
+          rotation_strategy: string
+          target_countries: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          pool_type?: string
+          provider?: string | null
+          rotation_strategy?: string
+          target_countries?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          pool_type?: string
+          provider?: string | null
+          rotation_strategy?: string
+          target_countries?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -2129,6 +2295,28 @@ export type Database = {
       is_device_allowed: {
         Args: { _fingerprint: string; _user_id: string }
         Returns: boolean
+      }
+      pick_next_proxy: {
+        Args: { _country?: string; _pool_name: string }
+        Returns: {
+          host: string
+          id: string
+          password: string
+          port: number
+          protocol: string
+          username: string
+        }[]
+      }
+      record_proxy_result: {
+        Args: {
+          _error?: string
+          _latency_ms?: number
+          _proxy_id: string
+          _status_code?: number
+          _success: boolean
+          _used_for?: string
+        }
+        Returns: undefined
       }
       set_promo_input_method: { Args: { _method: string }; Returns: undefined }
       update_package_promo: {

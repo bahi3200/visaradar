@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.pick_next_proxy(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.record_proxy_result(UUID, BOOLEAN, INTEGER, INTEGER, TEXT, TEXT) FROM PUBLIC, anon, authenticated;

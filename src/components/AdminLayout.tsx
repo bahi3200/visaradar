@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ClipboardList, Users, Briefcase, Bell, Mail, LogOut,
-  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings, AlertTriangle, Clock, Bot, Database, Send, Megaphone, Package, CalendarDays, Link2, Radar
+  ChevronRight, Menu, X, Shield, MessageCircle, CreditCard, Activity, Star, Gift, Settings, AlertTriangle, Clock, Bot, Database, Send, Megaphone, Package, CalendarDays, Link2, Radar, Network
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/payment-settings", label: "إعدادات الدفع", icon: CreditCard, adminOnly: true },
   { path: "/dashboard/visa-monitor", label: "مراقبة التأشيرات", icon: Activity },
   { path: "/dashboard/enterprise", label: "مراقبة Enterprise", icon: Shield, adminOnly: true },
+  { path: "/dashboard/proxies", label: "إدارة الـ Proxies", icon: Network, adminOnly: true },
   { path: "/dashboard/visa-openings", label: "تتبع الفتحات", icon: Radar },
   { path: "/dashboard/visa-signals", label: "إشارات يدوية (بث فوري)", icon: Megaphone },
   { path: "/dashboard/appointments", label: "مواعيد التأشيرات", icon: CalendarDays },
