@@ -1266,6 +1266,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_auto_renewal: boolean
           moderator_action: string | null
           moderator_action_at: string | null
           moderator_id: string | null
@@ -1273,6 +1274,7 @@ export type Database = {
           package_id: string
           phone: string | null
           receipt_url: string | null
+          renewing_subscription_id: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           service_type: string
@@ -1290,6 +1292,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          is_auto_renewal?: boolean
           moderator_action?: string | null
           moderator_action_at?: string | null
           moderator_id?: string | null
@@ -1297,6 +1300,7 @@ export type Database = {
           package_id: string
           phone?: string | null
           receipt_url?: string | null
+          renewing_subscription_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           service_type?: string
@@ -1314,6 +1318,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_auto_renewal?: boolean
           moderator_action?: string | null
           moderator_action_at?: string | null
           moderator_id?: string | null
@@ -1321,6 +1326,7 @@ export type Database = {
           package_id?: string
           phone?: string | null
           receipt_url?: string | null
+          renewing_subscription_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           service_type?: string
@@ -1337,16 +1343,25 @@ export type Database = {
             referencedRelation: "packages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscription_requests_renewing_subscription_id_fkey"
+            columns: ["renewing_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       subscriptions: {
         Row: {
+          auto_renew: boolean
           countries: string[]
           created_at: string
           expires_at: string
           id: string
           monitoring_scopes: Json
           package_id: string
+          renewal_request_created_at: string | null
           service_type: string
           starts_at: string
           status: string
@@ -1355,12 +1370,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_renew?: boolean
           countries?: string[]
           created_at?: string
           expires_at: string
           id?: string
           monitoring_scopes?: Json
           package_id: string
+          renewal_request_created_at?: string | null
           service_type?: string
           starts_at?: string
           status?: string
@@ -1369,12 +1386,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_renew?: boolean
           countries?: string[]
           created_at?: string
           expires_at?: string
           id?: string
           monitoring_scopes?: Json
           package_id?: string
+          renewal_request_created_at?: string | null
           service_type?: string
           starts_at?: string
           status?: string
