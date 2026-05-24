@@ -53,6 +53,105 @@ export type Database = {
         }
         Relationships: []
       }
+      browser_verifications: {
+        Row: {
+          available_dates_count: number
+          booking_buttons_count: number
+          calendar_detected: boolean
+          checked_at: string
+          country_code: string
+          created_at: string
+          detection_details: Json | null
+          error_message: string | null
+          id: string
+          load_time_ms: number | null
+          no_appointments_text_found: boolean
+          page_text_snippet: string | null
+          provider: string
+          screenshot_path: string | null
+          status: string
+          url: string
+          user_agent: string | null
+          worker_id: string | null
+          xhr_requests: Json | null
+        }
+        Insert: {
+          available_dates_count?: number
+          booking_buttons_count?: number
+          calendar_detected?: boolean
+          checked_at?: string
+          country_code: string
+          created_at?: string
+          detection_details?: Json | null
+          error_message?: string | null
+          id?: string
+          load_time_ms?: number | null
+          no_appointments_text_found?: boolean
+          page_text_snippet?: string | null
+          provider: string
+          screenshot_path?: string | null
+          status: string
+          url: string
+          user_agent?: string | null
+          worker_id?: string | null
+          xhr_requests?: Json | null
+        }
+        Update: {
+          available_dates_count?: number
+          booking_buttons_count?: number
+          calendar_detected?: boolean
+          checked_at?: string
+          country_code?: string
+          created_at?: string
+          detection_details?: Json | null
+          error_message?: string | null
+          id?: string
+          load_time_ms?: number | null
+          no_appointments_text_found?: boolean
+          page_text_snippet?: string | null
+          provider?: string
+          screenshot_path?: string | null
+          status?: string
+          url?: string
+          user_agent?: string | null
+          worker_id?: string | null
+          xhr_requests?: Json | null
+        }
+        Relationships: []
+      }
+      browser_worker_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          token_hash: string
+          total_requests: number
+          worker_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          token_hash: string
+          total_requests?: number
+          worker_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          token_hash?: string
+          total_requests?: number
+          worker_name?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
