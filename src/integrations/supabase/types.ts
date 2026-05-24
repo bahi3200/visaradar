@@ -1122,15 +1122,22 @@ export type Database = {
       }
       proxy_endpoints: {
         Row: {
+          auto_disabled_at: string | null
           avg_latency_ms: number | null
+          ban_probability: number
+          block_count: number
+          captcha_count: number
           consecutive_failures: number
           cooldown_until: string | null
           created_at: string
+          disabled_reason: string | null
           failure_count: number
           geo_city: string | null
           geo_country: string | null
           host: string
           id: string
+          last_block_at: string | null
+          last_captcha_at: string | null
           last_error: string | null
           last_failure_at: string | null
           last_success_at: string | null
@@ -1140,21 +1147,30 @@ export type Database = {
           pool_id: string
           port: number
           protocol: string
+          score: number
           status: string
           success_count: number
+          total_requests: number
           updated_at: string
           username: string | null
         }
         Insert: {
+          auto_disabled_at?: string | null
           avg_latency_ms?: number | null
+          ban_probability?: number
+          block_count?: number
+          captcha_count?: number
           consecutive_failures?: number
           cooldown_until?: string | null
           created_at?: string
+          disabled_reason?: string | null
           failure_count?: number
           geo_city?: string | null
           geo_country?: string | null
           host: string
           id?: string
+          last_block_at?: string | null
+          last_captcha_at?: string | null
           last_error?: string | null
           last_failure_at?: string | null
           last_success_at?: string | null
@@ -1164,21 +1180,30 @@ export type Database = {
           pool_id: string
           port: number
           protocol?: string
+          score?: number
           status?: string
           success_count?: number
+          total_requests?: number
           updated_at?: string
           username?: string | null
         }
         Update: {
+          auto_disabled_at?: string | null
           avg_latency_ms?: number | null
+          ban_probability?: number
+          block_count?: number
+          captcha_count?: number
           consecutive_failures?: number
           cooldown_until?: string | null
           created_at?: string
+          disabled_reason?: string | null
           failure_count?: number
           geo_city?: string | null
           geo_country?: string | null
           host?: string
           id?: string
+          last_block_at?: string | null
+          last_captcha_at?: string | null
           last_error?: string | null
           last_failure_at?: string | null
           last_success_at?: string | null
@@ -1188,8 +1213,10 @@ export type Database = {
           pool_id?: string
           port?: number
           protocol?: string
+          score?: number
           status?: string
           success_count?: number
+          total_requests?: number
           updated_at?: string
           username?: string | null
         }
@@ -1209,33 +1236,42 @@ export type Database = {
           error_message: string | null
           id: number
           latency_ms: number | null
+          provider: string | null
           proxy_id: string
           status_code: number | null
           success: boolean
           test_url: string | null
           used_for: string | null
+          was_block: boolean
+          was_captcha: boolean
         }
         Insert: {
           checked_at?: string
           error_message?: string | null
           id?: number
           latency_ms?: number | null
+          provider?: string | null
           proxy_id: string
           status_code?: number | null
           success: boolean
           test_url?: string | null
           used_for?: string | null
+          was_block?: boolean
+          was_captcha?: boolean
         }
         Update: {
           checked_at?: string
           error_message?: string | null
           id?: number
           latency_ms?: number | null
+          provider?: string | null
           proxy_id?: string
           status_code?: number | null
           success?: boolean
           test_url?: string | null
           used_for?: string | null
+          was_block?: boolean
+          was_captcha?: boolean
         }
         Relationships: [
           {
@@ -1285,6 +1321,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      proxy_provider_affinity: {
+        Row: {
+          affinity_score: number
+          block_count: number
+          captcha_count: number
+          failure_count: number
+          id: string
+          last_used_at: string | null
+          provider: string
+          proxy_id: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          affinity_score?: number
+          block_count?: number
+          captcha_count?: number
+          failure_count?: number
+          id?: string
+          last_used_at?: string | null
+          provider: string
+          proxy_id: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          affinity_score?: number
+          block_count?: number
+          captcha_count?: number
+          failure_count?: number
+          id?: string
+          last_used_at?: string | null
+          provider?: string
+          proxy_id?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proxy_provider_affinity_proxy_id_fkey"
+            columns: ["proxy_id"]
+            isOneToOne: false
+            referencedRelation: "proxy_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
@@ -2596,6 +2679,21 @@ export type Database = {
         Args: { _country: string; _min_score?: number; _provider: string }
         Returns: boolean
       }
+      pick_best_proxy: {
+        Args: { _country?: string; _pool_name?: string; _provider?: string }
+        Returns: {
+          affinity: number
+          avg_latency_ms: number
+          ban_probability: number
+          host: string
+          id: string
+          password: string
+          port: number
+          protocol: string
+          score: number
+          username: string
+        }[]
+      }
       pick_next_proxy: {
         Args: { _country?: string; _pool_name: string }
         Returns: {
@@ -2605,6 +2703,13 @@ export type Database = {
           port: number
           protocol: string
           username: string
+        }[]
+      }
+      recompute_proxy_scores: {
+        Args: never
+        Returns: {
+          auto_disabled: number
+          updated: number
         }[]
       }
       record_ban_event: {
@@ -2624,17 +2729,32 @@ export type Database = {
         Args: { _provider: string }
         Returns: undefined
       }
-      record_proxy_result: {
-        Args: {
-          _error?: string
-          _latency_ms?: number
-          _proxy_id: string
-          _status_code?: number
-          _success: boolean
-          _used_for?: string
-        }
-        Returns: undefined
-      }
+      record_proxy_result:
+        | {
+            Args: {
+              _error?: string
+              _latency_ms?: number
+              _proxy_id: string
+              _status_code?: number
+              _success: boolean
+              _used_for?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _error?: string
+              _latency_ms?: number
+              _provider?: string
+              _proxy_id: string
+              _status_code?: number
+              _success: boolean
+              _used_for?: string
+              _was_block?: boolean
+              _was_captcha?: boolean
+            }
+            Returns: undefined
+          }
       set_promo_input_method: { Args: { _method: string }; Returns: undefined }
       update_package_promo: {
         Args: {
