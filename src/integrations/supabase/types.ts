@@ -249,6 +249,63 @@ export type Database = {
         }
         Relationships: []
       }
+      monitored_telegram_sources: {
+        Row: {
+          added_by: string | null
+          auto_broadcast: boolean
+          category: string | null
+          chat_id: string
+          chat_type: string
+          country_code: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          last_post_at: string | null
+          notes: string | null
+          posts_captured: number
+          title: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          auto_broadcast?: boolean
+          category?: string | null
+          chat_id: string
+          chat_type?: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          last_post_at?: string | null
+          notes?: string | null
+          posts_captured?: number
+          title: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          auto_broadcast?: boolean
+          category?: string | null
+          chat_id?: string
+          chat_type?: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          last_post_at?: string | null
+          notes?: string | null
+          posts_captured?: number
+          title?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           browser_notifications: boolean
@@ -978,6 +1035,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      telegram_channel_posts: {
+        Row: {
+          broadcast_signal_id: string | null
+          broadcasted: boolean
+          chat_id: string
+          created_at: string
+          detected_category: string | null
+          detected_country: string | null
+          id: string
+          is_signal: boolean
+          matched_keywords: string[]
+          message_id: number
+          posted_at: string
+          raw: Json | null
+          source_id: string | null
+          text: string | null
+        }
+        Insert: {
+          broadcast_signal_id?: string | null
+          broadcasted?: boolean
+          chat_id: string
+          created_at?: string
+          detected_category?: string | null
+          detected_country?: string | null
+          id?: string
+          is_signal?: boolean
+          matched_keywords?: string[]
+          message_id: number
+          posted_at?: string
+          raw?: Json | null
+          source_id?: string | null
+          text?: string | null
+        }
+        Update: {
+          broadcast_signal_id?: string | null
+          broadcasted?: boolean
+          chat_id?: string
+          created_at?: string
+          detected_category?: string | null
+          detected_country?: string | null
+          id?: string
+          is_signal?: boolean
+          matched_keywords?: string[]
+          message_id?: number
+          posted_at?: string
+          raw?: Json | null
+          source_id?: string | null
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_channel_posts_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_telegram_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       telegram_failure_alerts: {
         Row: {

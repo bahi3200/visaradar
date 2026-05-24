@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/telegram-users", label: "مستخدمو Telegram", icon: Send, adminOnly: true },
   { path: "/dashboard/telegram-broadcast", label: "بث Telegram جماعي", icon: Megaphone, adminOnly: true },
   { path: "/dashboard/telegram-link-log", label: "سجل ربط Telegram", icon: Link2, adminOnly: true },
+ { path: "/dashboard/telegram-sources", label: "قنوات Telegram المراقَبة", icon: Radar, adminOnly: true },
   { path: "/dashboard/backup", label: "نسخ احتياطي", icon: Database, adminOnly: true },
 ];
 
