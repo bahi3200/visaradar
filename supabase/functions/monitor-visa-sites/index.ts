@@ -1264,6 +1264,14 @@ Deno.serve(async (req) => {
 
     const countryCodes = Object.keys(MONITOR_TARGETS);
 
+    // ── Distributed sharding: accept a subset of countries via body.countries
+    const shardCountries: string[] | null = Array.isArray(bodyData?.countries) && bodyData.countries.length > 0
+      ? bodyData.countries.map((c: string) => String(c).toUpperCase())
+      : null;
+    const shardProvider: string | null = typeof bodyData?.provider === 'string' ? bodyData.provider : null;
+    const taskId: string | null = typeof bodyData?.task_id === 'string' ? bodyData.task_id : null;
+    const distributedScan = !!(shardCountries || shardProvider || taskId);
+
     // ── Respect scan_priorities cooldown_until: skip countries currently cooling down
     const { data: priorities } = await supabase
       .from('scan_priorities')
