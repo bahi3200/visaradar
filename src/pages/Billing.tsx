@@ -27,6 +27,7 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import BackButton from "@/components/BackButton";
 import { toast } from "@/components/ui/use-toast";
+import AutoRenewCard from "@/components/billing/AutoRenewCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -946,6 +947,8 @@ export default function Billing() {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">إدارة الفوترة</h1>
           <p className="text-sm text-muted-foreground">عرض اشتراكك الحالي وإدارة طريقة الدفع</p>
         </div>
+
+        <AutoRenewCard />
 
         {/* Stripe failure + Paddle suggestion banner */}
         <div className="gradient-card rounded-xl border border-destructive/30 p-4 mb-4 flex items-start gap-3">
