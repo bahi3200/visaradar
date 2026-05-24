@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_dedup: {
+        Row: {
+          alert_type: string
+          cooldown_until: string
+          country_code: string
+          dedup_key: string
+          first_sent_at: string
+          id: string
+          last_sent_at: string
+          metadata: Json | null
+          provider: string
+          send_count: number
+        }
+        Insert: {
+          alert_type: string
+          cooldown_until?: string
+          country_code: string
+          dedup_key: string
+          first_sent_at?: string
+          id?: string
+          last_sent_at?: string
+          metadata?: Json | null
+          provider: string
+          send_count?: number
+        }
+        Update: {
+          alert_type?: string
+          cooldown_until?: string
+          country_code?: string
+          dedup_key?: string
+          first_sent_at?: string
+          id?: string
+          last_sent_at?: string
+          metadata?: Json | null
+          provider?: string
+          send_count?: number
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -162,6 +201,50 @@ export type Database = {
         }
         Relationships: []
       }
+      detection_evidence: {
+        Row: {
+          check_id: string
+          content: string | null
+          country_code: string
+          created_at: string
+          evidence_type: string
+          id: string
+          metadata: Json | null
+          provider: string
+          url: string | null
+        }
+        Insert: {
+          check_id: string
+          content?: string | null
+          country_code: string
+          created_at?: string
+          evidence_type: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          url?: string | null
+        }
+        Update: {
+          check_id?: string
+          content?: string | null
+          country_code?: string
+          created_at?: string
+          evidence_type?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detection_evidence_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "visa_monitor_checks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_notifications: {
         Row: {
           created_at: string
@@ -248,6 +331,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      false_positive_reports: {
+        Row: {
+          check_id: string | null
+          country_code: string
+          created_at: string
+          id: string
+          provider: string
+          reason: string | null
+          reported_by: string | null
+          reporter_type: string
+          resolved: boolean
+        }
+        Insert: {
+          check_id?: string | null
+          country_code: string
+          created_at?: string
+          id?: string
+          provider: string
+          reason?: string | null
+          reported_by?: string | null
+          reporter_type?: string
+          resolved?: boolean
+        }
+        Update: {
+          check_id?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          provider?: string
+          reason?: string | null
+          reported_by?: string | null
+          reporter_type?: string
+          resolved?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "false_positive_reports_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "visa_monitor_checks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monitored_telegram_sources: {
         Row: {
@@ -342,6 +469,54 @@ export type Database = {
           sound_enabled?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      outbound_webhooks: {
+        Row: {
+          countries: string[]
+          created_at: string
+          created_by: string | null
+          event_types: string[]
+          failure_count: number
+          id: string
+          is_active: boolean
+          last_failure_at: string | null
+          last_success_at: string | null
+          name: string
+          secret: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          countries?: string[]
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          countries?: string[]
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
         }
         Relationships: []
       }
@@ -573,6 +748,45 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_adapters_config: {
+        Row: {
+          confidence_weights: Json
+          display_name: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          provider: string
+          rate_limit_per_minute: number
+          signal_thresholds: Json
+          updated_at: string
+          use_render: boolean
+        }
+        Insert: {
+          confidence_weights?: Json
+          display_name: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider: string
+          rate_limit_per_minute?: number
+          signal_thresholds?: Json
+          updated_at?: string
+          use_render?: boolean
+        }
+        Update: {
+          confidence_weights?: Json
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider?: string
+          rate_limit_per_minute?: number
+          signal_thresholds?: Json
+          updated_at?: string
+          use_render?: boolean
+        }
+        Relationships: []
+      }
       provider_center_changes: {
         Row: {
           center_name: string
@@ -780,6 +994,45 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visa_status?: string
+        }
+        Relationships: []
+      }
+      scan_priorities: {
+        Row: {
+          ban_detected_count: number
+          base_interval_seconds: number
+          consecutive_failures: number
+          cooldown_until: string | null
+          country_code: string
+          current_interval_seconds: number
+          id: string
+          last_scanned_at: string | null
+          priority: string
+          updated_at: string
+        }
+        Insert: {
+          ban_detected_count?: number
+          base_interval_seconds?: number
+          consecutive_failures?: number
+          cooldown_until?: string | null
+          country_code: string
+          current_interval_seconds?: number
+          id?: string
+          last_scanned_at?: string | null
+          priority?: string
+          updated_at?: string
+        }
+        Update: {
+          ban_detected_count?: number
+          base_interval_seconds?: number
+          consecutive_failures?: number
+          cooldown_until?: string | null
+          country_code?: string
+          current_interval_seconds?: number
+          id?: string
+          last_scanned_at?: string | null
+          priority?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1415,6 +1668,7 @@ export type Database = {
           category: string
           center_name: string | null
           checked_at: string
+          confidence_score: number | null
           country_code: string
           detection_method: string | null
           earliest_date: string | null
@@ -1425,13 +1679,16 @@ export type Database = {
           previous_status: string | null
           provider: string
           response_snippet: string | null
+          signal_breakdown: Json | null
           slot_count: number | null
           status: string
+          worker_id: string | null
         }
         Insert: {
           category?: string
           center_name?: string | null
           checked_at?: string
+          confidence_score?: number | null
           country_code: string
           detection_method?: string | null
           earliest_date?: string | null
@@ -1442,13 +1699,16 @@ export type Database = {
           previous_status?: string | null
           provider: string
           response_snippet?: string | null
+          signal_breakdown?: Json | null
           slot_count?: number | null
           status?: string
+          worker_id?: string | null
         }
         Update: {
           category?: string
           center_name?: string | null
           checked_at?: string
+          confidence_score?: number | null
           country_code?: string
           detection_method?: string | null
           earliest_date?: string | null
@@ -1459,8 +1719,10 @@ export type Database = {
           previous_status?: string | null
           provider?: string
           response_snippet?: string | null
+          signal_breakdown?: Json | null
           slot_count?: number | null
           status?: string
+          worker_id?: string | null
         }
         Relationships: []
       }
@@ -1677,6 +1939,98 @@ export type Database = {
           updated_at?: string
           user_id?: string
           wilaya?: string | null
+        }
+        Relationships: []
+      }
+      webhook_delivery_log: {
+        Row: {
+          attempt_count: number
+          delivered_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          success: boolean
+          webhook_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          delivered_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          webhook_id: string
+        }
+        Update: {
+          attempt_count?: number
+          delivered_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_delivery_log_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_health: {
+        Row: {
+          checks_attempted: number
+          checks_failed: number
+          checks_succeeded: number
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          metadata: Json | null
+          started_at: string
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          checks_attempted?: number
+          checks_failed?: number
+          checks_succeeded?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string
+          status?: string
+          worker_id: string
+        }
+        Update: {
+          checks_attempted?: number
+          checks_failed?: number
+          checks_succeeded?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string
+          status?: string
+          worker_id?: string
         }
         Relationships: []
       }
