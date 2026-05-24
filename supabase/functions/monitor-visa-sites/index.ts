@@ -1649,6 +1649,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Finalize worker_health
+    if (workerRow?.id) {
+      const succeeded = siteResults.filter((r) => r.status !== 'error').length;
+      await supabase.from('worker_health').update({
+        status: 'completed',
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - workerStartedAt,
+        checks_attempted: siteResults.length,
+        checks_succeeded: succeeded,
+        checks_failed: siteResults.length - succeeded,
+        metadata: { alertsSent: totalSent, skippedCooldown: Array.from(cooldownSkip) },
+      }).eq('id', workerRow.id);
+    }
+
+    // ── Dispatch outbound webhooks (fire-and-forget) for visa_opened events
+    const openTransitions = siteResults.filter((r) => r.status === 'open' && r.changed);
+    if (openTransitions.length > 0) {
+      const anon = Deno.env.get('SUPABASE_ANON_KEY') || '';
+      for (const r of openTransitions) {
+        fetch(`${supabaseUrl}/functions/v1/dispatch-webhooks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anon}`, 'apikey': anon },
+          body: JSON.stringify({
+            event_type: 'visa_opened',
+            country_code: r.countryCode,
+            category: r.category,
+            provider: MONITOR_TARGETS[r.countryCode].provider,
+            check_id: checkIdByKey.get(`${r.countryCode}:${r.category}`),
+            detected_at: new Date().toISOString(),
+            confidence_score:
+              (r.openScore + r.closedScore) === 0
+                ? 0
+                : Math.round((r.openScore / (r.openScore + r.closedScore)) * 100),
+            earliest_date: r.earliestDate,
+            centers_open: r.centersOpen,
+            slot_count: r.slotCount,
+          }),
+        }).catch(() => {});
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
