@@ -58,6 +58,7 @@ import VisaCalendar from "./pages/VisaCalendar";
 import AdminVisaAppointments from "./pages/AdminVisaAppointments";
 import AdminVisaOpenings from "./pages/AdminVisaOpenings";
 import AdminVisaSignals from "./pages/AdminVisaSignals";
+import AdminTelegramSources from "./pages/AdminTelegramSources";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -124,6 +125,7 @@ const App = () => (
       <Route path="/dashboard/telegram-users" element={<AdminRoute adminOnly><AdminTelegramUsers /></AdminRoute>} />
       <Route path="/dashboard/telegram-broadcast" element={<AdminRoute adminOnly><AdminTelegramBroadcast /></AdminRoute>} />
       <Route path="/dashboard/telegram-link-log" element={<AdminRoute adminOnly><AdminTelegramLinkLog /></AdminRoute>} />
+      <Route path="/dashboard/telegram-sources" element={<AdminRoute adminOnly><AdminTelegramSources /></AdminRoute>} />
       <Route path="/dashboard/packages" element={<AdminRoute adminOnly><ManagePackages /></AdminRoute>} />
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
       <Route path="/dashboard/visa-openings" element={<AdminRoute><AdminVisaOpenings /></AdminRoute>} />
