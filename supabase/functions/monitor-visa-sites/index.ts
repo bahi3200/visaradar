@@ -176,6 +176,101 @@ async function antiDetectFetch(
 }
 
 // ──────────────────────────────────────────────
+// Smart Ban & CAPTCHA Detection
+// Classifies a fetched response into a ban reason (or null = clean).
+// ──────────────────────────────────────────────
+export type BanClassification = {
+  reason: 'captcha' | 'cloudflare' | 'rate_limit' | 'temp_ban' | 'forbidden' | 'unknown';
+  severity: 'low' | 'medium' | 'high';
+  retryAfterSeconds: number | null;
+} | null;
+
+export function classifyBlock(status: number, headers: Headers, html: string, bodyText: string): BanClassification {
+  const retryAfterRaw = headers.get('retry-after');
+  let retryAfter: number | null = null;
+  if (retryAfterRaw) {
+    const n = parseInt(retryAfterRaw, 10);
+    if (!isNaN(n)) retryAfter = n;
+    else {
+      const d = Date.parse(retryAfterRaw);
+      if (!isNaN(d)) retryAfter = Math.max(0, Math.round((d - Date.now()) / 1000));
+    }
+  }
+
+  const cfRay = headers.get('cf-ray');
+  const server = (headers.get('server') || '').toLowerCase();
+  const cfMitigated = headers.get('cf-mitigated');
+
+  // 1) Rate-limit / Too Many Requests
+  if (status === 429) {
+    return { reason: 'rate_limit', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 2) Service overload — often masks throttling
+  if (status === 503 && (cfRay || server.includes('cloudflare'))) {
+    return { reason: 'cloudflare', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 3) CAPTCHA / browser challenge
+  if (/cf[-_]chl|cf-browser-verification|hcaptcha|recaptcha|g-recaptcha|challenge-platform|__cf_chl|just a moment/i.test(html)) {
+    return { reason: 'captcha', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 4) Cloudflare block / Access denied
+  if (status === 403 && (cfRay || cfMitigated || /cloudflare|attention required|access denied|sorry, you have been blocked/i.test(html))) {
+    return { reason: 'cloudflare', severity: 'high', retryAfterSeconds: retryAfter };
+  }
+  // 5) Temporary ban patterns
+  if (/temporarily (banned|blocked|unavailable)|too many requests|ip.{0,10}banned|access (has been )?denied for security/i.test(html)) {
+    return { reason: 'temp_ban', severity: 'medium', retryAfterSeconds: retryAfter };
+  }
+  // 6) Generic 403 with small body
+  if (status === 403 && bodyText.length < 400) {
+    return { reason: 'forbidden', severity: 'medium', retryAfterSeconds: retryAfter };
+  }
+  // 7) Generic blocked text on tiny body
+  if (bodyText.length < 200 && /captcha|challenge|blocked|access denied|forbidden/i.test(html)) {
+    return { reason: 'unknown', severity: 'low', retryAfterSeconds: retryAfter };
+  }
+  return null;
+}
+
+async function recordBanEvent(
+  country: string, provider: string, c: NonNullable<BanClassification>,
+  httpStatus: number, snippet: string, sourceUrl: string,
+): Promise<Date | null> {
+  const sb = getSbForProxy();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.rpc('record_ban_event', {
+      _country: country, _provider: provider, _reason: c.reason, _severity: c.severity,
+      _http_status: httpStatus, _retry_after: c.retryAfterSeconds,
+      _snippet: snippet, _source_url: sourceUrl,
+    });
+    return data ? new Date(data as string) : null;
+  } catch (e) {
+    console.error('[ban] recordBanEvent failed:', e);
+    return null;
+  }
+}
+
+async function recordProviderSuccess(provider: string) {
+  const sb = getSbForProxy();
+  if (!sb) return;
+  try { await sb.rpc('record_provider_success', { _provider: provider }); } catch { /* swallow */ }
+}
+
+async function isProviderThrottled(provider: string): Promise<Date | null> {
+  const sb = getSbForProxy();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.from('provider_throttle').select('cooldown_until').eq('provider', provider).maybeSingle();
+    if (data?.cooldown_until) {
+      const d = new Date(data.cooldown_until);
+      if (d.getTime() > Date.now()) return d;
+    }
+  } catch { /* swallow */ }
+  return null;
+}
+
+// ──────────────────────────────────────────────
 // Monitor targets with multi-layer detection
 // ──────────────────────────────────────────────
 interface MonitorTarget {
@@ -984,21 +1079,30 @@ export async function checkSite(
     const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
     const snippet = bodyText.substring(0, 500);
 
-    // Detect blocking / CAPTCHA
-    const isBlocked =
-      /captcha|challenge|blocked|access denied|403 forbidden|cf-browser/i.test(html) &&
-      bodyText.length < 200;
-
-    if (isBlocked) {
+    // Smart Ban & CAPTCHA classification
+    const ban = classifyBlock(response.status, response.headers, html, bodyText);
+    if (ban) {
+      const cooldown = await recordBanEvent(
+        countryCode, target.provider, ban,
+        response.status, snippet || html.substring(0, 500), target.checkUrl,
+      );
+      console.warn(
+        `[BAN/${ban.reason}] ${countryCode} via ${target.provider} (status=${response.status}` +
+        `${ban.retryAfterSeconds ? `, retry-after=${ban.retryAfterSeconds}s` : ''}` +
+        `${cooldown ? `, cooldown until ${cooldown.toISOString()}` : ''})`,
+      );
       return {
         countryCode, category: category.key, status: 'error', previousStatus: null,
-        snippet: '[Blocked/CAPTCHA detected]', error: 'Anti-bot protection detected',
+        snippet: `[Blocked: ${ban.reason}]`, error: `Blocked by anti-bot: ${ban.reason}`,
         changed: false, openScore: 0, closedScore: 0,
         httpStatus: response.status, responseTimeMs: durationMs,
-        detectionMethod: 'blocked',
+        detectionMethod: `blocked:${ban.reason}`,
         extractedDates: [], earliestDate: null, slotCount: 0, centersOpen: [], signalHash: 'blocked',
       };
     }
+
+    // Clean response → reset provider throttle
+    recordProviderSuccess(target.provider);
 
     // Run all detection layers in parallel
     const [apiResult] = await Promise.all([
@@ -1172,9 +1276,32 @@ Deno.serve(async (req) => {
     );
     const activeCountryCodes = countryCodes.filter((c) => !cooldownSkip.has(c));
 
+    // ── Respect provider_throttle: if a provider is currently in escalating backoff,
+    // skip ALL countries served by that provider until cooldown_until expires.
+    const { data: throttles } = await supabase
+      .from('provider_throttle')
+      .select('provider, cooldown_until, last_reason');
+    const throttledProviders = new Set(
+      (throttles || [])
+        .filter((t: any) => t.cooldown_until && new Date(t.cooldown_until).getTime() > Date.now())
+        .map((t: any) => t.provider),
+    );
+    const providerSkip = new Set<string>();
+    const finalActiveCountries = activeCountryCodes.filter((code) => {
+      const prov = MONITOR_TARGETS[code]?.provider;
+      if (prov && throttledProviders.has(prov)) {
+        providerSkip.add(code);
+        return false;
+      }
+      return true;
+    });
+    if (providerSkip.size > 0) {
+      console.warn(`[throttle] skipping ${providerSkip.size} countries — providers in cooldown: ${[...throttledProviders].join(', ')}`);
+    }
+
     // Stagger checks with random delays — across every (country × category) pair
     const siteResults: CheckResult[] = [];
-    for (const code of activeCountryCodes) {
+    for (const code of finalActiveCountries) {
       for (const cat of VISA_CATEGORIES) {
         if (siteResults.length > 0) await randomDelay(600, 2000);
         const result = await checkSite(code, MONITOR_TARGETS[code], cat);

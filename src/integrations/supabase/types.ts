@@ -107,6 +107,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ban_events: {
+        Row: {
+          country_code: string
+          detected_at: string
+          http_status: number | null
+          id: string
+          provider: string
+          reason: string
+          retry_after_seconds: number | null
+          severity: string
+          snippet: string | null
+          source_url: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          country_code: string
+          detected_at?: string
+          http_status?: number | null
+          id?: string
+          provider: string
+          reason: string
+          retry_after_seconds?: number | null
+          severity?: string
+          snippet?: string | null
+          source_url?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          country_code?: string
+          detected_at?: string
+          http_status?: number | null
+          id?: string
+          provider?: string
+          reason?: string
+          retry_after_seconds?: number | null
+          severity?: string
+          snippet?: string | null
+          source_url?: string | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       browser_verifications: {
         Row: {
           available_dates_count: number
@@ -1002,6 +1044,39 @@ export type Database = {
           last_checked_at?: string | null
           provider?: string
           source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      provider_throttle: {
+        Row: {
+          consecutive_blocks: number
+          cooldown_until: string | null
+          current_backoff_minutes: number
+          last_block_at: string | null
+          last_reason: string | null
+          last_success_at: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_blocks?: number
+          cooldown_until?: string | null
+          current_backoff_minutes?: number
+          last_block_at?: string | null
+          last_reason?: string | null
+          last_success_at?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_blocks?: number
+          cooldown_until?: string | null
+          current_backoff_minutes?: number
+          last_block_at?: string | null
+          last_reason?: string | null
+          last_success_at?: string | null
+          provider?: string
           updated_at?: string
         }
         Relationships: []
@@ -2478,6 +2553,23 @@ export type Database = {
           protocol: string
           username: string
         }[]
+      }
+      record_ban_event: {
+        Args: {
+          _country: string
+          _http_status: number
+          _provider: string
+          _reason: string
+          _retry_after: number
+          _severity: string
+          _snippet: string
+          _source_url: string
+        }
+        Returns: string
+      }
+      record_provider_success: {
+        Args: { _provider: string }
+        Returns: undefined
       }
       record_proxy_result: {
         Args: {
