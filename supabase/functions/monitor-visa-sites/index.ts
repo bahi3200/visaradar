@@ -1276,9 +1276,32 @@ Deno.serve(async (req) => {
     );
     const activeCountryCodes = countryCodes.filter((c) => !cooldownSkip.has(c));
 
+    // ── Respect provider_throttle: if a provider is currently in escalating backoff,
+    // skip ALL countries served by that provider until cooldown_until expires.
+    const { data: throttles } = await supabase
+      .from('provider_throttle')
+      .select('provider, cooldown_until, last_reason');
+    const throttledProviders = new Set(
+      (throttles || [])
+        .filter((t: any) => t.cooldown_until && new Date(t.cooldown_until).getTime() > Date.now())
+        .map((t: any) => t.provider),
+    );
+    const providerSkip = new Set<string>();
+    const finalActiveCountries = activeCountryCodes.filter((code) => {
+      const prov = MONITOR_TARGETS[code]?.provider;
+      if (prov && throttledProviders.has(prov)) {
+        providerSkip.add(code);
+        return false;
+      }
+      return true;
+    });
+    if (providerSkip.size > 0) {
+      console.warn(`[throttle] skipping ${providerSkip.size} countries — providers in cooldown: ${[...throttledProviders].join(', ')}`);
+    }
+
     // Stagger checks with random delays — across every (country × category) pair
     const siteResults: CheckResult[] = [];
-    for (const code of activeCountryCodes) {
+    for (const code of finalActiveCountries) {
       for (const cat of VISA_CATEGORIES) {
         if (siteResults.length > 0) await randomDelay(600, 2000);
         const result = await checkSite(code, MONITOR_TARGETS[code], cat);
