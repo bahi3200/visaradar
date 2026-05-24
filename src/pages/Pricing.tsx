@@ -314,7 +314,10 @@ export default function PricingPage() {
                   </div>
                 )}
                 <h3 className="font-heading text-lg font-bold text-foreground mb-1">{pkg.name_ar}</h3>
-                <p className="text-sm text-muted-foreground mb-1">{pkg.duration_months} أشهر</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {pkg.duration_months} أشهر
+                  <span className="text-accent font-bold"> + شهر هدية 🎁</span>
+                </p>
                 <div className="inline-flex items-center gap-1.5 mb-4">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     serviceType === "visa" ? "bg-primary/10 text-primary" :
