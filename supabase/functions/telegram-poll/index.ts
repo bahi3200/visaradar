@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
     const data = await tg("getUpdates", {
       offset: currentOffset,
       timeout,
-      allowed_updates: ["message", "callback_query"],
+      allowed_updates: ["message", "callback_query", "channel_post", "edited_channel_post"],
     }, TOKEN);
 
     if (!data.ok) {
@@ -251,6 +251,24 @@ Deno.serve(async (req) => {
     }
 
     for (const u of updates) {
+      // ─── Monitored channel/group posts (visa appointment signals) ───
+      const post = u.channel_post;
+      if (post?.chat?.id) {
+        const postText = post.text || post.caption || "";
+        if (postText) {
+          await handleMonitoredPost(
+            supabase,
+            String(post.chat.id),
+            post.message_id ?? 0,
+            postText,
+            post.date ? new Date(post.date * 1000) : new Date(),
+            u,
+          );
+        }
+        processed++;
+        continue;
+      }
+
       // ─── Inline button callbacks (unsubscribe / change service) ───
       if (u.callback_query) {
         const cq = u.callback_query;
@@ -343,6 +361,24 @@ Deno.serve(async (req) => {
       const chatId = String(msg.chat.id);
       const username = msg.chat.username || null;
       const fullName = [msg.chat.first_name, msg.chat.last_name].filter(Boolean).join(" ") || null;
+
+      // Also capture posts from monitored groups (chat type group/supergroup)
+      // when the bot is a member. This is fired for any group message.
+      const isPrivate = !msg.chat.username && msg.chat.first_name; // crude private chat heuristic
+      if (!isPrivate && msg.message_id) {
+        const handled = await handleMonitoredPost(
+          supabase,
+          chatId,
+          msg.message_id,
+          text,
+          msg.date ? new Date(msg.date * 1000) : new Date(),
+          u,
+        );
+        if (handled) {
+          processed++;
+          continue;
+        }
+      }
 
       // /start <token>
       const m = text.match(/^\/start\s+([A-Za-z0-9_-]{10,})/);
