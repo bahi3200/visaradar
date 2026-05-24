@@ -146,7 +146,8 @@ export default function AdminRequestsPage() {
           const isUpgradeRequest = request.admin_notes?.includes('ترقية');
 
           const expiresAt = new Date();
-          expiresAt.setMonth(expiresAt.getMonth() + months);
+          // 🎁 Free gift: +1 bonus month on every new subscription
+          expiresAt.setMonth(expiresAt.getMonth() + months + 1);
 
           const { error: subError } = await supabase.from('subscriptions').insert({
             user_id: request.user_id,
