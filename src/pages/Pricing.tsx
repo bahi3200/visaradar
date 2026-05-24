@@ -432,7 +432,9 @@ export default function PricingPage() {
               </div>
               <div>
                 <h3 className="font-heading text-xl font-bold text-foreground">{goldenPackage.name_ar}</h3>
-                <p className="text-sm text-muted-foreground">12 شهر • حتى 3 دول</p>
+                <p className="text-sm text-muted-foreground">
+                  12 شهر <span className="text-accent font-bold">+ شهر هدية 🎁</span> • حتى 3 دول
+                </p>
               </div>
             </div>
 
