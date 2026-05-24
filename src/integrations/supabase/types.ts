@@ -895,6 +895,45 @@ export type Database = {
         }
         Relationships: []
       }
+      predictive_windows: {
+        Row: {
+          computed_at: string
+          country_code: string
+          hour: number
+          id: string
+          last_seen_at: string | null
+          open_count: number
+          provider: string
+          score: number
+          total_samples: number
+          weekday: number
+        }
+        Insert: {
+          computed_at?: string
+          country_code: string
+          hour: number
+          id?: string
+          last_seen_at?: string | null
+          open_count?: number
+          provider: string
+          score?: number
+          total_samples?: number
+          weekday: number
+        }
+        Update: {
+          computed_at?: string
+          country_code?: string
+          hour?: number
+          id?: string
+          last_seen_at?: string | null
+          open_count?: number
+          provider?: string
+          score?: number
+          total_samples?: number
+          weekday?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2522,7 +2561,17 @@ export type Database = {
       }
     }
     Functions: {
+      compute_predictive_windows: { Args: { _days?: number }; Returns: number }
       count_active_devices: { Args: { _user_id: string }; Returns: number }
+      get_open_heatmap: {
+        Args: { _country?: string; _days?: number; _provider?: string }
+        Returns: {
+          avg_duration_minutes: number
+          hour: number
+          open_count: number
+          weekday: number
+        }[]
+      }
       get_payment_info: {
         Args: never
         Returns: {
@@ -2541,6 +2590,10 @@ export type Database = {
       }
       is_device_allowed: {
         Args: { _fingerprint: string; _user_id: string }
+        Returns: boolean
+      }
+      is_in_predictive_window: {
+        Args: { _country: string; _min_score?: number; _provider: string }
         Returns: boolean
       }
       pick_next_proxy: {
