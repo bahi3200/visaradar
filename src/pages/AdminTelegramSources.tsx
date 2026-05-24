@@ -201,7 +201,7 @@ export default function AdminTelegramSources() {
   );
 
   return (
-    <AdminLayout>
+    <AdminLayout title="قنوات Telegram المراقَبة">
       <div className="container py-8 space-y-6" dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
