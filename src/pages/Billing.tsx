@@ -27,6 +27,7 @@ import Layout from "@/components/Layout";
 import SEO from "@/components/SEO";
 import BackButton from "@/components/BackButton";
 import { toast } from "@/components/ui/use-toast";
+import AutoRenewCard from "@/components/billing/AutoRenewCard";
 import {
   AlertDialog,
   AlertDialogAction,
