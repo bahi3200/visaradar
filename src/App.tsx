@@ -68,6 +68,7 @@ import AdminHistoricalIntel from "./pages/AdminHistoricalIntel";
 import AdminProxyIntelligence from "./pages/AdminProxyIntelligence";
 import AdminDistributedScan from "./pages/AdminDistributedScan";
 import AdminAlertDelivery from "./pages/AdminAlertDelivery";
+import AdminDetectionReplay from "./pages/AdminDetectionReplay";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -148,6 +149,7 @@ const App = () => (
       <Route path="/dashboard/proxy-intelligence" element={<AdminRoute adminOnly><AdminProxyIntelligence /></AdminRoute>} />
       <Route path="/dashboard/distributed-scan" element={<AdminRoute adminOnly><AdminDistributedScan /></AdminRoute>} />
       <Route path="/dashboard/alert-delivery" element={<AdminRoute adminOnly><AdminAlertDelivery /></AdminRoute>} />
+      <Route path="/dashboard/detection-replay" element={<AdminRoute adminOnly><AdminDetectionReplay /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
