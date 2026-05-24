@@ -1646,6 +1646,30 @@ Deno.serve(async (req) => {
         }
         if (!shouldNotify) continue;
 
+        // ── Anti-False-Positive gateway ──
+        // Require API + DOM + Calendar + Playwright confidence before broadcasting.
+        try {
+          const { data: gate } = await supabase.functions.invoke('evaluate-visa-alert', {
+            body: {
+              country_code: alert.countryCode,
+              provider: target.provider,
+              category: alert.category,
+              check_only: true,
+            },
+          });
+          const decision = (gate as any)?.decision;
+          const confidence = (gate as any)?.confidence_score;
+          const threshold = (gate as any)?.threshold;
+          if (decision && decision !== 'sent') {
+            console.log(`[Anti-FP] BLOCKED ${alert.countryCode}/${alert.category}: ${decision} (score=${confidence}/${threshold})`);
+            continue;
+          }
+          console.log(`[Anti-FP] PASS ${alert.countryCode}/${alert.category}: score=${confidence}/${threshold}`);
+        } catch (gateErr) {
+          console.error('[Anti-FP] gateway error — failing safe (blocking alert):', gateErr);
+          continue;
+        }
+
         const recipients = (allSubscriptions || [])
           .filter((s) =>
             s.telegram_chat_id &&
