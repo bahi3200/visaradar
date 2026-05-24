@@ -62,6 +62,7 @@ import AdminTelegramSources from "./pages/AdminTelegramSources";
 import AdminEnterpriseMonitor from "./pages/AdminEnterpriseMonitor";
 import AdminProxyManager from "./pages/AdminProxyManager";
 import AdminBrowserVerifications from "./pages/AdminBrowserVerifications";
+import AdminAntiFalsePositive from "./pages/AdminAntiFalsePositive";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -136,6 +137,7 @@ const App = () => (
       <Route path="/dashboard/enterprise" element={<AdminRoute adminOnly><AdminEnterpriseMonitor /></AdminRoute>} />
       <Route path="/dashboard/proxies" element={<AdminRoute adminOnly><AdminProxyManager /></AdminRoute>} />
       <Route path="/dashboard/browser-verifications" element={<AdminRoute adminOnly><AdminBrowserVerifications /></AdminRoute>} />
+      <Route path="/dashboard/anti-false-positive" element={<AdminRoute adminOnly><AdminAntiFalsePositive /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />

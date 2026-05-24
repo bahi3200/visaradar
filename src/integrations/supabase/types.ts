@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_decisions: {
+        Row: {
+          alert_id: string | null
+          api_score: number
+          block_reason: string | null
+          calendar_score: number
+          category: string | null
+          confidence_score: number
+          country_code: string
+          created_at: string
+          decision: string
+          dom_score: number
+          id: string
+          layer_details: Json | null
+          playwright_score: number
+          provider: string
+          threshold: number
+        }
+        Insert: {
+          alert_id?: string | null
+          api_score?: number
+          block_reason?: string | null
+          calendar_score?: number
+          category?: string | null
+          confidence_score?: number
+          country_code: string
+          created_at?: string
+          decision: string
+          dom_score?: number
+          id?: string
+          layer_details?: Json | null
+          playwright_score?: number
+          provider: string
+          threshold: number
+        }
+        Update: {
+          alert_id?: string | null
+          api_score?: number
+          block_reason?: string | null
+          calendar_score?: number
+          category?: string | null
+          confidence_score?: number
+          country_code?: string
+          created_at?: string
+          decision?: string
+          dom_score?: number
+          id?: string
+          layer_details?: Json | null
+          playwright_score?: number
+          provider?: string
+          threshold?: number
+        }
+        Relationships: []
+      }
       alert_dedup: {
         Row: {
           alert_type: string
