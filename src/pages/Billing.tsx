@@ -948,6 +948,8 @@ export default function Billing() {
           <p className="text-sm text-muted-foreground">عرض اشتراكك الحالي وإدارة طريقة الدفع</p>
         </div>
 
+        <AutoRenewCard />
+
         {/* Stripe failure + Paddle suggestion banner */}
         <div className="gradient-card rounded-xl border border-destructive/30 p-4 mb-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
