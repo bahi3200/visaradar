@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Trash2, RefreshCw, CheckCircle2, XCircle, Clock as ClockIcon } from "lucide-react";
+import { Plus, Play, Trash2, RefreshCw, CheckCircle2, XCircle, Clock as ClockIcon, Zap } from "lucide-react";
 
 type Pool = {
   id: string;
@@ -55,6 +55,17 @@ export default function AdminProxyManager() {
   const [loading, setLoading] = useState(false);
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
   const [epDialogOpen, setEpDialogOpen] = useState(false);
+  const [decodoDialogOpen, setDecodoDialogOpen] = useState(false);
+
+  // Decodo quick-setup form (gateway-style residential rotating)
+  const [decodoForm, setDecodoForm] = useState({
+    username: "",
+    password: "",
+    host: "gate.decodo.com",
+    port: "7000",
+    sessions: "10",
+    geo_country: "",
+  });
 
   // Pool form
   const [poolForm, setPoolForm] = useState({ name: "", provider: "", pool_type: "residential", rotation_strategy: "round_robin" });
@@ -172,6 +183,68 @@ export default function AdminProxyManager() {
     setBulkText("");
   };
 
+  // Provision Decodo Residential Rotating: creates a pool + N session endpoints.
+  // Decodo gateway uses username modifiers like `user-session-XXXX` for sticky
+  // sessions; a single rotating endpoint also works. We create one rotating
+  // endpoint + N sticky sessions for parallel scans.
+  const setupDecodo = async () => {
+    if (!decodoForm.username || !decodoForm.password || !decodoForm.host || !decodoForm.port) {
+      toast.error("املأ كل الحقول المطلوبة"); return;
+    }
+    const port = parseInt(decodoForm.port);
+    if (!Number.isFinite(port)) { toast.error("port غير صالح"); return; }
+    const sessions = Math.min(50, Math.max(1, parseInt(decodoForm.sessions) || 1));
+    const geo = decodoForm.geo_country.trim().toUpperCase() || null;
+
+    // 1. Find or create the Decodo pool
+    let poolId: string | null = pools.find(p => p.name === "decodo-residential")?.id ?? null;
+    if (!poolId) {
+      const { data: poolData, error: poolErr } = await supabase.from("proxy_pools").insert({
+        name: "decodo-residential",
+        provider: "Decodo",
+        pool_type: "residential",
+        rotation_strategy: "least_used",
+        target_countries: geo ? [geo] : [],
+      }).select("id").single();
+      if (poolErr) { toast.error(poolErr.message); return; }
+      poolId = poolData!.id;
+    }
+
+    // 2. Build endpoints: 1 rotating + N sticky sessions
+    const rows: any[] = [{
+      pool_id: poolId,
+      protocol: "http",
+      host: decodoForm.host.trim(),
+      port,
+      username: decodoForm.username.trim(),
+      password: decodoForm.password,
+      geo_country: geo,
+      notes: "Decodo rotating gateway",
+    }];
+    for (let i = 1; i <= sessions; i++) {
+      const sessionId = `${Date.now().toString(36)}${i}`;
+      // Decodo session-username convention: user-session-XXXX[-country-XX]
+      const sessionUser = geo
+        ? `${decodoForm.username.trim()}-session-${sessionId}-country-${geo.toLowerCase()}`
+        : `${decodoForm.username.trim()}-session-${sessionId}`;
+      rows.push({
+        pool_id: poolId,
+        protocol: "http",
+        host: decodoForm.host.trim(),
+        port,
+        username: sessionUser,
+        password: decodoForm.password,
+        geo_country: geo,
+        notes: `Decodo sticky session #${i}`,
+      });
+    }
+    const { error } = await supabase.from("proxy_endpoints").insert(rows);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`تم إعداد Decodo: ${rows.length} endpoints`);
+    setDecodoDialogOpen(false);
+    setSelectedPool(poolId);
+  };
+
   const deleteEndpoint = async (id: string) => {
     if (!confirm("حذف هذا الـ proxy؟")) return;
     await supabase.from("proxy_endpoints").delete().eq("id", id);
@@ -228,6 +301,7 @@ export default function AdminProxyManager() {
           <TabsTrigger value="pools">المجمّعات (Pools)</TabsTrigger>
           <TabsTrigger value="endpoints">العناوين (Endpoints)</TabsTrigger>
           <TabsTrigger value="bulk">استيراد جماعي</TabsTrigger>
+          <TabsTrigger value="decodo">Decodo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pools">
@@ -381,6 +455,64 @@ export default function AdminProxyManager() {
                 placeholder="proxy1.example.com:8080:user:pass&#10;http://u:p@proxy2.example.com:3128"
               />
               <Button onClick={bulkImport} disabled={!selectedPool}>استيراد</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="decodo">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-yellow-500" />
+                Decodo Residential Rotating — إعداد سريع
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                ينشئ Pool باسم <code className="font-mono">decodo-residential</code> + endpoint رئيسي rotating
+                و عدة sticky sessions (للمسح المتوازي). الافتراضي:
+                <code className="font-mono"> gate.decodo.com:7000</code>.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Host *</Label>
+                  <Input value={decodoForm.host} onChange={e => setDecodoForm({ ...decodoForm, host: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Port *</Label>
+                  <Input type="number" value={decodoForm.port} onChange={e => setDecodoForm({ ...decodoForm, port: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label>Username *</Label>
+                <Input value={decodoForm.username} onChange={e => setDecodoForm({ ...decodoForm, username: e.target.value })} placeholder="user-..." />
+              </div>
+              <div>
+                <Label>Password *</Label>
+                <Input type="password" value={decodoForm.password} onChange={e => setDecodoForm({ ...decodoForm, password: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>عدد sticky sessions</Label>
+                  <Input type="number" min={1} max={50} value={decodoForm.sessions} onChange={e => setDecodoForm({ ...decodoForm, sessions: e.target.value })} />
+                </div>
+                <div>
+                  <Label>الدولة (ISO, اختياري)</Label>
+                  <Input maxLength={2} value={decodoForm.geo_country} onChange={e => setDecodoForm({ ...decodoForm, geo_country: e.target.value.toUpperCase() })} placeholder="FR" />
+                </div>
+              </div>
+              <Button onClick={setupDecodo} className="w-full">
+                <Zap className="w-4 h-4 ml-1" /> إعداد Decodo الآن
+              </Button>
+              <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                <p className="font-semibold mb-1">ملاحظات:</p>
+                <ul className="list-disc pr-4 space-y-0.5">
+                  <li>سيتم استخدام الـ proxies تلقائياً في فحص API + provider adapters.</li>
+                  <li>عند فشل proxy، يتم تجربة proxy آخر تلقائياً (retry).</li>
+                  <li>كل scan يسجّل proxy_id + latency في <code>proxy_health_log</code>.</li>
+                  <li>لتشغيل Decodo داخل Playwright (vps-worker)، أضف <code className="font-mono">DECODO_PROXY=http://user:pass@gate.decodo.com:7000</code> في <code>.env</code> الخاص بالـ VPS.</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
