@@ -1274,7 +1274,23 @@ Deno.serve(async (req) => {
         .filter((p: any) => p.cooldown_until && new Date(p.cooldown_until).getTime() > Date.now())
         .map((p: any) => p.country_code),
     );
-    const activeCountryCodes = countryCodes.filter((c) => !cooldownSkip.has(c));
+
+    // ── Historical Detection Intelligence ──
+    // Boost: if the current (weekday, hour) matches a known opening pattern for a
+    // country+provider, we BYPASS the soft cooldown so we don't miss the window.
+    // (Ban cooldown from provider_throttle still applies — see below.)
+    const nowAlgiers = new Date(Date.now() + 60 * 60 * 1000); // UTC+1
+    const wd = nowAlgiers.getUTCDay();
+    const hr = nowAlgiers.getUTCHours();
+    const { data: pw } = await supabase
+      .from('predictive_windows')
+      .select('country_code, provider, score')
+      .eq('weekday', wd).eq('hour', hr).gte('score', 8);
+    const boostedCountries = new Set((pw || []).map((p: any) => p.country_code));
+    if (boostedCountries.size > 0) {
+      console.log(`[predictive] boost active for ${[...boostedCountries].join(',')} at ${wd}h${hr}`);
+    }
+    const activeCountryCodes = countryCodes.filter((c) => boostedCountries.has(c) || !cooldownSkip.has(c));
 
     // ── Respect provider_throttle: if a provider is currently in escalating backoff,
     // skip ALL countries served by that provider until cooldown_until expires.
