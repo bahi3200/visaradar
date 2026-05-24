@@ -59,6 +59,7 @@ import AdminVisaAppointments from "./pages/AdminVisaAppointments";
 import AdminVisaOpenings from "./pages/AdminVisaOpenings";
 import AdminVisaSignals from "./pages/AdminVisaSignals";
 import AdminTelegramSources from "./pages/AdminTelegramSources";
+import AdminEnterpriseMonitor from "./pages/AdminEnterpriseMonitor";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
@@ -130,6 +131,7 @@ const App = () => (
       <Route path="/dashboard/appointments" element={<AdminRoute><AdminVisaAppointments /></AdminRoute>} />
       <Route path="/dashboard/visa-openings" element={<AdminRoute><AdminVisaOpenings /></AdminRoute>} />
       <Route path="/dashboard/visa-signals" element={<AdminRoute><AdminVisaSignals /></AdminRoute>} />
+      <Route path="/dashboard/enterprise" element={<AdminRoute adminOnly><AdminEnterpriseMonitor /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />

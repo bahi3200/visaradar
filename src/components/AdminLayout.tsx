@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/contact-messages", label: "رسائل التواصل", icon: MessageCircle },
   { path: "/dashboard/payment-settings", label: "إعدادات الدفع", icon: CreditCard, adminOnly: true },
   { path: "/dashboard/visa-monitor", label: "مراقبة التأشيرات", icon: Activity },
+  { path: "/dashboard/enterprise", label: "مراقبة Enterprise", icon: Shield, adminOnly: true },
   { path: "/dashboard/visa-openings", label: "تتبع الفتحات", icon: Radar },
   { path: "/dashboard/visa-signals", label: "إشارات يدوية (بث فوري)", icon: Megaphone },
   { path: "/dashboard/appointments", label: "مواعيد التأشيرات", icon: CalendarDays },
