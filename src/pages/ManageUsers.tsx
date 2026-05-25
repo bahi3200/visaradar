@@ -108,6 +108,8 @@ export default function ManageUsersPage() {
     setRetryAttempt(attempt);
     setIsRetrying(attempt > 0);
     let willRetry = false;
+    const startedAt = performance.now();
+    const requestId = `users-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -124,6 +126,78 @@ export default function ManageUsersPage() {
     } catch (err: any) {
       const isNetworkError = err.message?.includes("fetch") || err.message?.includes("network") || err.message?.includes("Failed to fetch") || err.status === 0 || err.status === 503 || err.status === 504;
       const isTimeout = err.message?.includes("timeout") || err.message?.includes("AbortError") || err.message?.includes("signal");
+      const isConnectionLost = isNetworkError || isTimeout || /connection (lost|closed|reset|refused)|server connection lost|disconnect/i.test(err?.message || "");
+
+      if (isConnectionLost) {
+        const durationMs = Math.round(performance.now() - startedAt);
+        const ctx = {
+          tag: "[SERVER_CONNECTION_LOST]",
+          page: "/dashboard/users",
+          component: "ManageUsers",
+          action: "fetchUsers → supabase.functions.invoke('list-users')",
+          requestId,
+          attempt: attempt + 1,
+          maxRetries: MAX_RETRIES,
+          willRetry: attempt < MAX_RETRIES,
+          durationMs,
+          timestamp: new Date().toISOString(),
+          online: typeof navigator !== "undefined" ? navigator.onLine : null,
+          connection: (navigator as any)?.connection
+            ? {
+                effectiveType: (navigator as any).connection.effectiveType,
+                downlink: (navigator as any).connection.downlink,
+                rtt: (navigator as any).connection.rtt,
+                saveData: (navigator as any).connection.saveData,
+              }
+            : null,
+          url: typeof window !== "undefined" ? window.location.href : null,
+          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+          classification: { isNetworkError, isTimeout },
+          error: {
+            name: err?.name,
+            message: err?.message,
+            status: err?.status ?? err?.context?.status ?? null,
+            statusText: err?.statusText ?? err?.context?.statusText ?? null,
+            code: err?.code ?? null,
+            details: err?.details ?? null,
+            hint: err?.hint ?? null,
+            cause: err?.cause ?? null,
+            stack: err?.stack ?? null,
+          },
+        };
+
+        // Detailed grouped log so it's easy to expand in DevTools.
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(
+          `%c[SERVER_CONNECTION_LOST]%c /dashboard/users · attempt ${attempt + 1}/${MAX_RETRIES} · ${durationMs}ms`,
+          "color:#fff;background:#dc2626;padding:2px 6px;border-radius:3px;font-weight:bold",
+          "color:#9ca3af;font-weight:normal",
+        );
+        // eslint-disable-next-line no-console
+        console.error("Server connection lost while loading users", ctx);
+        // eslint-disable-next-line no-console
+        console.table({
+          page: ctx.page,
+          requestId: ctx.requestId,
+          attempt: `${ctx.attempt}/${ctx.maxRetries}`,
+          willRetry: ctx.willRetry,
+          durationMs: ctx.durationMs,
+          online: ctx.online,
+          status: ctx.error.status,
+          message: ctx.error.message,
+        });
+        if (err?.stack) {
+          // eslint-disable-next-line no-console
+          console.error("Stack trace:\n" + err.stack);
+        }
+        // eslint-disable-next-line no-console
+        console.groupEnd();
+
+        // Persist last failure for debugging across reloads.
+        try {
+          sessionStorage.setItem("lastServerConnectionLost", JSON.stringify(ctx));
+        } catch {}
+      }
 
       if (attempt < MAX_RETRIES && (isNetworkError || isTimeout || !err.status)) {
         const delay = RETRY_DELAYS[attempt] ?? 3000;
