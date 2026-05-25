@@ -552,11 +552,24 @@ async function checkTargetOnce(browser, target, opts) {
 async function checkTarget(target, headfulProb) {
   const triedProxies = new Set()
   const maxAttempts = 3
+  const forceHeadful = HEADFUL_PROVIDERS.has((target.provider || '').toLowerCase())
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fp = pick(FINGERPRINTS)
     const proxy = nextProxy(target.provider, triedProxies)
+    // Residential-only: skip scan entirely if no usable proxy
+    if (!proxy && REQUIRE_RESIDENTIAL) {
+      console.warn(`  SKIP ${target.country_code}/${target.provider}: no healthy residential proxy available`)
+      return {
+        country_code: target.country_code, provider: target.provider, url: target.url,
+        status: 'skipped', error_message: 'no_residential_proxy_available',
+        proxy_used: null, load_time_ms: 0, user_agent: fp.ua,
+        booking_buttons_count: 0, calendar_detected: false, available_dates_count: 0,
+        no_appointments_text_found: false, page_text_snippet: null, detection_details: {},
+        xhr_requests: [], screenshot_base64: null,
+      }
+    }
     if (proxy) triedProxies.add(proxy.label)
-    const headful = Math.random() < headfulProb
+    const headful = forceHeadful || (Math.random() < headfulProb)
     const browser = await chromium.launch({
       headless: !headful,
       args: [
