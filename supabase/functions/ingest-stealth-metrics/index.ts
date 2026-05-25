@@ -79,6 +79,30 @@ Deno.serve(async (req) => {
     });
     if (error) errors.push(error.message);
     else inserted++;
+
+    // Log fingerprint success/failure for dashboard
+    if (m.stealth_profile_id) {
+      await supabase.from('fingerprint_success_log').insert({
+        stealth_profile_id: m.stealth_profile_id,
+        human_profile_id: (m as any).human_profile_id ?? null,
+        provider: m.provider,
+        country_code: m.country_code,
+        proxy_label: m.proxy_label ?? null,
+        success: m.outcome === 'success',
+        captcha_seen: m.outcome === 'captcha' || m.outcome === 'cloudflare',
+        cloudflare_seen: !!m.cloudflare_detected || m.outcome === 'cloudflare',
+        duration_ms: m.duration_ms ?? null,
+      });
+    }
+
+    // Escalate cooldown on captcha/block/cloudflare
+    if (['captcha', 'cloudflare', 'block'].includes(m.outcome)) {
+      await supabase.rpc('record_captcha_event' as any, {
+        _provider: m.provider,
+        _country: m.country_code,
+        _kind: m.outcome,
+      });
+    }
   }
 
   return new Response(JSON.stringify({ ok: true, inserted, errors }), {
