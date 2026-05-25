@@ -320,6 +320,65 @@ export type Database = {
         }
         Relationships: []
       }
+      browser_profiles: {
+        Row: {
+          cookies: Json
+          country_code: string
+          created_at: string
+          healthy: boolean
+          history: Json
+          id: string
+          last_error: string | null
+          last_visit_at: string | null
+          provider: string
+          proxy_label: string | null
+          stealth_profile_id: string | null
+          storage_state_path: string | null
+          updated_at: string
+          visits_count: number
+        }
+        Insert: {
+          cookies?: Json
+          country_code: string
+          created_at?: string
+          healthy?: boolean
+          history?: Json
+          id?: string
+          last_error?: string | null
+          last_visit_at?: string | null
+          provider: string
+          proxy_label?: string | null
+          stealth_profile_id?: string | null
+          storage_state_path?: string | null
+          updated_at?: string
+          visits_count?: number
+        }
+        Update: {
+          cookies?: Json
+          country_code?: string
+          created_at?: string
+          healthy?: boolean
+          history?: Json
+          id?: string
+          last_error?: string | null
+          last_visit_at?: string | null
+          provider?: string
+          proxy_label?: string | null
+          stealth_profile_id?: string | null
+          storage_state_path?: string | null
+          updated_at?: string
+          visits_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "browser_profiles_stealth_profile_id_fkey"
+            columns: ["stealth_profile_id"]
+            isOneToOne: false
+            referencedRelation: "stealth_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       browser_sessions: {
         Row: {
           country_code: string
@@ -1363,6 +1422,63 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_timing_profiles: {
+        Row: {
+          created_at: string
+          headful_only: boolean
+          id: string
+          is_active: boolean
+          jitter_pct: number
+          max_hops: number
+          max_idle_ms: number
+          max_interval_s: number
+          min_idle_ms: number
+          min_interval_s: number
+          mouse_speed: string
+          notes: string | null
+          provider: string
+          scroll_speed: string
+          updated_at: string
+          visit_homepage_prob: number
+        }
+        Insert: {
+          created_at?: string
+          headful_only?: boolean
+          id?: string
+          is_active?: boolean
+          jitter_pct?: number
+          max_hops?: number
+          max_idle_ms?: number
+          max_interval_s?: number
+          min_idle_ms?: number
+          min_interval_s?: number
+          mouse_speed?: string
+          notes?: string | null
+          provider: string
+          scroll_speed?: string
+          updated_at?: string
+          visit_homepage_prob?: number
+        }
+        Update: {
+          created_at?: string
+          headful_only?: boolean
+          id?: string
+          is_active?: boolean
+          jitter_pct?: number
+          max_hops?: number
+          max_idle_ms?: number
+          max_interval_s?: number
+          min_idle_ms?: number
+          min_interval_s?: number
+          mouse_speed?: string
+          notes?: string | null
+          provider?: string
+          scroll_speed?: string
+          updated_at?: string
+          visit_homepage_prob?: number
+        }
+        Relationships: []
+      }
       proxy_endpoints: {
         Row: {
           auto_disabled_at: string | null
@@ -1656,6 +1772,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      proxy_quarantine: {
+        Row: {
+          block_count: number
+          captcha_count: number
+          country_code: string | null
+          id: string
+          notes: string | null
+          provider: string | null
+          proxy_label: string
+          quarantined_at: string
+          quarantined_until: string
+          reason: string
+          released_at: string | null
+          released_by: string | null
+        }
+        Insert: {
+          block_count?: number
+          captcha_count?: number
+          country_code?: string | null
+          id?: string
+          notes?: string | null
+          provider?: string | null
+          proxy_label: string
+          quarantined_at?: string
+          quarantined_until: string
+          reason: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Update: {
+          block_count?: number
+          captcha_count?: number
+          country_code?: string | null
+          id?: string
+          notes?: string | null
+          provider?: string | null
+          proxy_label?: string
+          quarantined_at?: string
+          quarantined_until?: string
+          reason?: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Relationships: []
       }
       push_subscriptions: {
         Row: {
@@ -2023,6 +2184,152 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: string
+        }
+        Relationships: []
+      }
+      stealth_metrics: {
+        Row: {
+          cloudflare_detected: boolean
+          country_code: string
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          fingerprint_rotated: boolean
+          headful: boolean
+          http_status: number | null
+          id: string
+          metadata: Json
+          outcome: string
+          provider: string
+          proxy_label: string | null
+          retry_count: number
+          stealth_profile_id: string | null
+        }
+        Insert: {
+          cloudflare_detected?: boolean
+          country_code: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          fingerprint_rotated?: boolean
+          headful?: boolean
+          http_status?: number | null
+          id?: string
+          metadata?: Json
+          outcome: string
+          provider: string
+          proxy_label?: string | null
+          retry_count?: number
+          stealth_profile_id?: string | null
+        }
+        Update: {
+          cloudflare_detected?: boolean
+          country_code?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          fingerprint_rotated?: boolean
+          headful?: boolean
+          http_status?: number | null
+          id?: string
+          metadata?: Json
+          outcome?: string
+          provider?: string
+          proxy_label?: string | null
+          retry_count?: number
+          stealth_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stealth_metrics_stealth_profile_id_fkey"
+            columns: ["stealth_profile_id"]
+            isOneToOne: false
+            referencedRelation: "stealth_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stealth_profiles: {
+        Row: {
+          block_count: number
+          captcha_count: number
+          created_at: string
+          device_memory: number
+          failure_count: number
+          fonts: string[]
+          gpu_renderer: string | null
+          gpu_vendor: string | null
+          hardware_concurrency: number
+          id: string
+          is_active: boolean
+          is_mobile: boolean
+          languages: string[]
+          last_used_at: string | null
+          locale: string
+          media_devices: Json
+          name: string
+          platform: string
+          score: number
+          screen_resolution: Json
+          success_count: number
+          timezone: string
+          updated_at: string
+          user_agent: string
+          viewport: Json
+        }
+        Insert: {
+          block_count?: number
+          captcha_count?: number
+          created_at?: string
+          device_memory?: number
+          failure_count?: number
+          fonts?: string[]
+          gpu_renderer?: string | null
+          gpu_vendor?: string | null
+          hardware_concurrency?: number
+          id?: string
+          is_active?: boolean
+          is_mobile?: boolean
+          languages?: string[]
+          last_used_at?: string | null
+          locale?: string
+          media_devices?: Json
+          name: string
+          platform?: string
+          score?: number
+          screen_resolution?: Json
+          success_count?: number
+          timezone?: string
+          updated_at?: string
+          user_agent: string
+          viewport?: Json
+        }
+        Update: {
+          block_count?: number
+          captcha_count?: number
+          created_at?: string
+          device_memory?: number
+          failure_count?: number
+          fonts?: string[]
+          gpu_renderer?: string | null
+          gpu_vendor?: string | null
+          hardware_concurrency?: number
+          id?: string
+          is_active?: boolean
+          is_mobile?: boolean
+          languages?: string[]
+          last_used_at?: string | null
+          locale?: string
+          media_devices?: Json
+          name?: string
+          platform?: string
+          score?: number
+          screen_resolution?: Json
+          success_count?: number
+          timezone?: string
+          updated_at?: string
+          user_agent?: string
+          viewport?: Json
         }
         Relationships: []
       }
@@ -3162,6 +3469,22 @@ export type Database = {
           running_tasks: number
         }[]
       }
+      get_stealth_dashboard_stats: {
+        Args: { _hours?: number }
+        Returns: {
+          active_profiles: number
+          block_count: number
+          block_rate: number
+          captcha_count: number
+          captcha_rate: number
+          cloudflare_count: number
+          high_risk_providers: number
+          quarantined_proxies: number
+          success_count: number
+          success_rate: number
+          total_requests: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3257,7 +3580,29 @@ export type Database = {
             }
             Returns: undefined
           }
+      record_stealth_metric: {
+        Args: {
+          _cloudflare: boolean
+          _country: string
+          _duration_ms: number
+          _error: string
+          _fingerprint_rotated: boolean
+          _headful: boolean
+          _http_status: number
+          _metadata: Json
+          _outcome: string
+          _profile_id: string
+          _provider: string
+          _proxy_label: string
+          _retry_count: number
+        }
+        Returns: string
+      }
       set_promo_input_method: { Args: { _method: string }; Returns: undefined }
+      should_quarantine_proxy: {
+        Args: { _provider: string; _proxy_label: string }
+        Returns: boolean
+      }
       update_package_promo: {
         Args: {
           _input_method: string
