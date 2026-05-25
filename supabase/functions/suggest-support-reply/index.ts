@@ -1,6 +1,8 @@
 // Suggests an AI-drafted reply for an admin to send back on a contact message.
 // Uses Lovable AI Gateway with the LOVABLE_API_KEY auto-secret.
 
+import { requireServiceRoleOrAdmin } from '../_shared/internalAuth.ts';
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -18,6 +20,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const authFail = await requireServiceRoleOrAdmin(req, { allowModerator: true });
+  if (authFail) return authFail;
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
