@@ -1,53 +1,105 @@
 /**
  * VisaRadar — Real Browser Verification Worker (Playwright + Stealth)
- * 
- * Deploy on a VPS (DigitalOcean / Hetzner / Contabo, etc.)
- * Required env vars (in .env):
- *   SUPABASE_URL=https://frhrvkzkihxaopnsznrj.supabase.co
- *   WORKER_TOKEN=<plain token created via admin UI>
- *   TARGETS_JSON=[{"country_code":"FR","provider":"vfs","url":"https://..."}, ...]
- *   INTERVAL_MINUTES=5
+ * Advanced Anti-Bot Evasion System (v2)
  *
- * Install:
- *   npm install
- *   npx playwright install --with-deps chromium
- *
- * Run as systemd service or pm2:
- *   pm2 start worker.js --name visaradar-worker
+ * Features:
+ *  - playwright-extra + stealth plugin (hides webdriver fingerprints)
+ *  - human-like mouse paths, scrolling, typing delays, hover/click jitter
+ *  - WebGL / Canvas / timezone / locale / hardware spoofing
+ *  - sec-ch-ua + Accept-Language + UA rotation
+ *  - random headless/headful switching, random viewport sizes
+ *  - smart proxy rotation w/ per-provider pools + cooldown awareness from server
+ *  - captcha / cloudflare / rate-limit detection + automatic retry on new proxy
+ *  - persistent storageState reuse + cookies across cycles
+ *  - adaptive scan interval (provider risk score -> longer interval)
+ *  - full evidence capture (screenshot + html + headers) on block
  */
 
 import 'dotenv/config'
 import { chromium } from 'playwright-extra'
 import stealth from 'puppeteer-extra-plugin-stealth'
+import fs from 'node:fs'
+import path from 'node:path'
 
 chromium.use(stealth())
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const WORKER_TOKEN = process.env.WORKER_TOKEN
 const INGEST_URL = `${SUPABASE_URL}/functions/v1/ingest-browser-verification`
-const INTERVAL_MS = (parseInt(process.env.INTERVAL_MINUTES || '5', 10)) * 60_000
+const BOT_INGEST_URL = `${SUPABASE_URL}/functions/v1/ingest-bot-detection`
+const POLICY_URL = `${SUPABASE_URL}/functions/v1/get-scan-policy`
+const BASE_INTERVAL_MS = (parseInt(process.env.INTERVAL_MINUTES || '5', 10)) * 60_000
+const JITTER_PCT = Math.max(0, Math.min(80, parseFloat(process.env.SCAN_JITTER_PCT || '35')))
+const HEADFUL_PROB = Math.max(0, Math.min(1, parseFloat(process.env.HEADFUL_PROBABILITY || '0.15')))
 const RUN_ONCE = process.argv.includes('--once')
+const SESSION_DIR = path.resolve('./.sessions')
+if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true })
 
-// Optional residential proxy (e.g. Decodo). Format: http://user:pass@host:port
-// Also supports a list separated by commas for round-robin per cycle.
-const PROXY_URLS = (process.env.DECODO_PROXY || process.env.PROXY_URL || '')
-  .split(',').map(s => s.trim()).filter(Boolean)
-let _proxyIdx = 0
-function nextProxy() {
-  if (!PROXY_URLS.length) return null
-  const raw = PROXY_URLS[_proxyIdx % PROXY_URLS.length]
-  _proxyIdx++
-  try {
-    const u = new URL(raw)
-    return {
-      server: `${u.protocol}//${u.hostname}:${u.port}`,
-      username: decodeURIComponent(u.username) || undefined,
-      password: decodeURIComponent(u.password) || undefined,
-      raw,
-    }
-  } catch (e) {
-    console.error('Invalid proxy url:', raw, e.message); return null
+// === Proxy pools ===
+function parseProxyList(raw) {
+  return (raw || '').split(',').map(s => s.trim()).filter(Boolean)
+}
+const GLOBAL_PROXIES = parseProxyList(process.env.DECODO_PROXY || process.env.PROXY_URL)
+const PROVIDER_POOLS = {}
+;(process.env.PROVIDER_PROXY_POOLS || '').split(',').map(s => s.trim()).filter(Boolean).forEach(pair => {
+  const m = pair.match(/^([a-zA-Z0-9_-]+)=(.+)$/)
+  if (m) {
+    PROVIDER_POOLS[m[1].toLowerCase()] = PROVIDER_POOLS[m[1].toLowerCase()] || []
+    PROVIDER_POOLS[m[1].toLowerCase()].push(m[2])
   }
+})
+
+let _policy = { risk: [], cooldown_proxies: [] }
+let _proxyIdx = 0
+
+function poolFor(provider) {
+  const p = (provider || '').toLowerCase()
+  if (PROVIDER_POOLS[p] && PROVIDER_POOLS[p].length) return PROVIDER_POOLS[p]
+  return GLOBAL_PROXIES
+}
+
+function isProxyOnCooldown(label, provider) {
+  const now = Date.now()
+  return (_policy.cooldown_proxies || []).some(c =>
+    c.proxy_label === label && c.provider === provider &&
+    (!c.cooldown_until || new Date(c.cooldown_until).getTime() > now)
+  )
+}
+
+function nextProxy(provider, exclude = new Set()) {
+  const pool = poolFor(provider)
+  if (!pool.length) return null
+  for (let i = 0; i < pool.length; i++) {
+    const raw = pool[(_proxyIdx + i) % pool.length]
+    try {
+      const u = new URL(raw)
+      const label = `${u.hostname}:${u.port}${u.username ? ':' + u.username.split('-')[0] : ''}`
+      if (exclude.has(label)) continue
+      if (isProxyOnCooldown(label, provider)) continue
+      _proxyIdx = (_proxyIdx + i + 1) % pool.length
+      return {
+        server: `${u.protocol}//${u.hostname}:${u.port}`,
+        username: decodeURIComponent(u.username) || undefined,
+        password: decodeURIComponent(u.password) || undefined,
+        label,
+      }
+    } catch (e) {
+      console.error('Invalid proxy url:', raw, e.message)
+    }
+  }
+  return null
+}
+
+async function refreshPolicy() {
+  try {
+    const res = await fetch(POLICY_URL, { headers: { 'x-worker-token': WORKER_TOKEN } })
+    if (res.ok) _policy = await res.json()
+  } catch (e) { console.error('policy fetch failed', e.message) }
+}
+
+function providerRisk(provider) {
+  const r = (_policy.risk || []).find(x => x.provider === provider)
+  return r || { risk_score: 0, recommended_interval_seconds: BASE_INTERVAL_MS / 1000, throttle_until: null }
 }
 
 if (!SUPABASE_URL || !WORKER_TOKEN) {
@@ -64,11 +116,40 @@ if (!TARGETS.length) {
   console.error('No targets configured'); process.exit(1)
 }
 
-// Realistic user agents pool
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+// Realistic fingerprint matrix
+const FINGERPRINTS = [
+  {
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    secChUa: '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+    platform: 'Windows', mobile: false, viewport: { width: 1920, height: 1080 },
+    locale: 'en-US', tz: 'Europe/Paris', langs: ['en-US','en','fr'],
+    webgl: { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+    deviceMemory: 8, hardwareConcurrency: 12,
+  },
+  {
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    secChUa: '"Google Chrome";v="130", "Chromium";v="130", "Not_A Brand";v="24"',
+    platform: 'macOS', mobile: false, viewport: { width: 1440, height: 900 },
+    locale: 'fr-FR', tz: 'Europe/Paris', langs: ['fr-FR','fr','en'],
+    webgl: { vendor: 'Apple Inc.', renderer: 'Apple M2' },
+    deviceMemory: 16, hardwareConcurrency: 10,
+  },
+  {
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0',
+    secChUa: '"Microsoft Edge";v="129", "Chromium";v="129", "Not_A Brand";v="24"',
+    platform: 'Windows', mobile: false, viewport: { width: 1366, height: 768 },
+    locale: 'en-GB', tz: 'Europe/London', langs: ['en-GB','en'],
+    webgl: { vendor: 'Google Inc. (Intel)', renderer: 'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+    deviceMemory: 8, hardwareConcurrency: 8,
+  },
+  {
+    ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    secChUa: '"Google Chrome";v="130", "Chromium";v="130", "Not_A Brand";v="24"',
+    platform: 'Linux', mobile: false, viewport: { width: 1680, height: 1050 },
+    locale: 'en-US', tz: 'Europe/Berlin', langs: ['en-US','en','de'],
+    webgl: { vendor: 'Google Inc. (Mesa)', renderer: 'ANGLE (AMD, AMD Radeon RX 6700 XT, OpenGL 4.6)' },
+    deviceMemory: 16, hardwareConcurrency: 16,
+  },
 ]
 
 // Phrases that mean "no appointments available" in multiple languages
@@ -79,6 +160,24 @@ const NO_APPT_PHRASES = [
   'no hay citas', 'sin disponibilidad',
   'لا توجد مواعيد', 'غير متاح',
 ]
+
+// Captcha / block signatures
+const BLOCK_SIGNATURES = [
+  { type: 'recaptcha',  re: /(g-recaptcha|recaptcha\/api\.js|grecaptcha)/i },
+  { type: 'hcaptcha',   re: /(h-captcha|hcaptcha\.com)/i },
+  { type: 'captcha',    re: /(captcha|verify you are human|i'?m not a robot|please verify)/i },
+  { type: 'cloudflare', re: /(cf-chl|cloudflare|attention required|just a moment|checking your browser|ray id:)/i },
+  { type: 'block',      re: /(access denied|forbidden|blocked|automated traffic|unusual activity|bot detected)/i },
+  { type: 'rate_limit', re: /(too many requests|rate ?limit|429)/i },
+]
+function detectBlock({ status, title, text, html }) {
+  const hay = `${title || ''}\n${text || ''}\n${html || ''}`
+  for (const sig of BLOCK_SIGNATURES) if (sig.re.test(hay)) return sig.type
+  if (status === 403) return 'block'
+  if (status === 429) return 'rate_limit'
+  if (status === 503 && /cloudflare/i.test(html || '')) return 'cloudflare'
+  return null
+}
 
 // Selectors hinting at booking buttons
 const BOOKING_SELECTORS = [
@@ -107,13 +206,145 @@ const AVAILABLE_DATE_SELECTORS = [
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+function jitter(base, pct) {
+  const delta = base * (pct / 100)
+  return Math.max(1, Math.round(base + (Math.random() * 2 - 1) * delta))
+}
 
-async function checkTarget(browser, target) {
+// === Human-like behavior ===
+async function humanizePage(page) {
+  try {
+    const vp = page.viewportSize() || { width: 1366, height: 768 }
+    // Bezier-ish mouse movement (a few waypoints)
+    let x = Math.random() * vp.width, y = Math.random() * vp.height
+    const steps = 4 + Math.floor(Math.random() * 4)
+    for (let i = 0; i < steps; i++) {
+      const nx = Math.random() * vp.width
+      const ny = Math.random() * vp.height
+      await page.mouse.move(nx, ny, { steps: 8 + Math.floor(Math.random() * 12) })
+      await sleep(120 + Math.random() * 380)
+      x = nx; y = ny
+    }
+    // Random scrolls
+    const scrolls = 2 + Math.floor(Math.random() * 4)
+    for (let i = 0; i < scrolls; i++) {
+      await page.mouse.wheel(0, 150 + Math.random() * 600)
+      await sleep(400 + Math.random() * 1200)
+    }
+    // Occasional scroll back up
+    if (Math.random() < 0.4) {
+      await page.mouse.wheel(0, -(200 + Math.random() * 500))
+      await sleep(300 + Math.random() * 700)
+    }
+    // Hover something visible
+    if (Math.random() < 0.5) {
+      const el = await page.$('a, button')
+      if (el) { await el.hover().catch(() => {}); await sleep(200 + Math.random() * 600) }
+    }
+  } catch {}
+}
+
+// Realistic typing for any input we may need
+async function humanType(page, selector, text) {
+  const el = await page.$(selector)
+  if (!el) return false
+  await el.click({ delay: 50 + Math.random() * 100 }).catch(() => {})
+  for (const ch of text) {
+    await page.keyboard.type(ch, { delay: 60 + Math.random() * 140 })
+  }
+  return true
+}
+
+// Spoofing init script (runs before any page script)
+function spoofScript(fp) {
+  const langsJson = JSON.stringify(fp.langs)
+  return `
+    (() => {
+      try {
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        Object.defineProperty(navigator, 'languages', { get: () => ${langsJson} });
+        Object.defineProperty(navigator, 'platform', { get: () => '${fp.platform === 'Windows' ? 'Win32' : fp.platform === 'macOS' ? 'MacIntel' : 'Linux x86_64'}' });
+        Object.defineProperty(navigator, 'deviceMemory', { get: () => ${fp.deviceMemory} });
+        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${fp.hardwareConcurrency} });
+        // userAgentData (sec-ch-ua)
+        if (navigator.userAgentData) {
+          Object.defineProperty(navigator, 'userAgentData', {
+            get: () => ({
+              brands: [
+                { brand: 'Google Chrome', version: '131' },
+                { brand: 'Chromium', version: '131' },
+                { brand: 'Not_A Brand', version: '24' },
+              ],
+              mobile: ${fp.mobile},
+              platform: '${fp.platform}',
+              getHighEntropyValues: () => Promise.resolve({ platform: '${fp.platform}', mobile: ${fp.mobile}, architecture: 'x86', bitness: '64', model: '', platformVersion: '15.0.0' }),
+            }),
+          });
+        }
+        // WebGL vendor/renderer spoof
+        const getParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function(p) {
+          if (p === 37445) return '${fp.webgl.vendor}';
+          if (p === 37446) return '${fp.webgl.renderer}';
+          return getParameter.call(this, p);
+        };
+        if (typeof WebGL2RenderingContext !== 'undefined') {
+          const gp2 = WebGL2RenderingContext.prototype.getParameter;
+          WebGL2RenderingContext.prototype.getParameter = function(p) {
+            if (p === 37445) return '${fp.webgl.vendor}';
+            if (p === 37446) return '${fp.webgl.renderer}';
+            return gp2.call(this, p);
+          };
+        }
+        // Canvas fingerprint: subtle noise
+        const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+        HTMLCanvasElement.prototype.toDataURL = function(...args) {
+          try {
+            const ctx = this.getContext('2d');
+            if (ctx && this.width && this.height) {
+              const img = ctx.getImageData(0, 0, this.width, this.height);
+              for (let i = 0; i < img.data.length; i += 97) img.data[i] = (img.data[i] + 1) & 0xff;
+              ctx.putImageData(img, 0, 0);
+            }
+          } catch {}
+          return toDataURL.apply(this, args);
+        };
+        // Hide chrome.runtime automation hint
+        if (window.chrome) { Object.defineProperty(window.chrome, 'runtime', { get: () => undefined }); }
+      } catch (e) {}
+    })();
+  `
+}
+
+function sessionPath(target, proxyLabel) {
+  const safe = `${target.country_code}-${target.provider}-${(proxyLabel || 'noproxy').replace(/[^a-z0-9_-]/gi, '_')}.json`
+  return path.join(SESSION_DIR, safe)
+}
+function loadStorageState(target, proxyLabel) {
+  try {
+    const p = sessionPath(target, proxyLabel)
+    if (fs.existsSync(p)) {
+      const st = JSON.parse(fs.readFileSync(p, 'utf-8'))
+      // expire after 24h
+      if (st.__saved_at && Date.now() - st.__saved_at < 24 * 3600_000) return st
+    }
+  } catch {}
+  return undefined
+}
+async function saveStorageState(context, target, proxyLabel) {
+  try {
+    const st = await context.storageState()
+    st.__saved_at = Date.now()
+    fs.writeFileSync(sessionPath(target, proxyLabel), JSON.stringify(st))
+  } catch {}
+}
+
+async function checkTargetOnce(browser, target, opts) {
   const start = Date.now()
-  const userAgent = pick(USER_AGENTS)
+  const fp = opts.fp
+  const proxy = opts.proxy
   const xhrLog = []
-  const proxy = nextProxy()
-  let result = {
+  const result = {
     country_code: target.country_code,
     provider: target.provider,
     url: target.url,
@@ -127,23 +358,40 @@ async function checkTarget(browser, target) {
     xhr_requests: [],
     screenshot_base64: null,
     load_time_ms: 0,
-    user_agent: userAgent,
+    user_agent: fp.ua,
     error_message: null,
-    proxy_used: proxy ? `${proxy.server} (${proxy.username || 'no-auth'})` : null,
+    proxy_used: proxy ? proxy.label : null,
+    blocked: null,
+    block_evidence: null,
   }
 
-  const context = await browser.newContext({
-    userAgent,
-    viewport: { width: 1366, height: 768 },
-    locale: 'en-US',
-    timezoneId: 'Europe/Paris',
-    proxy: proxy || undefined,
+  const storageState = loadStorageState(target, proxy?.label)
+  const ctxOpts = {
+    userAgent: fp.ua,
+    viewport: fp.viewport,
+    locale: fp.locale,
+    timezoneId: fp.tz,
+    proxy: proxy ? { server: proxy.server, username: proxy.username, password: proxy.password } : undefined,
     extraHTTPHeaders: {
-      'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
+      'Accept-Language': fp.langs.map((l, i) => `${l}${i ? ';q=' + (0.9 - i*0.1).toFixed(1) : ''}`).join(','),
+      'sec-ch-ua': fp.secChUa,
+      'sec-ch-ua-mobile': fp.mobile ? '?1' : '?0',
+      'sec-ch-ua-platform': `"${fp.platform}"`,
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-User': '?1',
+      'Sec-Fetch-Dest': 'document',
     },
-  })
+    ...(storageState ? { storageState } : {}),
+  }
 
+  const context = await browser.newContext(ctxOpts)
+  await context.addInitScript({ content: spoofScript(fp) })
   const page = await context.newPage()
+
+  let mainResponse = null
+  page.on('response', (resp) => { if (resp.url() === target.url || resp.url().startsWith(target.url)) mainResponse = mainResponse || resp })
 
   // Network interception
   page.on('response', async (resp) => {
@@ -160,13 +408,36 @@ async function checkTarget(browser, target) {
     await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
 
     // Human-like behavior
-    await page.mouse.move(200 + Math.random() * 400, 200 + Math.random() * 400)
-    await sleep(1500 + Math.random() * 1500)
-    await page.evaluate(() => window.scrollBy(0, 300))
-    await sleep(1000 + Math.random() * 1000)
+    await humanizePage(page)
 
     // Wait for potential JS-rendered content
     await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {})
+
+    // === Block / captcha detection FIRST ===
+    const httpStatus = mainResponse ? mainResponse.status() : null
+    const respHeaders = mainResponse ? mainResponse.headers() : {}
+    const titleNow = await page.title().catch(() => '')
+    const htmlNow = await page.content().catch(() => '')
+    const textNow = (await page.evaluate(() => document.body?.innerText || '').catch(() => '')).slice(0, 5000)
+    const blockType = detectBlock({ status: httpStatus, title: titleNow, text: textNow, html: htmlNow })
+    if (blockType) {
+      result.status = 'blocked'
+      result.blocked = blockType
+      const buf = await page.screenshot({ fullPage: false, type: 'png' }).catch(() => null)
+      result.block_evidence = {
+        detection_type: blockType,
+        severity: ['captcha','recaptcha','hcaptcha','cloudflare'].includes(blockType) ? 4 : 3,
+        http_status: httpStatus,
+        page_title: titleNow,
+        page_text_snippet: textNow.slice(0, 1500),
+        response_headers: respHeaders,
+        screenshot_base64: buf ? buf.toString('base64') : null,
+        html_snapshot: htmlNow.slice(0, 200_000),
+        fingerprint_used: { ua: fp.ua, platform: fp.platform, tz: fp.tz, viewport: fp.viewport, webgl: fp.webgl },
+      }
+      result.load_time_ms = Date.now() - start
+      return result
+    }
 
     // Count booking buttons (use multiple selectors, dedupe by element handle)
     let bookingCount = 0
@@ -238,22 +509,56 @@ async function checkTarget(browser, target) {
       checked_selectors: BOOKING_SELECTORS.length + CALENDAR_SELECTORS.length,
       body_length: bodyText.length,
       title: await page.title().catch(() => null),
+      fingerprint: { platform: fp.platform, tz: fp.tz, viewport: fp.viewport, headful: opts.headful },
+      proxy: proxy?.label || null,
     }
     result.xhr_requests = xhrLog.slice(0, 20)
     result.load_time_ms = Date.now() - start
+
+    // Persist session for reuse
+    await saveStorageState(context, target, proxy?.label)
   } catch (e) {
     result.status = 'error'
-    result.error_message = (e.message?.slice(0, 500) || String(e)) + (proxy ? ` [via ${proxy.server}]` : '')
+    result.error_message = (e.message?.slice(0, 500) || String(e)) + (proxy ? ` [via ${proxy.label}]` : '')
     result.load_time_ms = Date.now() - start
-    // Retry once with a different proxy if available
-    if (proxy && PROXY_URLS.length > 1) {
-      console.warn(`  retrying with next proxy after error: ${e.message}`)
-    }
   } finally {
     await context.close().catch(() => {})
   }
 
   return result
+}
+
+// Wrapper with smart retry on block/captcha using fresh proxy + fingerprint
+async function checkTarget(target, headfulProb) {
+  const triedProxies = new Set()
+  const maxAttempts = 3
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const fp = pick(FINGERPRINTS)
+    const proxy = nextProxy(target.provider, triedProxies)
+    if (proxy) triedProxies.add(proxy.label)
+    const headful = Math.random() < headfulProb
+    const browser = await chromium.launch({
+      headless: !headful,
+      args: [
+        '--no-sandbox', '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--disable-features=IsolateOrigins,site-per-process',
+        `--window-size=${fp.viewport.width},${fp.viewport.height}`,
+      ],
+    })
+    try {
+      const result = await checkTargetOnce(browser, target, { fp, proxy, headful })
+      if (result.status !== 'blocked') return result
+      console.warn(`  [attempt ${attempt}] blocked=${result.blocked} proxy=${proxy?.label}; retrying with new proxy+fp`)
+      // Report the block to backend
+      await sendBotEvent(target, result)
+      if (attempt === maxAttempts) return result
+      await sleep(2000 + Math.random() * 3000)
+    } finally {
+      await browser.close().catch(() => {})
+    }
+  }
 }
 
 async function sendToSupabase(result) {
@@ -273,37 +578,73 @@ async function sendToSupabase(result) {
   return true
 }
 
+async function sendBotEvent(target, result) {
+  if (!result.block_evidence) return
+  try {
+    await fetch(BOT_INGEST_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-worker-token': WORKER_TOKEN },
+      body: JSON.stringify({
+        country_code: target.country_code,
+        provider: target.provider,
+        url: target.url,
+        detection_type: result.block_evidence.detection_type,
+        severity: result.block_evidence.severity,
+        blocked_reason: result.block_evidence.detection_type,
+        http_status: result.block_evidence.http_status,
+        proxy_used: result.proxy_used,
+        fingerprint_used: result.block_evidence.fingerprint_used,
+        response_headers: result.block_evidence.response_headers,
+        page_title: result.block_evidence.page_title,
+        page_text_snippet: result.block_evidence.page_text_snippet,
+        screenshot_base64: result.block_evidence.screenshot_base64,
+        html_snapshot: result.block_evidence.html_snapshot,
+      }),
+    })
+  } catch (e) { console.error('bot ingest failed', e.message) }
+}
+
 async function runCycle() {
   console.log(`[${new Date().toISOString()}] Starting cycle (${TARGETS.length} targets)`)
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      '--no-sandbox', '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--disable-dev-shm-usage',
-    ],
-  })
-  try {
-    for (const target of TARGETS) {
-      try {
-        console.log(`→ ${target.country_code}/${target.provider}`)
-        const result = await checkTarget(browser, target)
-        console.log(`  status=${result.status} buttons=${result.booking_buttons_count} dates=${result.available_dates_count}`)
-        await sendToSupabase(result)
-        await sleep(3000 + Math.random() * 4000)
-      } catch (e) {
-        console.error(`  Error: ${e.message}`)
+  await refreshPolicy()
+  // Shuffle targets for unpredictability
+  const order = [...TARGETS].sort(() => Math.random() - 0.5)
+  for (const target of order) {
+    try {
+      const risk = providerRisk(target.provider)
+      if (risk.throttle_until && new Date(risk.throttle_until).getTime() > Date.now()) {
+        console.log(`→ ${target.country_code}/${target.provider} THROTTLED until ${risk.throttle_until} (risk=${risk.risk_score})`)
+        continue
       }
+      // Adaptive headful probability: higher risk -> more headful
+      const adaptiveHeadful = Math.min(0.6, HEADFUL_PROB + (Number(risk.risk_score || 0) / 200))
+      console.log(`→ ${target.country_code}/${target.provider} (risk=${risk.risk_score} headful_p=${adaptiveHeadful.toFixed(2)})`)
+      const result = await checkTarget(target, adaptiveHeadful)
+      console.log(`  status=${result.status} buttons=${result.booking_buttons_count} dates=${result.available_dates_count} proxy=${result.proxy_used || '-'}${result.blocked ? ' BLOCKED='+result.blocked : ''}`)
+      await sendToSupabase(result)
+      await sleep(jitter(4000, 50) + Math.random() * 3000)
+    } catch (e) {
+      console.error(`  Error: ${e.message}`)
     }
-  } finally {
-    await browser.close()
   }
+}
+
+function nextDelayMs() {
+  // Use the highest recommended interval among providers as the base, plus jitter
+  const recs = (_policy.risk || []).map(r => (r.recommended_interval_seconds || 300) * 1000)
+  const base = recs.length ? Math.max(BASE_INTERVAL_MS, Math.max(...recs)) : BASE_INTERVAL_MS
+  return jitter(base, JITTER_PCT)
 }
 
 async function main() {
   await runCycle()
   if (RUN_ONCE) return
-  setInterval(runCycle, INTERVAL_MS)
+  const loop = async () => {
+    const delay = nextDelayMs()
+    console.log(`Next cycle in ${(delay/1000).toFixed(0)}s`)
+    setTimeout(async () => { try { await runCycle() } catch (e) { console.error(e) } finally { loop() } }, delay)
+  }
+  loop()
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1) })

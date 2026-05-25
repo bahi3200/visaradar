@@ -260,6 +260,105 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_detection_events: {
+        Row: {
+          blocked_reason: string | null
+          country_code: string
+          detected_at: string
+          detection_type: string
+          fingerprint_used: Json | null
+          html_snapshot_path: string | null
+          http_status: number | null
+          id: string
+          page_text_snippet: string | null
+          page_title: string | null
+          provider: string
+          proxy_used: string | null
+          response_headers: Json | null
+          screenshot_path: string | null
+          severity: number
+          url: string
+          worker_id: string | null
+        }
+        Insert: {
+          blocked_reason?: string | null
+          country_code: string
+          detected_at?: string
+          detection_type: string
+          fingerprint_used?: Json | null
+          html_snapshot_path?: string | null
+          http_status?: number | null
+          id?: string
+          page_text_snippet?: string | null
+          page_title?: string | null
+          provider: string
+          proxy_used?: string | null
+          response_headers?: Json | null
+          screenshot_path?: string | null
+          severity?: number
+          url: string
+          worker_id?: string | null
+        }
+        Update: {
+          blocked_reason?: string | null
+          country_code?: string
+          detected_at?: string
+          detection_type?: string
+          fingerprint_used?: Json | null
+          html_snapshot_path?: string | null
+          http_status?: number | null
+          id?: string
+          page_text_snippet?: string | null
+          page_title?: string | null
+          provider?: string
+          proxy_used?: string | null
+          response_headers?: Json | null
+          screenshot_path?: string | null
+          severity?: number
+          url?: string
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
+      browser_sessions: {
+        Row: {
+          country_code: string
+          created_at: string
+          expires_at: string | null
+          fingerprint: Json | null
+          id: string
+          last_used_at: string | null
+          provider: string
+          proxy_label: string | null
+          storage_state: Json
+          user_agent: string | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          expires_at?: string | null
+          fingerprint?: Json | null
+          id?: string
+          last_used_at?: string | null
+          provider: string
+          proxy_label?: string | null
+          storage_state?: Json
+          user_agent?: string | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          expires_at?: string | null
+          fingerprint?: Json | null
+          id?: string
+          last_used_at?: string | null
+          provider?: string
+          proxy_label?: string | null
+          storage_state?: Json
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       browser_verifications: {
         Row: {
           available_dates_count: number
@@ -1198,6 +1297,39 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_risk_scores: {
+        Row: {
+          block_rate: number
+          captcha_rate: number
+          last_event_at: string | null
+          provider: string
+          recommended_interval_seconds: number
+          risk_score: number
+          throttle_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_rate?: number
+          captcha_rate?: number
+          last_event_at?: string | null
+          provider: string
+          recommended_interval_seconds?: number
+          risk_score?: number
+          throttle_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_rate?: number
+          captcha_rate?: number
+          last_event_at?: string | null
+          provider?: string
+          recommended_interval_seconds?: number
+          risk_score?: number
+          throttle_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       provider_throttle: {
         Row: {
           consecutive_blocks: number
@@ -1340,6 +1472,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      proxy_health: {
+        Row: {
+          captcha_count: number
+          cooldown_until: string | null
+          created_at: string
+          failure_count: number
+          id: string
+          last_error: string | null
+          last_used_at: string | null
+          provider: string
+          proxy_label: string
+          status: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          captcha_count?: number
+          cooldown_until?: string | null
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          last_used_at?: string | null
+          provider: string
+          proxy_label: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          captcha_count?: number
+          cooldown_until?: string | null
+          created_at?: string
+          failure_count?: number
+          id?: string
+          last_error?: string | null
+          last_used_at?: string | null
+          provider?: string
+          proxy_label?: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       proxy_health_log: {
         Row: {
@@ -3019,6 +3196,10 @@ export type Database = {
           protocol: string
           username: string
         }[]
+      }
+      recompute_provider_risk: {
+        Args: { _provider: string }
+        Returns: undefined
       }
       recompute_proxy_scores: {
         Args: never
