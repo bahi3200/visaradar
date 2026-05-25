@@ -110,6 +110,9 @@ export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel
     error: errorMsg,
     fingerprint_success: outcome === 'success',
     captcha_seen: captcha,
+    metadata: {
+      detection_reason: errorMsg,
+    },
   })
 
   // Escalate cooldown on captcha/block/cloudflare
