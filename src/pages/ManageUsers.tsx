@@ -494,7 +494,7 @@ export default function ManageUsersPage() {
         )}
 
         {/* Results count */}
-        {(search || activeFilterCount > 0) && !loading && (
+        {(search || activeFilterCount > 0) && !loading && !loadError && (
           <p className="text-xs text-muted-foreground mb-3">
             عرض {filtered.length} من {users.length} مستخدم
           </p>
@@ -504,7 +504,25 @@ export default function ManageUsersPage() {
         {loading ? (
           <div className="text-center py-20">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">جارٍ تحميل المستخدمين...</p>
+            <p className="text-sm text-muted-foreground">
+              {isRetrying ? `إعادة المحاولة ${retryAttempt}/${MAX_RETRIES}...` : "جارٍ تحميل المستخدمين..."}
+            </p>
+            {isRetrying && (
+              <p className="text-xs text-muted-foreground/60 mt-1">تأخر في الاستجابة — إعادة الاتصال تلقائياً</p>
+            )}
+          </div>
+        ) : loadError ? (
+          <div className="text-center py-16">
+            <AlertTriangle className="w-12 h-12 text-orange-400/60 mx-auto mb-3" />
+            <p className="text-muted-foreground mb-1">تعذّر تحميل البيانات</p>
+            <p className="text-xs text-muted-foreground/50 mb-4">{loadError}</p>
+            <button
+              onClick={() => fetchUsers(0)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all text-sm font-medium"
+            >
+              <RefreshCw className="w-4 h-4" />
+              إعادة المحاولة
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
