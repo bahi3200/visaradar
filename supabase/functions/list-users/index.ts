@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
     // Map data
     const result = users.map((u) => {
       const userSubs = (subscriptions || []).filter((s) => s.user_id === u.id);
-      const activeSub = userSubs.find((s) => s.status === "active" && new Date(s.expires_at) > new Date());
+      const activeSub =
+        userSubs.find((s) => s.status === "active" && new Date(s.expires_at) > new Date()) ||
+        userSubs.find((s) => s.status === "paused");
       const userRoles = (roles || []).filter((r) => r.user_id === u.id).map((r) => r.role);
       const deviceCount = (devices || []).filter((d) => d.user_id === u.id).length;
       const profile = (profiles || []).find((p) => p.user_id === u.id);
@@ -93,11 +95,14 @@ Deno.serve(async (req) => {
         telegram_linked_at: profile?.telegram_linked_at || null,
         subscription: activeSub
           ? {
+              id: activeSub.id,
               status: activeSub.status,
               package_name: activeSub.packages?.name_ar || "",
               is_golden: activeSub.packages?.is_golden || false,
               countries: activeSub.countries,
               expires_at: activeSub.expires_at,
+              paused_at: activeSub.paused_at || null,
+              paused_remaining_seconds: activeSub.paused_remaining_seconds || null,
             }
           : null,
       };

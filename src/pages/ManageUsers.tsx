@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles, Pause, Play, CalendarOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,11 +47,14 @@ type UserInfo = {
   telegram_username: string | null;
   telegram_linked_at: string | null;
   subscription: {
+    id: string;
     status: string;
     package_name: string;
     is_golden: boolean;
     countries: string[];
     expires_at: string;
+    paused_at?: string | null;
+    paused_remaining_seconds?: number | null;
   } | null;
 };
 
@@ -63,6 +66,11 @@ type FilterState = {
 
 type PendingAction = {
   type: "delete" | "disable" | "enable" | "assign_moderator" | "remove_moderator";
+  user: UserInfo;
+} | null;
+
+type SubAction = {
+  type: "pause_sub" | "resume_sub" | "delete_sub";
   user: UserInfo;
 } | null;
 
