@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
   { path: "/dashboard/visa-monitor", label: "مراقبة التأشيرات", icon: Activity },
   { path: "/dashboard/enterprise", label: "مراقبة Enterprise", icon: Shield, adminOnly: true },
   { path: "/dashboard/proxies", label: "إدارة الـ Proxies", icon: Network, adminOnly: true },
+  { path: "/dashboard/anti-bot", label: "Anti-Bot Evasion", icon: Shield, adminOnly: true },
   { path: "/dashboard/visa-openings", label: "تتبع الفتحات", icon: Radar },
   { path: "/dashboard/visa-signals", label: "إشارات يدوية (بث فوري)", icon: Megaphone },
   { path: "/dashboard/appointments", label: "مواعيد التأشيرات", icon: CalendarDays },
