@@ -1,10 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { requireServiceRole } from '../_shared/internalAuth.ts';
 
 // Scan worker: claims a batch of tasks (SKIP LOCKED), then invokes monitor-visa-sites
 // in parallel for each task with a sharded countries+provider filter.
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const authFail = requireServiceRole(req);
+  if (authFail) return authFail;
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

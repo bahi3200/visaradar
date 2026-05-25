@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@3.25.76';
+import { requireServiceRoleOrAdmin } from '../_shared/internalAuth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,12 +52,12 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      logErr('Missing Authorization header');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Require admin/moderator (or service-role). The function mutates
+    // subscription_requests fraud flags using the service role and burns AI credits.
+    const authFail = await requireServiceRoleOrAdmin(req, { allowModerator: true });
+    if (authFail) {
+      logErr('Auth check failed');
+      return authFail;
     }
 
     const body = await req.json();
