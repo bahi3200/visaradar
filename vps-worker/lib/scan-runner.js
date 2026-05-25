@@ -8,16 +8,9 @@
  */
 
 import { pickProfilePair } from './profile-rotation.js'
-import { detectCloudflare } from './cloudflare.js'
+import { detectBlocker } from './cloudflare.js'
 import { humanIdle, humanMouseMove, humanScroll, humanFocusBlur } from './humanize.js'
 import { maybeVisitHomepage, naturalNavigateTo } from './navigation.js'
-
-async function detectCaptcha(page) {
-  try {
-    const html = await page.content()
-    return /recaptcha|hcaptcha|g-recaptcha|cf-challenge|captcha/i.test(html)
-  } catch { return false }
-}
 
 async function reportMetric(supaUrl, token, payload) {
   try {
@@ -74,14 +67,25 @@ export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel
     if (Math.random() < (human?.hover_prob ?? 0.5)) await humanFocusBlur(page).catch(()=>{})
     await page.waitForTimeout(humanIdle(human?.idle_avg_ms ?? 2000, (human?.idle_avg_ms ?? 2000) + (human?.idle_jitter_ms ?? 1500)))
 
-    // Detection
-    cloudflare = await detectCloudflare(page)
-    captcha = await detectCaptcha(page)
+    // Advanced detection
+    const det = await detectBlocker(page, resp)
+    cloudflare = det.kind === 'cloudflare'
+    captcha = det.kind === 'captcha'
 
-    if (httpStatus === 403 || httpStatus === 429) outcome = 'block'
-    else if (cloudflare) outcome = 'cloudflare'
-    else if (captcha) outcome = 'captcha'
-    else outcome = 'success'
+    if (det.detected) {
+      // Map detection kind to outcome
+      outcome = det.kind === 'cloudflare' ? 'cloudflare'
+              : det.kind === 'captcha'    ? 'captcha'
+              : det.kind === 'rate_limit' ? 'block'
+              : det.kind === 'waf'        ? 'block'
+              : det.kind === 'maintenance'? 'error'
+              : 'block'
+      errorMsg = `[${det.kind} conf=${det.confidence}] ${det.reason}`.slice(0, 500)
+    } else if (httpStatus && httpStatus >= 400) {
+      outcome = httpStatus === 403 || httpStatus === 429 ? 'block' : 'error'
+    } else {
+      outcome = 'success'
+    }
   } catch (e) {
     outcome = 'error'
     errorMsg = String(e?.message || e).slice(0, 500)
@@ -106,6 +110,9 @@ export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel
     error: errorMsg,
     fingerprint_success: outcome === 'success',
     captcha_seen: captcha,
+    metadata: {
+      detection_reason: errorMsg,
+    },
   })
 
   // Escalate cooldown on captcha/block/cloudflare
