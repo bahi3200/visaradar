@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AssignSubscriptionDialog from "@/components/admin/AssignSubscriptionDialog";
 
 type UserInfo = {
   id: string;
@@ -77,6 +78,7 @@ export default function ManageUsersPage() {
   const [msgSubject, setMsgSubject] = useState("");
   const [msgBody, setMsgBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [subscriptionTarget, setSubscriptionTarget] = useState<UserInfo | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     role: "all",
     subscription: "all",
@@ -512,6 +514,15 @@ export default function ManageUsersPage() {
                             <MessageCircle className="w-4 h-4" />
                             إرسال رسالة
                           </DropdownMenuItem>
+                          {!user.roles.includes("admin") && !user.roles.includes("moderator") && (
+                            <DropdownMenuItem
+                              onClick={() => setSubscriptionTarget(user)}
+                              className="text-yellow-400 focus:text-yellow-400 gap-2"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              {user.subscription ? "ترقية الاشتراك" : "منح اشتراك"}
+                            </DropdownMenuItem>
+                          )}
                           {/* Moderator role toggle */}
                           {!user.roles.includes("admin") && (
                             user.roles.includes("moderator") ? (
@@ -654,6 +665,22 @@ export default function ManageUsersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AssignSubscriptionDialog
+        target={
+          subscriptionTarget
+            ? {
+                id: subscriptionTarget.id,
+                email: subscriptionTarget.email,
+                full_name: subscriptionTarget.full_name,
+                hasSubscription: !!subscriptionTarget.subscription,
+                currentPackageName: subscriptionTarget.subscription?.package_name,
+              }
+            : null
+        }
+        onClose={() => setSubscriptionTarget(null)}
+        onDone={fetchUsers}
+      />
     </AdminLayout>
   );
 }
