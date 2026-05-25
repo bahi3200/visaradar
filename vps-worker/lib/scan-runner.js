@@ -11,6 +11,7 @@ import { pickProfilePair } from './profile-rotation.js'
 import { detectBlocker } from './cloudflare.js'
 import { humanIdle, humanMouseMove, humanScroll, humanFocusBlur } from './humanize.js'
 import { maybeVisitHomepage, naturalNavigateTo } from './navigation.js'
+import { getSession, reportChallenge, reportOutcome, applySessionToContext } from './session-gateway.js'
 
 async function reportMetric(supaUrl, token, payload) {
   try {
@@ -32,12 +33,21 @@ async function reportCaptchaEvent(supaUrl, token, provider, country, kind) {
   } catch {}
 }
 
-export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel }) {
+export async function runStealthCheck({ page, context, target, supaUrl, token, proxyLabel, workerId }) {
   const startedAt = Date.now()
   const { stealth, human } = await pickProfilePair(supaUrl, token, {
     provider: target.provider,
     country: target.country,
   })
+
+  // 1) Try to load a healthy HVG session (cookies + UA) before scanning.
+  let hvgSession = null
+  try {
+    hvgSession = await getSession(token, target.provider, target.country)
+    if (hvgSession && context) {
+      await applySessionToContext(context, hvgSession, target.homepage || target.url).catch(() => {})
+    }
+  } catch {}
 
   let outcome = 'success'
   let httpStatus = null
@@ -115,10 +125,37 @@ export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel
     },
   })
 
+  // HVG: record outcome against the active session (adapts health_score).
+  if (hvgSession?.session_id) {
+    await reportOutcome(token, {
+      session_id: hvgSession.session_id,
+      outcome,
+      http_status: httpStatus,
+      duration_ms: durationMs,
+      worker_id: workerId,
+      metadata: { proxy_label: proxyLabel },
+    }).catch(() => {})
+  }
+
+  // HVG: open a human-verification challenge on detection.
+  if (['captcha', 'cloudflare'].includes(outcome) || (outcome === 'block' && httpStatus === 403)) {
+    await reportChallenge(token, {
+      provider: target.provider,
+      country: target.country,
+      challenge_type: outcome === 'block' ? 'rate_limit' : outcome,
+      user_id: hvgSession?.user_id ?? null,
+      session_id: hvgSession?.session_id ?? null,
+      target_url: target.url,
+      http_status: httpStatus,
+      snippet: errorMsg,
+      priority: 3,
+    }).catch(() => {})
+  }
+
   // Escalate cooldown on captcha/block/cloudflare
   if (['captcha', 'cloudflare', 'block'].includes(outcome)) {
     await reportCaptchaEvent(supaUrl, token, target.provider, target.country, outcome)
   }
 
-  return { outcome, httpStatus, cloudflare, captcha, durationMs, stealthProfile: stealth, humanProfile: human, error: errorMsg }
+  return { outcome, httpStatus, cloudflare, captcha, durationMs, stealthProfile: stealth, humanProfile: human, hvgSession, error: errorMsg }
 }
