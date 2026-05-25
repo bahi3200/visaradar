@@ -5,6 +5,7 @@
 // the subscription's renewal_request_created_at, and notifies the user via
 // Telegram with payment instructions.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireServiceRole } from '../_shared/internalAuth.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,8 @@ const RENEWAL_WINDOW_DAYS = 7;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const authFail = requireServiceRole(req);
+  if (authFail) return authFail;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
