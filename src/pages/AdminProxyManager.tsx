@@ -567,6 +567,102 @@ export default function AdminProxyManager() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="health">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="w-4 h-4 text-primary" />
+                Proxy Health Checker
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                فحص شامل لكل proxy في الـ pool المحدّد:
+                <span className="font-semibold"> الاتصال · المصادقة (Auth) · قياس السرعة · التحقق من تغيير الـ IP · الوصول إلى TLScontact</span>.
+                النتائج: <Badge className="mx-1" variant="outline">Healthy</Badge>
+                <Badge className="mx-1" variant="outline">Slow</Badge>
+                <Badge className="mx-1" variant="outline">Blocked</Badge>
+                <Badge className="mx-1" variant="outline">Dead</Badge>
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-sm">
+                  Pool: <span className="font-semibold">{selectedPool ? pools.find(p => p.id === selectedPool)?.name : (pools[0]?.name || "—")}</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoDisable}
+                    onChange={e => setAutoDisable(e.target.checked)}
+                    className="rounded border-input"
+                  />
+                  Auto-disable الفاشلة (بعد 5 محاولات)
+                </label>
+                <Button onClick={runHealthCheck} disabled={healthRunning} size="sm">
+                  <Play className="w-3.5 h-3.5 ml-1" />
+                  {healthRunning ? "جاري الفحص..." : "تشغيل الفحص"}
+                </Button>
+              </div>
+
+              {healthSummary && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                  <Card><CardContent className="p-3 text-center">
+                    <div className="text-2xl font-bold text-green-600">{healthSummary.healthy}</div>
+                    <div className="text-xs text-muted-foreground">Healthy</div>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{healthSummary.slow}</div>
+                    <div className="text-xs text-muted-foreground">Slow</div>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <div className="text-2xl font-bold text-orange-600">{healthSummary.blocked}</div>
+                    <div className="text-xs text-muted-foreground">Blocked</div>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-3 text-center">
+                    <div className="text-2xl font-bold text-red-600">{healthSummary.dead}</div>
+                    <div className="text-xs text-muted-foreground">Dead</div>
+                  </CardContent></Card>
+                </div>
+              )}
+
+              {healthDirectIp && (
+                <div className="text-xs text-muted-foreground">
+                  IP المباشر للسيرفر (بدون proxy): <code className="font-mono">{healthDirectIp}</code>
+                </div>
+              )}
+
+              {healthResults.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  {healthResults.map((r, i) => {
+                    const style = HEALTH_STYLES[r.health] || HEALTH_STYLES.dead;
+                    const Icon = style.icon;
+                    return (
+                      <Card key={r.proxy_id || i}>
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <Badge className={style.cls} variant="outline">
+                            <Icon className="w-3 h-3 ml-1" />{style.label}
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-sm truncate">{r.host}:{r.port}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
+                              <span>{r.latency_ms}ms</span>
+                              {r.proxy_ip && <span>IP: <code className="font-mono">{r.proxy_ip}</code></span>}
+                              <span>{r.auth_ok ? "✓ Auth" : "✗ Auth"}</span>
+                              <span>{r.ip_changed ? "✓ IP changed" : "✗ IP same"}</span>
+                              <span>{r.tls_ok ? "✓ TLScontact" : `✗ TLS (${r.tls_status || "—"})`}</span>
+                            </div>
+                            <div className="text-xs mt-0.5 text-muted-foreground">{r.reason}</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </AdminLayout>
   );
