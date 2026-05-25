@@ -31,6 +31,15 @@ const POLICY_URL = `${SUPABASE_URL}/functions/v1/get-scan-policy`
 const BASE_INTERVAL_MS = (parseInt(process.env.INTERVAL_MINUTES || '5', 10)) * 60_000
 const JITTER_PCT = Math.max(0, Math.min(80, parseFloat(process.env.SCAN_JITTER_PCT || '35')))
 const HEADFUL_PROB = Math.max(0, Math.min(1, parseFloat(process.env.HEADFUL_PROBABILITY || '0.15')))
+// Providers that MUST always run in headful mode (real visible Chromium)
+const HEADFUL_PROVIDERS = new Set(
+  (process.env.HEADFUL_PROVIDERS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+)
+// Per-target gap (seconds) — start slow: 20–40s between targets
+const BETWEEN_MIN_S = Math.max(1, parseInt(process.env.BETWEEN_TARGET_MIN_S || '20', 10))
+const BETWEEN_MAX_S = Math.max(BETWEEN_MIN_S, parseInt(process.env.BETWEEN_TARGET_MAX_S || '40', 10))
+// Residential-only enforcement
+const REQUIRE_RESIDENTIAL = (process.env.REQUIRE_RESIDENTIAL_PROXY || 'true').toLowerCase() !== 'false'
 const RUN_ONCE = process.argv.includes('--once')
 const SESSION_DIR = path.resolve('./.sessions')
 if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true })
@@ -73,6 +82,17 @@ function nextProxy(provider, exclude = new Set()) {
     const raw = pool[(_proxyIdx + i) % pool.length]
     try {
       const u = new URL(raw)
+      // Residential-only: must be tagged residential (in URL/userinfo) or come from a known residential gateway
+      const tag = `${raw}`.toLowerCase()
+      const isResidential =
+        tag.includes('residential') ||
+        tag.includes('-resi') ||
+        tag.includes('decodo.com') ||      // Decodo residential gateway
+        tag.includes('smartproxy') ||
+        tag.includes('brightdata') ||
+        tag.includes('oxylabs') ||
+        tag.includes('iproyal')
+      if (REQUIRE_RESIDENTIAL && !isResidential) continue
       const label = `${u.hostname}:${u.port}${u.username ? ':' + u.username.split('-')[0] : ''}`
       if (exclude.has(label)) continue
       if (isProxyOnCooldown(label, provider)) continue
