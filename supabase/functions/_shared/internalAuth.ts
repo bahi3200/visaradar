@@ -42,6 +42,39 @@ export function requireServiceRole(req: Request): Response | null {
 }
 
 /**
+ * Allow either the service-role key (cron / internal) OR an authenticated
+ * admin/moderator JWT. Returns null on success, or a Response on failure.
+ */
+export async function requireServiceRoleOrAdmin(
+  req: Request,
+  opts: { allowModerator?: boolean } = {},
+): Promise<Response | null> {
+  const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!SERVICE_ROLE) return unauthorized('SERVICE_ROLE not configured');
+
+  const raw = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+  const token = raw.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return unauthorized();
+  if (token === SERVICE_ROLE) return null;
+
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const { data: { user }, error } = await admin.auth.getUser(token);
+  if (error || !user) return unauthorized();
+
+  const roles = opts.allowModerator ? ['admin', 'moderator'] : ['admin'];
+  const { data: roleRow } = await admin
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .in('role', roles)
+    .maybeSingle();
+
+  if (!roleRow) return forbidden('Admin role required');
+  return null;
+}
+
+/**
  * Require an authenticated admin (or moderator) JWT.
  * Returns { user } on success, or a Response on failure.
  */
