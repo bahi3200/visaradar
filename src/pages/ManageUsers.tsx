@@ -82,6 +82,8 @@ export default function ManageUsersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [subAction, setSubAction] = useState<SubAction>(null);
+  const [subActionLoading, setSubActionLoading] = useState(false);
   const [messageTarget, setMessageTarget] = useState<UserInfo | null>(null);
   const [msgSubject, setMsgSubject] = useState("");
   const [msgBody, setMsgBody] = useState("");
@@ -182,6 +184,82 @@ export default function ManageUsersPage() {
       toast.error(err.message || "فشل إرسال الرسالة");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleSubAction() {
+    if (!subAction) return;
+    const sub = subAction.user.subscription;
+    if (!sub) {
+      toast.error("لا يوجد اشتراك");
+      setSubAction(null);
+      return;
+    }
+    setSubActionLoading(true);
+    try {
+      if (subAction.type === "delete_sub") {
+        const { error } = await supabase.from("subscriptions").delete().eq("id", sub.id);
+        if (error) throw error;
+        await supabase.from("payment_events").insert({
+          user_id: subAction.user.id,
+          subscription_id: sub.id,
+          event_type: "admin_delete_subscription",
+          status: "success",
+          message: `تم حذف اشتراك "${sub.package_name}" يدوياً من قبل الإدارة`,
+        });
+        toast.success("تم حذف الاشتراك");
+      } else if (subAction.type === "pause_sub") {
+        const remaining = Math.max(
+          0,
+          Math.floor((new Date(sub.expires_at).getTime() - Date.now()) / 1000),
+        );
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "paused",
+            paused_at: new Date().toISOString(),
+            paused_remaining_seconds: remaining,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", sub.id);
+        if (error) throw error;
+        await supabase.from("payment_events").insert({
+          user_id: subAction.user.id,
+          subscription_id: sub.id,
+          event_type: "admin_pause_subscription",
+          status: "success",
+          message: `تم إيقاف العداد عند ${Math.floor(remaining / 86400)} يوم متبقي`,
+        });
+        toast.success("تم إيقاف العداد");
+      } else if (subAction.type === "resume_sub") {
+        const remaining = sub.paused_remaining_seconds ?? 0;
+        const newExpiresAt = new Date(Date.now() + remaining * 1000).toISOString();
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            expires_at: newExpiresAt,
+            paused_at: null,
+            paused_remaining_seconds: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", sub.id);
+        if (error) throw error;
+        await supabase.from("payment_events").insert({
+          user_id: subAction.user.id,
+          subscription_id: sub.id,
+          event_type: "admin_resume_subscription",
+          status: "success",
+          message: `تم تشغيل العداد — ينتهي في ${new Date(newExpiresAt).toLocaleDateString("ar")}`,
+        });
+        toast.success("تم تشغيل العداد");
+      }
+      await fetchUsers();
+    } catch (err: any) {
+      toast.error(err.message || "فشل تنفيذ العملية");
+    } finally {
+      setSubActionLoading(false);
+      setSubAction(null);
     }
   }
 
@@ -531,6 +609,34 @@ export default function ManageUsersPage() {
                               {user.subscription ? "ترقية الاشتراك" : "منح اشتراك"}
                             </DropdownMenuItem>
                           )}
+                          {user.subscription && !user.roles.includes("admin") && !user.roles.includes("moderator") && (
+                            <>
+                              {user.subscription.status === "paused" ? (
+                                <DropdownMenuItem
+                                  onClick={() => setSubAction({ type: "resume_sub", user })}
+                                  className="text-green-400 focus:text-green-400 gap-2"
+                                >
+                                  <Play className="w-4 h-4" />
+                                  تشغيل العداد
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => setSubAction({ type: "pause_sub", user })}
+                                  className="text-orange-400 focus:text-orange-400 gap-2"
+                                >
+                                  <Pause className="w-4 h-4" />
+                                  إيقاف العداد
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => setSubAction({ type: "delete_sub", user })}
+                                className="text-red-400 focus:text-red-400 gap-2"
+                              >
+                                <CalendarOff className="w-4 h-4" />
+                                حذف الاشتراك
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {/* Moderator role toggle */}
                           {!user.roles.includes("admin") && (
                             user.roles.includes("moderator") ? (
@@ -584,7 +690,13 @@ export default function ManageUsersPage() {
                     <div className="mt-3 pt-3 border-t border-border/30 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span>الدول: {user.subscription.countries.join("، ") || "—"}</span>
                       <span>•</span>
-                      <span>ينتهي: {new Date(user.subscription.expires_at).toLocaleDateString("ar", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      {user.subscription.status === "paused" ? (
+                        <span className="text-orange-400">
+                          ⏸ موقوف — متبقي {Math.max(0, Math.floor((user.subscription.paused_remaining_seconds ?? 0) / 86400))} يوم
+                        </span>
+                      ) : (
+                        <span>ينتهي: {new Date(user.subscription.expires_at).toLocaleDateString("ar", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      )}
                     </div>
                   )}
                 </motion.div>
