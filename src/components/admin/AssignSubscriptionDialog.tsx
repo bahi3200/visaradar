@@ -146,12 +146,16 @@ export default function AssignSubscriptionDialog({
       if (insErr) throw insErr;
 
       // Best-effort: log a payment event for admin trail
-      await supabase.from("payment_events").insert({
-        user_id: target.id,
-        event_type: target.hasSubscription ? "admin_upgrade" : "admin_grant",
-        status: "success",
-        message: `تم ${target.hasSubscription ? "ترقية" : "منح"} اشتراك "${selectedPackage.name_ar}" يدوياً من قبل الإدارة (${months} شهر، الدول: ${countries.join("، ")})`,
-      }).then(() => {}).catch(() => {});
+      try {
+        await supabase.from("payment_events").insert({
+          user_id: target.id,
+          event_type: target.hasSubscription ? "admin_upgrade" : "admin_grant",
+          status: "success",
+          message: `تم ${target.hasSubscription ? "ترقية" : "منح"} اشتراك "${selectedPackage.name_ar}" يدوياً من قبل الإدارة (${months} شهر، الدول: ${countries.join("، ")})`,
+        });
+      } catch {
+        /* non-blocking */
+      }
 
       toast.success(
         target.hasSubscription
