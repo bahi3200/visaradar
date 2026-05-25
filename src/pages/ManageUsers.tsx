@@ -753,6 +753,22 @@ export default function ManageUsersPage() {
                             <Trash2 className="w-4 h-4" />
                             حذف نهائي
                           </DropdownMenuItem>
+                          {(loadError || user.roles.includes("admin") || !user.subscription) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled
+                                className="text-muted-foreground/50 text-[10px] cursor-default focus:bg-transparent gap-2"
+                              >
+                                <Info className="w-3 h-3 shrink-1" />
+                                {loadError
+                                  ? "فشل تحميل البيانات"
+                                  : user.roles.includes("admin")
+                                  ? "صلاحيات محدودة — مسؤول"
+                                  : "لا يوجد اشتراك"}
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
