@@ -8,9 +8,16 @@
  */
 
 import { pickProfilePair } from './profile-rotation.js'
-import { detectCloudflare, detectCaptcha } from './cloudflare.js'
-import { humanLikeMouseMove, humanLikeScroll, humanIdle } from './humanize.js'
-import { maybeVisitHomepage, organicHop } from './navigation.js'
+import { detectCloudflare } from './cloudflare.js'
+import { humanIdle, humanMouseMove, humanScroll, humanFocusBlur } from './humanize.js'
+import { maybeVisitHomepage, naturalNavigateTo } from './navigation.js'
+
+async function detectCaptcha(page) {
+  try {
+    const html = await page.content()
+    return /recaptcha|hcaptcha|g-recaptcha|cf-challenge|captcha/i.test(html)
+  } catch { return false }
+}
 
 async function reportMetric(supaUrl, token, payload) {
   try {
@@ -46,27 +53,26 @@ export async function runStealthCheck({ page, target, supaUrl, token, proxyLabel
   let errorMsg = null
 
   try {
-    // Sometimes warm up by visiting homepage first
-    if (human && Math.random() < (human.visit_homepage_prob ?? 0.35) && target.homepage) {
-      await maybeVisitHomepage(page, target.homepage)
-      await humanIdle(page, human.idle_avg_ms, human.idle_jitter_ms)
+    const homepageProb = human?.visit_homepage_prob ?? 0.35
+    if (target.homepage && Math.random() < homepageProb) {
+      await maybeVisitHomepage(page, target.homepage, { probability: 1 }).catch(() => {})
+      await page.waitForTimeout(humanIdle(human?.idle_avg_ms ?? 2000, (human?.idle_avg_ms ?? 2000) + (human?.idle_jitter_ms ?? 1500)))
     }
 
-    const resp = await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
-    httpStatus = resp?.status() ?? null
+    let resp
+    if (human?.navigation_style === 'explorer') {
+      resp = await naturalNavigateTo(page, target.url, { hops: 2 }).catch(() => null)
+    } else {
+      resp = await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 45_000 })
+    }
+    httpStatus = resp?.status?.() ?? null
 
     // Human noise
-    await humanLikeMouseMove(page, {
-      minSpeed: human?.mouse_speed_min ?? 400,
-      maxSpeed: human?.mouse_speed_max ?? 1200,
-    })
-    await humanLikeScroll(page, human?.scroll_pattern ?? 'natural')
-    await humanIdle(page, human?.idle_avg_ms ?? 2200, human?.idle_jitter_ms ?? 1500)
-
-    // Occasionally hop within site
-    if (human?.navigation_style === 'explorer' && Math.random() < 0.4) {
-      await organicHop(page).catch(() => {})
-    }
+    const vp = page.viewportSize() || { width: 1280, height: 720 }
+    await humanMouseMove(page, Math.random()*vp.width, Math.random()*vp.height, Math.random()*vp.width, Math.random()*vp.height, 'medium').catch(()=>{})
+    await humanScroll(page, { totalPx: 800 + Math.floor(Math.random()*1200), speed: human?.scroll_pattern === 'fast' ? 'fast' : 'medium' }).catch(()=>{})
+    if (Math.random() < (human?.hover_prob ?? 0.5)) await humanFocusBlur(page).catch(()=>{})
+    await page.waitForTimeout(humanIdle(human?.idle_avg_ms ?? 2000, (human?.idle_avg_ms ?? 2000) + (human?.idle_jitter_ms ?? 1500)))
 
     // Detection
     cloudflare = await detectCloudflare(page)
