@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@3.25.76';
+import { requireServiceRoleOrAdmin } from '../_shared/internalAuth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,28 +84,12 @@ Deno.serve(async (req) => {
     console.log('[notify-subscription-status] Function called');
     console.log('[notify-subscription-status] TELEGRAM_BOT_TOKEN present:', !!TELEGRAM_BOT_TOKEN);
 
-    // Validate auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('[notify-subscription-status] No auth header');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Require admin or moderator (or service role) — this function can email/Telegram any user.
+    const authFail = await requireServiceRoleOrAdmin(req, { allowModerator: true });
+    if (authFail) {
+      console.error('[notify-subscription-status] Auth check failed');
+      return authFail;
     }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-    if (authError || !user) {
-      console.error('[notify-subscription-status] Auth failed:', authError?.message);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log('[notify-subscription-status] Authenticated user:', user.id);
 
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
