@@ -51,18 +51,32 @@ type ProviderRisk = {
   updated_at: string;
 };
 
+type BotDetectionRow = {
+  provider: string;
+  total_requests: number;
+  captcha_rate: number;
+  block_rate: number;
+  cloudflare_rate: number;
+  success_rate: number;
+  fingerprint_success_rate: number | null;
+  risk_score: number;
+  cooldown_until: string | null;
+  escalation_level: number;
+};
+
 export default function AdminStealthAnalytics() {
   const [hours, setHours] = useState(24);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [quarantines, setQuarantines] = useState<Quarantine[]>([]);
   const [profiles, setProfiles] = useState<StealthProfile[]>([]);
   const [risks, setRisks] = useState<ProviderRisk[]>([]);
+  const [botRows, setBotRows] = useState<BotDetectionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [statsRes, qRes, pRes, rRes] = await Promise.all([
+      const [statsRes, qRes, pRes, rRes, bRes] = await Promise.all([
         supabase.rpc("get_stealth_dashboard_stats" as any, { _hours: hours }),
         supabase
           .from("proxy_quarantine" as any)
@@ -79,6 +93,7 @@ export default function AdminStealthAnalytics() {
           .from("provider_risk_scores")
           .select("provider, risk_score, captcha_rate, block_rate, recommended_interval_seconds, updated_at")
           .order("risk_score", { ascending: false }),
+        supabase.rpc("get_bot_detection_dashboard" as any, { _hours: hours }),
       ]);
 
       const s = (statsRes.data as any);
@@ -86,6 +101,7 @@ export default function AdminStealthAnalytics() {
       setQuarantines((qRes.data as any) || []);
       setProfiles((pRes.data as any) || []);
       setRisks((rRes.data as any) || []);
+      setBotRows((bRes.data as any) || []);
     } catch (e: any) {
       toast.error(e.message || "فشل تحميل البيانات");
     } finally {
@@ -189,6 +205,57 @@ export default function AdminStealthAnalytics() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="gradient-card rounded-xl border border-border/50 p-4">
+          <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
+            <Eye className="w-4 h-4 text-purple-400" /> Bot Detection — لكل Provider
+          </h3>
+          {botRows.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">لا توجد بيانات في النافذة المختارة</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr className="border-b border-border/40">
+                    <th className="text-right p-2">Provider</th>
+                    <th className="p-2">طلبات</th>
+                    <th className="p-2">نجاح</th>
+                    <th className="p-2">Captcha</th>
+                    <th className="p-2">Block</th>
+                    <th className="p-2">CF</th>
+                    <th className="p-2">FP%</th>
+                    <th className="p-2">Cooldown</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {botRows.map((b) => {
+                    const cooling = b.cooldown_until && new Date(b.cooldown_until) > new Date();
+                    return (
+                      <tr key={b.provider} className="border-b border-border/20">
+                        <td className="text-right p-2 font-medium">{b.provider}</td>
+                        <td className="text-center p-2">{b.total_requests}</td>
+                        <td className={`text-center p-2 ${b.success_rate >= 80 ? "text-green-400" : "text-orange-400"}`}>{b.success_rate}%</td>
+                        <td className={`text-center p-2 ${b.captcha_rate > 10 ? "text-orange-400" : "text-muted-foreground"}`}>{b.captcha_rate}%</td>
+                        <td className={`text-center p-2 ${b.block_rate > 5 ? "text-red-400" : "text-muted-foreground"}`}>{b.block_rate}%</td>
+                        <td className="text-center p-2 text-purple-400">{b.cloudflare_rate}%</td>
+                        <td className="text-center p-2">{b.fingerprint_success_rate ?? "—"}</td>
+                        <td className="text-center p-2">
+                          {cooling ? (
+                            <span className="inline-flex items-center gap-1 text-yellow-400">
+                              <Pause className="w-3 h-3" /> L{b.escalation_level}
+                            </span>
+                          ) : (
+                            <span className="text-green-400">نشط</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

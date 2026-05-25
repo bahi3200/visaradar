@@ -840,6 +840,111 @@ export type Database = {
           },
         ]
       }
+      fingerprint_success_log: {
+        Row: {
+          captcha_seen: boolean
+          cloudflare_seen: boolean
+          country_code: string | null
+          created_at: string
+          duration_ms: number | null
+          human_profile_id: string | null
+          id: number
+          provider: string
+          proxy_label: string | null
+          stealth_profile_id: string | null
+          success: boolean
+        }
+        Insert: {
+          captcha_seen?: boolean
+          cloudflare_seen?: boolean
+          country_code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          human_profile_id?: string | null
+          id?: number
+          provider: string
+          proxy_label?: string | null
+          stealth_profile_id?: string | null
+          success: boolean
+        }
+        Update: {
+          captcha_seen?: boolean
+          cloudflare_seen?: boolean
+          country_code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          human_profile_id?: string | null
+          id?: number
+          provider?: string
+          proxy_label?: string | null
+          stealth_profile_id?: string | null
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fingerprint_success_log_human_profile_id_fkey"
+            columns: ["human_profile_id"]
+            isOneToOne: false
+            referencedRelation: "human_session_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fingerprint_success_log_stealth_profile_id_fkey"
+            columns: ["stealth_profile_id"]
+            isOneToOne: false
+            referencedRelation: "stealth_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      human_session_profiles: {
+        Row: {
+          created_at: string
+          hover_prob: number
+          id: string
+          idle_avg_ms: number
+          idle_jitter_ms: number
+          is_active: boolean
+          mouse_speed_max: number
+          mouse_speed_min: number
+          name: string
+          navigation_style: string
+          scroll_pattern: string
+          updated_at: string
+          visit_homepage_prob: number
+        }
+        Insert: {
+          created_at?: string
+          hover_prob?: number
+          id?: string
+          idle_avg_ms?: number
+          idle_jitter_ms?: number
+          is_active?: boolean
+          mouse_speed_max?: number
+          mouse_speed_min?: number
+          name: string
+          navigation_style?: string
+          scroll_pattern?: string
+          updated_at?: string
+          visit_homepage_prob?: number
+        }
+        Update: {
+          created_at?: string
+          hover_prob?: number
+          id?: string
+          idle_avg_ms?: number
+          idle_jitter_ms?: number
+          is_active?: boolean
+          mouse_speed_max?: number
+          mouse_speed_min?: number
+          name?: string
+          navigation_style?: string
+          scroll_pattern?: string
+          updated_at?: string
+          visit_homepage_prob?: number
+        }
+        Relationships: []
+      }
       monitored_telegram_sources: {
         Row: {
           added_by: string | null
@@ -1352,6 +1457,39 @@ export type Database = {
           last_checked_at?: string | null
           provider?: string
           source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      provider_cooldown_state: {
+        Row: {
+          block_count_5m: number
+          captcha_count_5m: number
+          cooldown_until: string | null
+          escalation_level: number
+          last_event_at: string | null
+          provider: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_count_5m?: number
+          captcha_count_5m?: number
+          cooldown_until?: string | null
+          escalation_level?: number
+          last_event_at?: string | null
+          provider: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_count_5m?: number
+          captcha_count_5m?: number
+          cooldown_until?: string | null
+          escalation_level?: number
+          last_event_at?: string | null
+          provider?: string
+          reason?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3438,6 +3576,21 @@ export type Database = {
           sends_per_second: number
         }[]
       }
+      get_bot_detection_dashboard: {
+        Args: { _hours?: number }
+        Returns: {
+          block_rate: number
+          captcha_rate: number
+          cloudflare_rate: number
+          cooldown_until: string
+          escalation_level: number
+          fingerprint_success_rate: number
+          provider: string
+          risk_score: number
+          success_rate: number
+          total_requests: number
+        }[]
+      }
       get_open_heatmap: {
         Args: { _country?: string; _days?: number; _provider?: string }
         Returns: {
@@ -3548,6 +3701,10 @@ export type Database = {
           _snippet: string
           _source_url: string
         }
+        Returns: string
+      }
+      record_captcha_event: {
+        Args: { _country?: string; _kind?: string; _provider: string }
         Returns: string
       }
       record_provider_success: {
