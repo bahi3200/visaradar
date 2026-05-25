@@ -268,6 +268,10 @@ export default function AdminProxyManager() {
       toast.dismiss(t);
       if (error) { toast.error(error.message); return; }
       const results = (data as any)?.results || [];
+      if (!results.length) {
+        toast.info((data as any)?.message || "لا يوجد proxies للاختبار");
+        return;
+      }
       const ok = results.filter((r: any) => r.ok).length;
       toast.success(`${ok}/${results.length} نجحت`);
     } catch (err: any) {
