@@ -416,7 +416,7 @@ export default function ManageUsersPage() {
           ))}
         </div>
 
-        {/* Search + Filter Toggle */}
+        {/* Search + Filter Toggle + Refresh */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -447,6 +447,14 @@ export default function ManageUsersPage() {
                 {activeFilterCount}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => fetchUsers(0)}
+            disabled={loading}
+            title="تحديث القائمة"
+            className="flex items-center gap-1.5 px-4 py-3 rounded-xl border text-sm transition-all bg-muted/50 border-border/50 text-muted-foreground hover:text-foreground disabled:opacity-40"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
