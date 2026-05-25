@@ -75,6 +75,7 @@ import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
 import NotificationPermissionBanner from "@/components/NotificationPermissionBanner";
 import VisaOpenAlertsBridge from "@/hooks/useVisaOpenAlerts";
+import HardReloadButton from "@/components/HardReloadButton";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,7 @@ const App = () => (
           <GlobalShortcuts />
           <NotificationPermissionBanner />
           <VisaOpenAlertsBridge />
+          <HardReloadButton />
           <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
