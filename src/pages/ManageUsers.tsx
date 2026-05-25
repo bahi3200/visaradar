@@ -665,6 +665,22 @@ export default function ManageUsersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AssignSubscriptionDialog
+        target={
+          subscriptionTarget
+            ? {
+                id: subscriptionTarget.id,
+                email: subscriptionTarget.email,
+                full_name: subscriptionTarget.full_name,
+                hasSubscription: !!subscriptionTarget.subscription,
+                currentPackageName: subscriptionTarget.subscription?.package_name,
+              }
+            : null
+        }
+        onClose={() => setSubscriptionTarget(null)}
+        onDone={fetchUsers}
+      />
     </AdminLayout>
   );
 }
