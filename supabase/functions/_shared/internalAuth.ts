@@ -75,6 +75,27 @@ export async function requireServiceRoleOrAdmin(
 }
 
 /**
+ * Require at minimum an authenticated user JWT (any user) — or the service role.
+ * Use for functions that should not be anonymously callable but may legitimately
+ * be invoked by any logged-in user.
+ */
+export async function requireAnyAuthenticated(req: Request): Promise<Response | null> {
+  const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!SERVICE_ROLE) return unauthorized('SERVICE_ROLE not configured');
+
+  const raw = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+  const token = raw.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return unauthorized();
+  if (token === SERVICE_ROLE) return null;
+
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const { data: { user }, error } = await admin.auth.getUser(token);
+  if (error || !user) return unauthorized();
+  return null;
+}
+
+/**
  * Require an authenticated admin (or moderator) JWT.
  * Returns { user } on success, or a Response on failure.
  */
