@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Trash2, RefreshCw, CheckCircle2, XCircle, Clock as ClockIcon, Zap } from "lucide-react";
+import { Plus, Play, Trash2, RefreshCw, CheckCircle2, XCircle, Clock as ClockIcon, Zap, Activity, Heart, AlertTriangle, Skull } from "lucide-react";
 
 type Pool = {
   id: string;
@@ -56,6 +56,13 @@ export default function AdminProxyManager() {
   const [poolDialogOpen, setPoolDialogOpen] = useState(false);
   const [epDialogOpen, setEpDialogOpen] = useState(false);
   const [decodoDialogOpen, setDecodoDialogOpen] = useState(false);
+
+  // Health checker state
+  const [healthRunning, setHealthRunning] = useState(false);
+  const [healthResults, setHealthResults] = useState<any[]>([]);
+  const [healthSummary, setHealthSummary] = useState<{healthy:number;slow:number;blocked:number;dead:number} | null>(null);
+  const [healthDirectIp, setHealthDirectIp] = useState<string | null>(null);
+  const [autoDisable, setAutoDisable] = useState(true);
 
   // Decodo quick-setup form (gateway-style residential rotating)
   const [decodoForm, setDecodoForm] = useState({
@@ -280,6 +287,45 @@ export default function AdminProxyManager() {
     }
   };
 
+  const runHealthCheck = async () => {
+    if (!selectedPool && !endpoints.length) {
+      toast.error("اختر pool أو أضف proxies");
+      return;
+    }
+    setHealthRunning(true);
+    const t = toast.loading("جاري الفحص الشامل...");
+    try {
+      const body: any = { auto_disable: autoDisable };
+      if (selectedPool) body.pool_id = selectedPool;
+      else if (pools[0]) body.pool_id = pools[0].id;
+      const { data, error } = await supabase.functions.invoke("proxy-health-check", { body });
+      toast.dismiss(t);
+      if (error) { toast.error(error.message); return; }
+      const res = (data as any)?.results || [];
+      setHealthResults(res);
+      setHealthSummary((data as any)?.summary || null);
+      setHealthDirectIp((data as any)?.direct_ip || null);
+      if (!res.length) {
+        toast.info((data as any)?.message || "لا يوجد proxies للفحص");
+        return;
+      }
+      const s = (data as any).summary;
+      toast.success(`Healthy: ${s.healthy} · Slow: ${s.slow} · Blocked: ${s.blocked} · Dead: ${s.dead}`);
+    } catch (err: any) {
+      toast.dismiss(t);
+      toast.error(err.message);
+    } finally {
+      setHealthRunning(false);
+    }
+  };
+
+  const HEALTH_STYLES: Record<string, { cls: string; icon: any; label: string }> = {
+    healthy: { cls: "bg-green-500/15 text-green-600 border-green-500/30", icon: Heart,         label: "Healthy" },
+    slow:    { cls: "bg-yellow-500/15 text-yellow-600 border-yellow-500/30", icon: ClockIcon,  label: "Slow" },
+    blocked: { cls: "bg-orange-500/15 text-orange-600 border-orange-500/30", icon: AlertTriangle, label: "Blocked" },
+    dead:    { cls: "bg-red-500/15 text-red-600 border-red-500/30", icon: Skull,              label: "Dead" },
+  };
+
   const filteredEndpoints = selectedPool
     ? endpoints.filter(e => e.pool_id === selectedPool)
     : endpoints;
@@ -306,6 +352,7 @@ export default function AdminProxyManager() {
           <TabsTrigger value="endpoints">العناوين (Endpoints)</TabsTrigger>
           <TabsTrigger value="bulk">استيراد جماعي</TabsTrigger>
           <TabsTrigger value="decodo">Decodo</TabsTrigger>
+          <TabsTrigger value="health"><Activity className="w-3.5 h-3.5 ml-1" />Health Checker</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pools">
