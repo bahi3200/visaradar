@@ -517,6 +517,77 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_sessions: {
+        Row: {
+          challenge_type: string
+          country_code: string
+          created_at: string
+          deep_link_token: string
+          expires_at: string
+          http_status: number | null
+          id: string
+          priority: number
+          provider: string
+          resolved_at: string | null
+          resolved_by: string | null
+          session_id: string | null
+          snippet: string | null
+          status: string
+          target_url: string | null
+          telegram_sent_at: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          challenge_type: string
+          country_code: string
+          created_at?: string
+          deep_link_token?: string
+          expires_at?: string
+          http_status?: number | null
+          id?: string
+          priority?: number
+          provider: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          session_id?: string | null
+          snippet?: string | null
+          status?: string
+          target_url?: string | null
+          telegram_sent_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          challenge_type?: string
+          country_code?: string
+          created_at?: string
+          deep_link_token?: string
+          expires_at?: string
+          http_status?: number | null
+          id?: string
+          priority?: number
+          provider?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          session_id?: string | null
+          snippet?: string | null
+          status?: string
+          target_url?: string | null
+          telegram_sent_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "provider_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -1527,6 +1598,63 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_sessions: {
+        Row: {
+          block_count: number
+          captcha_count: number
+          country_code: string
+          created_at: string
+          expires_at: string | null
+          fingerprint_hash: string | null
+          health_score: number
+          id: string
+          last_used_at: string | null
+          last_validated_at: string | null
+          provider: string
+          status: string
+          success_count: number
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          block_count?: number
+          captcha_count?: number
+          country_code: string
+          created_at?: string
+          expires_at?: string | null
+          fingerprint_hash?: string | null
+          health_score?: number
+          id?: string
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          block_count?: number
+          captcha_count?: number
+          country_code?: string
+          created_at?: string
+          expires_at?: string | null
+          fingerprint_hash?: string | null
+          health_score?: number
+          id?: string
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider?: string
+          status?: string
+          success_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       provider_throttle: {
         Row: {
           consecutive_blocks: number
@@ -2270,6 +2398,91 @@ export type Database = {
           worker_id?: string
         }
         Relationships: []
+      }
+      session_cookie_vault: {
+        Row: {
+          cookies: Json
+          created_at: string
+          expires_at: string | null
+          id: string
+          local_storage: Json | null
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          cookies?: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          local_storage?: Json | null
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          cookies?: Json
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          local_storage?: Json | null
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_cookie_vault_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "provider_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_health_log: {
+        Row: {
+          country_code: string | null
+          created_at: string
+          duration_ms: number | null
+          http_status: number | null
+          id: string
+          metadata: Json | null
+          outcome: string
+          provider: string
+          session_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          outcome: string
+          provider: string
+          session_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          metadata?: Json | null
+          outcome?: string
+          provider?: string
+          session_id?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_health_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "provider_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings_audit_log: {
         Row: {
@@ -3644,6 +3857,71 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hvg_create_challenge: {
+        Args: {
+          _challenge_type: string
+          _country: string
+          _http_status?: number
+          _priority?: number
+          _provider: string
+          _session_id?: string
+          _snippet?: string
+          _target_url?: string
+          _user_id?: string
+        }
+        Returns: {
+          deep_link_token: string
+          expires_at: string
+          id: string
+        }[]
+      }
+      hvg_dashboard: {
+        Args: { _hours?: number }
+        Returns: {
+          active_sessions: number
+          avg_health: number
+          captcha_rate: number
+          country_code: string
+          pending_challenges: number
+          provider: string
+          quarantined_sessions: number
+          success_rate: number
+        }[]
+      }
+      hvg_pick_session: {
+        Args: { _country: string; _provider: string }
+        Returns: {
+          cookies: Json
+          fingerprint_hash: string
+          health_score: number
+          local_storage: Json
+          session_id: string
+          user_agent: string
+          user_id: string
+        }[]
+      }
+      hvg_record_outcome: {
+        Args: {
+          _duration_ms?: number
+          _http_status?: number
+          _metadata?: Json
+          _outcome: string
+          _session_id: string
+          _worker_id?: string
+        }
+        Returns: undefined
+      }
+      hvg_resolve_challenge: {
+        Args: {
+          _cookies: Json
+          _fingerprint_hash?: string
+          _local_storage?: Json
+          _token: string
+          _ttl_minutes?: number
+          _user_agent?: string
+        }
+        Returns: string
       }
       is_device_allowed: {
         Args: { _fingerprint: string; _user_id: string }
