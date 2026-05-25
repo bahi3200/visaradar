@@ -1,90 +1,51 @@
-# Advanced Human Simulation Layer — خطة التنفيذ
+## Advanced Human Simulation & Stealth Layer — تنفيذ كامل
 
-نطاق العمل واسع جداً (10 أنظمة فرعية) ويمتد بين 3 طبقات: **vps-worker** (Playwright)، **قاعدة البيانات + Edge Functions**، و**لوحة الأدمن**. ما يلي خطة منظمة على دفعات حتى نُنجز كل طبقة بجودة عالية بدل دفعة واحدة سطحية.
+سنبني نظام stealth متقدم على مرحلتين: **VPS Worker (Playwright)** للتنفيذ الفعلي، و**Supabase** لإدارة الـ profiles/proxies/metrics/risk.
 
-## ما هو موجود بالفعل (لا حاجة لإعادة بنائه)
-- `playwright-extra + stealth` مفعّل
-- mouse paths/scroll/typing jitter أساسي
-- WebGL/Canvas/timezone spoofing أساسي
-- UA + sec-ch-ua rotation
-- random headless/headful switching (`HEADFUL_PROBABILITY`, `HEADFUL_PROVIDERS`)
-- proxy pools لكل provider + cooldown awareness
-- captcha/cloudflare/rate-limit detection + retry على proxy جديد
-- storageState persistence
-- adaptive interval بحسب provider risk score
-- evidence capture (screenshot + html)
+### 1) VPS Worker — Playwright Stealth Engine
+ملفات جديدة في `vps-worker/`:
+- `lib/browser-pool.js` — تشغيل Chrome stable حقيقي عبر `playwright-extra` + `puppeteer-extra-plugin-stealth` (تعطيل `navigator.webdriver`, spoof plugins/languages/webgl/canvas/audio).
+- `lib/human-simulation.js` — Bezier curve mouse movements، random pauses، realistic scrolling، hover/focus/blur events، idle time.
+- `lib/navigation-patterns.js` — زيارة homepage أولاً أحياناً، تنقل طبيعي بين صفحات provider، random paths.
+- `lib/profile-rotation.js` — تدوير profile (UA + viewport + locale + timezone + fonts) لكل (provider, country).
+- `lib/proxy-router.js` — اختيار proxy حسب country/provider + timezone/locale matching من `pick_best_proxy`.
+- `lib/captcha-detector.js` — كشف Cloudflare/CAPTCHA → تسجيل metric → cooldown.
+- `lib/scan-runner.js` — يدمج الكل ويستبدل `requests/fetch` العادي.
 
-## ما سيُضاف (الدفعات الثلاث)
+### 2) Database — جداول جديدة + recompute
+Migration واحدة:
+- `human_session_profiles` (mouse_speed_range, scroll_pattern, idle_avg_ms, navigation_style).
+- `provider_cooldown_state` (provider, until, reason, captcha_count_5m).
+- `fingerprint_success_log` (profile_id, provider, success, captcha_seen).
+- دالة `record_captcha_event(provider, country)` ترفع cooldown تلقائياً (exponential).
+- دالة `get_bot_detection_dashboard()` ترجع: captcha_rate, block_rate, provider_risk, proxy_detection_rate, fingerprint_success_rate.
 
-### الدفعة 1 — قاعدة البيانات + Backend
-جداول جديدة + Edge Function لاستقبال المقاييس:
+### 3) Edge Functions
+- `stealth-scan-config` — يرجع للـ VPS: أفضل proxy + profile + cooldown status لكل provider.
+- توسعة `ingest-stealth-metrics` لتسجيل fingerprint success وcaptcha events.
 
-1. **`stealth_profiles`** — بصمات متعددة جاهزة للتدوير
-   - `name, user_agent, viewport, gpu_vendor, gpu_renderer, fonts[], screen_resolution, hardware_concurrency, device_memory, languages[], timezone, locale, media_devices(jsonb)`
-   - `last_used_at, success_count, failure_count, captcha_count, score`
+### 4) Admin Dashboard — تطوير `AdminStealthAnalytics`
+إضافة widgets:
+- Captcha rate (24h) per provider.
+- Block rate per provider.
+- Provider risk score table (مع cooldown countdown).
+- Proxy detection rate (top 10 worst proxies).
+- Fingerprint success rate per profile.
+- Live cooldown queue (providers في quarantine الآن).
 
-2. **`browser_profiles`** — جلسات دائمة لكل (provider+country+proxy)
-   - `provider, country_code, proxy_label, storage_state_path, cookies(jsonb), history(jsonb), last_visit_at, visits_count, healthy boolean`
+### 5) Smart Captcha Avoidance
+- عند captcha: زيادة interval تلقائياً (5→10→20→40 دقيقة).
+- proxy quarantine 45 دقيقة (موجود — سنربطه بـ VPS).
+- captcha risk metrics في كل scan.
 
-3. **`proxy_quarantine`** — عزل البروكسي عند كثرة الـcaptchas
-   - `proxy_label, provider, country_code, reason, captcha_count, quarantined_until, released_at`
+### تفاصيل تقنية
+- Chrome stable عبر `playwright install chrome` (وليس chromium).
+- stealth plugin: `puppeteer-extra-plugin-stealth` متوافق مع playwright.
+- locale/timezone من proxy geo (موجود في `proxy_endpoints.geo_country`).
+- لن نتعدى على Cloudflare بشكل عدائي — فقط نقلل البصمة.
 
-4. **`stealth_metrics`** — قياسات تجميعية كل دقيقة
-   - `provider, country_code, window_start, total_requests, captcha_count, block_count, success_count, cloudflare_count, fingerprint_id, proxy_label, headful boolean`
+### ما لن يتم
+- لن نحل CAPTCHAs (غير قانوني وضد ToS).
+- لن نستعمل خدمات anti-captcha مدفوعة.
 
-5. **`provider_timing_profiles`** — توقيت مخصص لكل provider
-   - `provider, min_interval_s, max_interval_s, jitter_pct, min_idle_ms, max_idle_ms, scroll_speed, mouse_speed, headful_only boolean`
-
-6. **Edge Function `ingest-stealth-metrics`** — استقبال نتائج الفحص من VPS مع `requireServiceRole` + تحديث `stealth_profiles.success/failure` و`proxy_quarantine` تلقائياً عند تجاوز عتبة الـcaptcha.
-
-7. **DB function** `should_quarantine_proxy(label, provider)` للقرار التلقائي.
-
-RLS: قراءة للأدمن فقط، كتابة لـservice_role.
-
-### الدفعة 2 — تحسينات VPS Worker
-كل ميزة في ملف منفصل تحت `vps-worker/lib/`:
-
-- **`humanize.js`** — Bezier mouse curves، realistic scroll بسرعة متغيرة، hover قبل الـclick، focus/blur events، idle pauses (200ms–4s) بتوزيع log-normal.
-- **`navigation.js`** — Smart paths: قبل فتح صفحة المواعيد، 30–60% احتمال زيارة الصفحة الرئيسية للـprovider أولاً + التنقل عبر روابط داخلية (2–4 hops).
-- **`profiles.js`** — تحميل/تدوير `stealth_profiles` من DB، حفظ `browser_profiles` (cookies + storageState + history) لكل (provider, country, proxy).
-- **`adaptive.js`** — إذا captcha_rate آخر ساعة > 15% للـprovider، فرض headful وتقليل التردد للضعف. fast headless للفحوصات منخفضة الخطورة فقط.
-- **`timing.js`** — يقرأ `provider_timing_profiles` ويطبق jitter غير منتظم (Poisson distribution بدل uniform).
-- **`cloudflare.js`** — اكتشاف challenge (title contains "Just a moment", cf-chl-bypass cookie)، انتظار automatic حتى 30s، retry بعد delay عشوائي، تبديل fingerprint بعد 3 challenges متتالية.
-- **`fingerprint.js`** — تدوير GPU/WebGL/fonts/screen/hardwareConcurrency/mediaDevices عبر injected scripts.
-- **`geo.js`** — اختيار proxy مطابق لدولة الـprovider + ضبط `timezoneId` و`locale` و`Accept-Language` لتطابق IP الـproxy.
-- **`metrics.js`** — تجميع وإرسال `stealth_metrics` بعد كل دورة.
-
-تحديث `worker.js` للاستيراد من هذه الـmodules دون كسر السلوك الحالي.
-
-### الدفعة 3 — لوحة الأدمن
-صفحة جديدة `/admin/stealth-analytics`:
-
-- Cards علوية: captcha rate, block rate, fingerprint success rate, proxy detection rate (آخر 24س)
-- جدول **Provider Risk Score** مع sparkline لـ24س
-- جدول **Proxy Quarantine** الفعّال مع زر إفراج يدوي
-- جدول **Stealth Profiles** مع score وعدد مرات الاستخدام
-- توصيات تلقائية ("Provider X يحتاج headful")
-- Tab لـ `provider_timing_profiles` للتعديل المباشر
-
-روابط في AdminLayout.
-
-## التفاصيل التقنية
-
-| طبقة | تقنية |
-|---|---|
-| DB | Supabase Postgres + RLS + DB functions |
-| Edge | Deno + `requireServiceRole` من `_shared/internalAuth.ts` |
-| VPS | Node + playwright-extra + stealth + canvas/webgl override scripts |
-| UI | React + framer-motion + Recharts |
-
-## ترتيب التنفيذ
-1. الدفعة 1 (DB + Edge) — أكتبها الآن مع migration واحد ثم انتظر موافقتك على الـmigration.
-2. الدفعة 2 (VPS) — بعد التأكد من الجداول.
-3. الدفعة 3 (Dashboard) — أخيراً، بعد توفر بيانات حقيقية للعرض.
-
-## ملاحظات
-- VPS worker لا يُنشر تلقائياً من Lovable؛ ستحتاج لـpull/restart يدوياً على VPS بعد كل دفعة.
-- لن أعدّل سلوكاً مالياً/اشتراكياً موجوداً.
-- جميع المقاييس ستُخزّن مع TTL ضمني (يمكن إضافة cron تنظيف لاحقاً).
-
-هل أبدأ بالدفعة 1 (الجداول + Edge Function)؟
+سأبدأ بـ: (1) الـ migration، (2) ملفات VPS worker، (3) تطوير الـ dashboard.
