@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles, Pause, Play, CalendarOff, RefreshCw, AlertTriangle } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles, Pause, Play, CalendarOff, RefreshCw, AlertTriangle, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import AssignSubscriptionDialog from "@/components/admin/AssignSubscriptionDialog";
 
@@ -644,7 +645,18 @@ export default function ManageUsersPage() {
                       {/* Actions Menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors">
+                          <button
+                            className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+                            title={
+                              loadError
+                                ? "فشل تحميل البيانات — اضغط ⟳ لإعادة المحاولة"
+                                : user.roles.includes("admin")
+                                ? "صلاحيات محدودة — لا يمكن تعديل بيانات مسؤول"
+                                : !user.subscription
+                                ? "لا يوجد اشتراك لإدارته"
+                                : "إجراءات متاحة"
+                            }
+                          >
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
@@ -741,6 +753,22 @@ export default function ManageUsersPage() {
                             <Trash2 className="w-4 h-4" />
                             حذف نهائي
                           </DropdownMenuItem>
+                          {(loadError || user.roles.includes("admin") || !user.subscription) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled
+                                className="text-muted-foreground/50 text-[10px] cursor-default focus:bg-transparent gap-2"
+                              >
+                                <Info className="w-3 h-3 shrink-1" />
+                                {loadError
+                                  ? "فشل تحميل البيانات"
+                                  : user.roles.includes("admin")
+                                  ? "صلاحيات محدودة — مسؤول"
+                                  : "لا يوجد اشتراك"}
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
