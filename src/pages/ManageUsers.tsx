@@ -78,6 +78,9 @@ export default function ManageUsersPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -95,24 +98,53 @@ export default function ManageUsersPage() {
     sort: "newest",
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [1500, 3000, 6000]; // ms
 
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async (attempt = 0) => {
     setLoading(true);
+    setLoadError(null);
+    setRetryAttempt(attempt);
+    setIsRetrying(attempt >  0);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setLoading(false);
+        setIsRetrying(false);
+        return;
+      }
+
       const res = await supabase.functions.invoke("list-users");
       if (res.error) throw res.error;
       setUsers(res.data || []);
+      setLoadError(null);
     } catch (err: any) {
-      toast.error("فشل في تحميل المستخدمين");
+      const isNetworkError = err.message?.includes("fetch") || err.message?.includes("network") || err.message?.includes("Failed to fetch") || err.status === 0 || err.status === 503 || err.status === 504;
+      const isTimeout = err.message?.includes("timeout") || err.message?.includes("AbortError") || err.message?.includes("signal");
+
+      if (attempt < MAX_RETRIES && (isNetworkError || isTimeout || !err.status)) {
+        const delay = RETRY_DELAYS[attempt] ?? 3000;
+        toast.info(`فشل الاتصال — إعادة المحاولة ${attempt + 1}/${MAX_RETRIES} خلال ${Math.round(delay / 1000)} ثانية...`);
+        setTimeout(() => {
+          fetchUsers(attempt + 1);
+        }, delay);
+        return;
+      }
+
+      setLoadError(err.message || "فشل في تحميل المستخدمين");
+      toast.error("فشل في تحميل المستخدمين بعد عدة محاولات");
     } finally {
-      setLoading(false);
+      if (attempt >= MAX_RETRIES || !loadError) {
+        setLoading(false);
+        setIsRetrying(false);
+      }
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   async function handleUserAction() {
     if (!pendingAction) return;
