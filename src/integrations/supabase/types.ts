@@ -2131,6 +2131,8 @@ export type Database = {
           id: string
           monitoring_scopes: Json
           package_id: string
+          paused_at: string | null
+          paused_remaining_seconds: number | null
           renewal_request_created_at: string | null
           service_type: string
           starts_at: string
@@ -2147,6 +2149,8 @@ export type Database = {
           id?: string
           monitoring_scopes?: Json
           package_id: string
+          paused_at?: string | null
+          paused_remaining_seconds?: number | null
           renewal_request_created_at?: string | null
           service_type?: string
           starts_at?: string
@@ -2163,6 +2167,8 @@ export type Database = {
           id?: string
           monitoring_scopes?: Json
           package_id?: string
+          paused_at?: string | null
+          paused_remaining_seconds?: number | null
           renewal_request_created_at?: string | null
           service_type?: string
           starts_at?: string
