@@ -101,11 +101,12 @@ export default function ManageUsersPage() {
   const MAX_RETRIES = 3;
   const RETRY_DELAYS = [1500, 3000, 6000]; // ms
 
-  const fetchUsers = useCallback(async (attempt = 0) => {
+  const fetchUsers = useCallback(async (attempt =  0) => {
     setLoading(true);
     setLoadError(null);
     setRetryAttempt(attempt);
-    setIsRetrying(attempt >  0);
+    setIsRetrying(attempt > 0);
+    let willRetry = false;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -125,6 +126,7 @@ export default function ManageUsersPage() {
 
       if (attempt < MAX_RETRIES && (isNetworkError || isTimeout || !err.status)) {
         const delay = RETRY_DELAYS[attempt] ?? 3000;
+        willRetry = true;
         toast.info(`فشل الاتصال — إعادة المحاولة ${attempt + 1}/${MAX_RETRIES} خلال ${Math.round(delay / 1000)} ثانية...`);
         setTimeout(() => {
           fetchUsers(attempt + 1);
@@ -135,7 +137,7 @@ export default function ManageUsersPage() {
       setLoadError(err.message || "فشل في تحميل المستخدمين");
       toast.error("فشل في تحميل المستخدمين بعد عدة محاولات");
     } finally {
-      if (attempt >= MAX_RETRIES || !loadError) {
+      if (!willRetry) {
         setLoading(false);
         setIsRetrying(false);
       }
