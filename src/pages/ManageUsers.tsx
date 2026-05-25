@@ -1,7 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles, Pause, Play, CalendarOff, RefreshCw, AlertTriangle } from "lucide-react";
+import { Users, Crown, Shield, Smartphone, Mail, Calendar, Search, Filter, X, Trash2, Ban, CheckCircle, MoreVertical, Send, MessageCircle, Sparkles, Pause, Play, CalendarOff, RefreshCw, AlertTriangle, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
