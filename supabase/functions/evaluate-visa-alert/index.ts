@@ -50,6 +50,8 @@ async function loadSettings(admin: any): Promise<Settings> {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  const authFail = requireServiceRole(req)
+  if (authFail) return authFail
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
 
