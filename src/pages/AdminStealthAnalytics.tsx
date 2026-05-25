@@ -51,18 +51,32 @@ type ProviderRisk = {
   updated_at: string;
 };
 
+type BotDetectionRow = {
+  provider: string;
+  total_requests: number;
+  captcha_rate: number;
+  block_rate: number;
+  cloudflare_rate: number;
+  success_rate: number;
+  fingerprint_success_rate: number | null;
+  risk_score: number;
+  cooldown_until: string | null;
+  escalation_level: number;
+};
+
 export default function AdminStealthAnalytics() {
   const [hours, setHours] = useState(24);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [quarantines, setQuarantines] = useState<Quarantine[]>([]);
   const [profiles, setProfiles] = useState<StealthProfile[]>([]);
   const [risks, setRisks] = useState<ProviderRisk[]>([]);
+  const [botRows, setBotRows] = useState<BotDetectionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [statsRes, qRes, pRes, rRes] = await Promise.all([
+      const [statsRes, qRes, pRes, rRes, bRes] = await Promise.all([
         supabase.rpc("get_stealth_dashboard_stats" as any, { _hours: hours }),
         supabase
           .from("proxy_quarantine" as any)
@@ -79,6 +93,7 @@ export default function AdminStealthAnalytics() {
           .from("provider_risk_scores")
           .select("provider, risk_score, captcha_rate, block_rate, recommended_interval_seconds, updated_at")
           .order("risk_score", { ascending: false }),
+        supabase.rpc("get_bot_detection_dashboard" as any, { _hours: hours }),
       ]);
 
       const s = (statsRes.data as any);
@@ -86,6 +101,7 @@ export default function AdminStealthAnalytics() {
       setQuarantines((qRes.data as any) || []);
       setProfiles((pRes.data as any) || []);
       setRisks((rRes.data as any) || []);
+      setBotRows((bRes.data as any) || []);
     } catch (e: any) {
       toast.error(e.message || "فشل تحميل البيانات");
     } finally {
