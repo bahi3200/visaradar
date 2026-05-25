@@ -1,12 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { requireServiceRole } from '../_shared/internalAuth.ts';
+import { requireServiceRoleOrAdmin } from '../_shared/internalAuth.ts';
 
 // Orchestrator: enqueues distributed scan tasks and dispatches N parallel workers.
 // Triggered every minute by pg_cron, or manually.
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  const authFail = requireServiceRole(req);
+  const authFail = await requireServiceRoleOrAdmin(req);
   if (authFail) return authFail;
 
   try {

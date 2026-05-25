@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { requireServiceRole } from '../_shared/internalAuth.ts';
+import { requireServiceRoleOrAdmin } from '../_shared/internalAuth.ts';
 
 // Ultra-fast alert dispatcher.
 // Input: { country_code, provider, text, parse_mode?, reply_markup?, priority?, chat_ids?: string[], alert_key? }
@@ -12,7 +12,7 @@ const TELEGRAM_API = 'https://api.telegram.org';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  const authFail = requireServiceRole(req);
+  const authFail = await requireServiceRoleOrAdmin(req);
   if (authFail) return authFail;
   const t0 = Date.now();
 
