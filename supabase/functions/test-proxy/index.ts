@@ -93,8 +93,14 @@ Deno.serve(async (req) => {
   }
 
   const { data: proxies, error } = await query.limit(50);
-  if (error || !proxies?.length) {
-    return new Response(JSON.stringify({ error: error?.message || 'No proxies found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+  if (!proxies?.length) {
+    return new Response(
+      JSON.stringify({ tested: 0, results: [], message: 'لا يوجد proxies في هذا الـ pool. أضف عناوين أولاً.' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   }
 
   const results: any[] = [];
