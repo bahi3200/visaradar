@@ -645,7 +645,18 @@ export default function ManageUsersPage() {
                       {/* Actions Menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors">
+                          <button
+                            className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+                            title={
+                              loadError
+                                ? "فشل تحميل البيانات — اضغط ⟳ لإعادة المحاولة"
+                                : user.roles.includes("admin")
+                                ? "صلاحيات محدودة — لا يمكن تعديل بيانات مسؤول"
+                                : !user.subscription
+                                ? "لا يوجد اشتراك لإدارته"
+                                : "إجراءات متاحة"
+                            }
+                          >
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
