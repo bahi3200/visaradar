@@ -178,6 +178,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  const authFail = requireServiceRole(req);
+  if (authFail) return authFail;
 
   const startTime = Date.now();
   const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
