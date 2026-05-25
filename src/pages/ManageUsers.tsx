@@ -801,6 +801,50 @@ export default function ManageUsersPage() {
         onClose={() => setSubscriptionTarget(null)}
         onDone={fetchUsers}
       />
+
+      <AlertDialog open={!!subAction} onOpenChange={(open) => !open && setSubAction(null)}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">
+              {subAction?.type === "pause_sub" && "إيقاف عداد الاشتراك"}
+              {subAction?.type === "resume_sub" && "تشغيل عداد الاشتراك"}
+              {subAction?.type === "delete_sub" && "حذف الاشتراك"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right leading-relaxed">
+              {subAction?.type === "pause_sub" &&
+                `سيتم إيقاف عداد اشتراك "${subAction.user.full_name || subAction.user.email}". يبقى الوقت المتبقي محفوظاً حتى إعادة التشغيل.`}
+              {subAction?.type === "resume_sub" &&
+                `سيتم تشغيل العداد مجدداً من حيث توقف للمستخدم "${subAction.user.full_name || subAction.user.email}".`}
+              {subAction?.type === "delete_sub" &&
+                `هل تريد حذف اشتراك "${subAction.user.full_name || subAction.user.email}" نهائياً؟ لا يمكن التراجع.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel disabled={subActionLoading}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubAction}
+              disabled={subActionLoading}
+              className={
+                subAction?.type === "delete_sub"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : subAction?.type === "pause_sub"
+                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              }
+            >
+              {subActionLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : subAction?.type === "pause_sub" ? (
+                "إيقاف"
+              ) : subAction?.type === "resume_sub" ? (
+                "تشغيل"
+              ) : (
+                "حذف"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
