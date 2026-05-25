@@ -655,7 +655,10 @@ async function runCycle() {
       const result = await checkTarget(target, adaptiveHeadful)
       console.log(`  status=${result.status} buttons=${result.booking_buttons_count} dates=${result.available_dates_count} proxy=${result.proxy_used || '-'}${result.blocked ? ' BLOCKED='+result.blocked : ''}`)
       await sendToSupabase(result)
-      await sleep(jitter(4000, 50) + Math.random() * 3000)
+      // Per-target gap: 20–40s by default (configurable)
+      const gapMs = (BETWEEN_MIN_S + Math.random() * (BETWEEN_MAX_S - BETWEEN_MIN_S)) * 1000
+      console.log(`  waiting ${(gapMs/1000).toFixed(0)}s before next target`)
+      await sleep(gapMs)
     } catch (e) {
       console.error(`  Error: ${e.message}`)
     }
