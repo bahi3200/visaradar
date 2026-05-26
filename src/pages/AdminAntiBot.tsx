@@ -100,12 +100,14 @@ export default function AdminAntiBot() {
             <Badge variant="secondary">{summary.captchas} captcha</Badge>
             <Badge variant="destructive">{summary.blocks} block</Badge>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCcw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} /> تحديث
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/dashboard/deploy-worker"><Rocket className="w-4 h-4 ml-2" /> Deploy Worker</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCcw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} /> تحديث
+            </Button>
+            <Button asChild size="sm">
+              <Link to="/dashboard/deploy-worker"><Rocket className="w-4 h-4 ml-2" /> Deploy Worker</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Provider Risk */}
