@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, RefreshCcw, Eye, AlertTriangle } from "lucide-react";
+import { ShieldAlert, RefreshCcw, Eye, AlertTriangle, Rocket } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 type RiskRow = {
@@ -101,6 +102,9 @@ export default function AdminAntiBot() {
           </div>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCcw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} /> تحديث
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/dashboard/deploy-worker"><Rocket className="w-4 h-4 ml-2" /> Deploy Worker</Link>
           </Button>
         </div>
 
