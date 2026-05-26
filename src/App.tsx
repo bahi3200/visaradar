@@ -72,6 +72,7 @@ import AdminDetectionReplay from "./pages/AdminDetectionReplay";
 import AdminAntiBot from "./pages/AdminAntiBot";
 import AdminStealthAnalytics from "./pages/AdminStealthAnalytics";
 import AdminVerificationGateway from "./pages/AdminVerificationGateway";
+import AdminDeployWorker from "./pages/AdminDeployWorker";
 import VerifyChallenge from "./pages/VerifyChallenge";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
