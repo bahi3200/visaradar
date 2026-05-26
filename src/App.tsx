@@ -161,6 +161,7 @@ const App = () => (
       <Route path="/dashboard/anti-bot" element={<AdminRoute adminOnly><AdminAntiBot /></AdminRoute>} />
       <Route path="/dashboard/stealth-analytics" element={<AdminRoute adminOnly><AdminStealthAnalytics /></AdminRoute>} />
       <Route path="/dashboard/verification-gateway" element={<AdminRoute adminOnly><AdminVerificationGateway /></AdminRoute>} />
+      <Route path="/dashboard/deploy-worker" element={<AdminRoute adminOnly><AdminDeployWorker /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
