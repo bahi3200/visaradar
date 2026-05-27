@@ -199,7 +199,15 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
                 placeholder="https://github.com/USERNAME/REPO.git"
                 value={repoUrl}
                 onChange={(e) => { setRepoUrl(e.target.value); persist("vr_repo_url", e.target.value); }}
+                onBlur={() => setRepoTouched(true)}
+                className={repoTouched && repoUrlError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
+              {repoTouched && repoUrlError && (
+                <p className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {repoUrlError}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground mt-1">
                 اربط مشروع Lovable بـ GitHub (الزر أعلى يمين الشاشة) ثم الصق رابط الـ .git هنا.
               </p>
