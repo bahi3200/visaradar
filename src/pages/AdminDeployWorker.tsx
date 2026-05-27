@@ -46,6 +46,22 @@ export default function AdminDeployWorker() {
   const [creating, setCreating] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [workerName, setWorkerName] = useState<string>("");
+  const [repoUrl, setRepoUrl] = useState<string>(
+    localStorage.getItem("vr_repo_url") || ""
+  );
+  const [proxyUrl, setProxyUrl] = useState<string>(
+    localStorage.getItem("vr_proxy_url") ||
+      "http://brd-customer-hl_f0d8164b-zone-residential_proxy1:s8423k8sh3f2@brd.superproxy.io:33335"
+  );
+  const [targetsJson, setTargetsJson] = useState<string>(
+    localStorage.getItem("vr_targets_json") ||
+      '[{"country_code":"DZ","provider":"tlscontact","url":"https://visas-fr.tlscontact.com/visa/dz","homepage":"https://visas-fr.tlscontact.com/"}]'
+  );
+
+  // persist convenience inputs
+  const persist = (k: string, v: string) => {
+    try { localStorage.setItem(k, v); } catch {}
+  };
 
   const create = async () => {
     const trimmed = name.trim() || `worker-${Date.now()}`;
@@ -76,9 +92,8 @@ HEADFUL_PROBABILITY=0.15
 BETWEEN_TARGET_MIN_S=20
 BETWEEN_TARGET_MAX_S=40
 REQUIRE_RESIDENTIAL_PROXY=true
-# DECODO_PROXY=http://user:pass@gateway.decodo.com:7000
-# PROVIDER_PROXY_POOLS=tlscontact=http://user:pass@brd.superproxy.io:33335
-TARGETS_JSON='[{"country_code":"DZ","provider":"tlscontact","url":"https://visas-fr.tlscontact.com/visa/dz","homepage":"https://visas-fr.tlscontact.com/"}]'`
+DECODO_PROXY=${proxyUrl}
+TARGETS_JSON=${targetsJson}`
     : "";
 
   const deployScript = token
@@ -91,10 +106,11 @@ apt update -y
 apt install -y curl git ca-certificates gnupg
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
+npm install -g pm2
 
 echo "[2/5] Clone worker…"
 rm -rf /opt/visaradar-worker
-git clone <YOUR_REPO_URL> /opt/visaradar-worker
+git clone ${repoUrl || "<YOUR_REPO_URL>"} /opt/visaradar-worker
 cd /opt/visaradar-worker/vps-worker
 
 echo "[3/5] Install Playwright + Chromium…"
@@ -107,7 +123,6 @@ ${envBlock}
 ENV
 
 echo "[5/5] Start as pm2 service…"
-npm install -g pm2
 pm2 start worker.js --name visaradar-worker --time
 pm2 save
 pm2 startup systemd -u root --hp /root | tail -n 1 | bash || true
@@ -155,6 +170,46 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
           )}
         </Card>
 
+        {/* Inputs: repo + proxy + targets */}
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">★</Badge>
+            <h2 className="font-heading text-lg">إعدادات السكريبت</h2>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">رابط مستودع GitHub (يحتوي مجلد vps-worker/)</Label>
+              <Input
+                placeholder="https://github.com/USERNAME/REPO.git"
+                value={repoUrl}
+                onChange={(e) => { setRepoUrl(e.target.value); persist("vr_repo_url", e.target.value); }}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                اربط مشروع Lovable بـ GitHub (الزر أعلى يمين الشاشة) ثم الصق رابط الـ .git هنا.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Residential Proxy URL</Label>
+              <Input
+                placeholder="http://user:pass@host:port"
+                value={proxyUrl}
+                onChange={(e) => { setProxyUrl(e.target.value); persist("vr_proxy_url", e.target.value); }}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                BrightData / Decodo / Smartproxy. سيُحفظ في <code>DECODO_PROXY</code>.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">TARGETS_JSON (المواقع المراقبة)</Label>
+              <textarea
+                className="w-full rounded border border-input bg-background p-2 text-xs font-mono min-h-[80px]"
+                value={targetsJson}
+                onChange={(e) => { setTargetsJson(e.target.value); persist("vr_targets_json", e.target.value); }}
+              />
+            </div>
+          </div>
+        </Card>
+
         {/* Step 2 */}
         <Card className={`p-5 space-y-3 ${!token ? "opacity-50 pointer-events-none" : ""}`}>
           <div className="flex items-center gap-2">
@@ -181,24 +236,20 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
             {token && <CopyBtn text={deployScript} label="نسخ السكريبت" />}
           </div>
           <p className="text-xs text-muted-foreground">
-            استبدل <code>&lt;YOUR_REPO_URL&gt;</code> بعنوان مستودع المشروع الذي يحتوي مجلّد
-            <code> vps-worker/</code>. ثم نفّذ السكريبت كـ root على VPS (Ubuntu 22.04+، ≥1GB RAM).
+            نفّذ السكريبت كـ <b>root</b> على Ubuntu 22.04+ (≥1GB RAM). إذا تركت رابط GitHub فارغاً ستحتاج إلى استبداله يدوياً.
           </p>
+          {token && (
+            <div className="rounded border border-primary/30 bg-primary/5 p-3 text-xs space-y-1">
+              <div className="font-semibold">⚡ أمر واحد للتشغيل على VPS:</div>
+              <code className="block bg-background/60 rounded p-2 text-[11px] break-all">
+                ssh root@YOUR_VPS_IP
+              </code>
+              <div className="text-muted-foreground">ثم الصق السكريبت أدناه كاملاً واضغط Enter.</div>
+            </div>
+          )}
           <pre className="bg-muted/30 rounded p-3 text-[11px] font-mono overflow-auto max-h-96 leading-relaxed">
             {deployScript || "أنشئ الـ token أولاً…"}
           </pre>
-          {token && (
-            <div className="rounded border border-border/40 bg-muted/20 p-3 text-xs space-y-1">
-              <div className="font-semibold">طريقة سريعة عبر SSH:</div>
-              <code className="block bg-background/60 rounded p-2 text-[11px]">
-                ssh root@your-vps "bash -s" &lt;&lt; 'EOF'
-                <br />
-                # …الصق السكريبت هنا…
-                <br />
-                EOF
-              </code>
-            </div>
-          )}
         </Card>
 
         <Card className="p-4 text-xs text-muted-foreground space-y-1">
