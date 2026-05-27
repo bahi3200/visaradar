@@ -49,6 +49,22 @@ export default function AdminDeployWorker() {
   const [repoUrl, setRepoUrl] = useState<string>(
     localStorage.getItem("vr_repo_url") || ""
   );
+  const [repoTouched, setRepoTouched] = useState(false);
+
+  const repoUrlError = useMemo(() => {
+    if (!repoUrl.trim()) return null;
+    if (!repoUrl.trim().startsWith("https://github.com/")) {
+      return "يجب أن يبدأ الرابط بـ https://github.com/";
+    }
+    if (!repoUrl.trim().endsWith(".git")) {
+      return "يجب أن ينتهي الرابط بـ .git (مثال: https://github.com/user/repo.git)";
+    }
+    const match = repoUrl.trim().match(/^https:\/\/github\.com\/[^\/]+\/[^\/]+\.git$/);
+    if (!match) {
+      return "رابط GitHub غير صحيح. الصيغة المتوقعة: https://github.com/USERNAME/REPO.git";
+    }
+    return null;
+  }, [repoUrl]);
   const [proxyUrl, setProxyUrl] = useState<string>(
     localStorage.getItem("vr_proxy_url") ||
       "http://brd-customer-hl_f0d8164b-zone-residential_proxy1:s8423k8sh3f2@brd.superproxy.io:33335"
