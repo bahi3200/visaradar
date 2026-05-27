@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Copy, Check, Server, Rocket, AlertTriangle, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
@@ -49,6 +49,22 @@ export default function AdminDeployWorker() {
   const [repoUrl, setRepoUrl] = useState<string>(
     localStorage.getItem("vr_repo_url") || ""
   );
+  const [repoTouched, setRepoTouched] = useState(false);
+
+  const repoUrlError = useMemo(() => {
+    if (!repoUrl.trim()) return null;
+    if (!repoUrl.trim().startsWith("https://github.com/")) {
+      return "يجب أن يبدأ الرابط بـ https://github.com/";
+    }
+    if (!repoUrl.trim().endsWith(".git")) {
+      return "يجب أن ينتهي الرابط بـ .git (مثال: https://github.com/user/repo.git)";
+    }
+    const match = repoUrl.trim().match(/^https:\/\/github\.com\/[^\/]+\/[^\/]+\.git$/);
+    if (!match) {
+      return "رابط GitHub غير صحيح. الصيغة المتوقعة: https://github.com/USERNAME/REPO.git";
+    }
+    return null;
+  }, [repoUrl]);
   const [proxyUrl, setProxyUrl] = useState<string>(
     localStorage.getItem("vr_proxy_url") ||
       "http://brd-customer-hl_f0d8164b-zone-residential_proxy1:s8423k8sh3f2@brd.superproxy.io:33335"
@@ -183,7 +199,15 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
                 placeholder="https://github.com/USERNAME/REPO.git"
                 value={repoUrl}
                 onChange={(e) => { setRepoUrl(e.target.value); persist("vr_repo_url", e.target.value); }}
+                onBlur={() => setRepoTouched(true)}
+                className={repoTouched && repoUrlError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
+              {repoTouched && repoUrlError && (
+                <p className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {repoUrlError}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground mt-1">
                 اربط مشروع Lovable بـ GitHub (الزر أعلى يمين الشاشة) ثم الصق رابط الـ .git هنا.
               </p>
