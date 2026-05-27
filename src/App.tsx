@@ -73,6 +73,7 @@ import AdminAntiBot from "./pages/AdminAntiBot";
 import AdminStealthAnalytics from "./pages/AdminStealthAnalytics";
 import AdminVerificationGateway from "./pages/AdminVerificationGateway";
 import AdminDeployWorker from "./pages/AdminDeployWorker";
+import AdminGitHubTroubleshoot from "./pages/AdminGitHubTroubleshoot";
 import VerifyChallenge from "./pages/VerifyChallenge";
 import SubscriberVisaMonitor from "./pages/SubscriberVisaMonitor";
 import SubscriberRoute from "@/components/SubscriberRoute";
@@ -162,6 +163,7 @@ const App = () => (
       <Route path="/dashboard/stealth-analytics" element={<AdminRoute adminOnly><AdminStealthAnalytics /></AdminRoute>} />
       <Route path="/dashboard/verification-gateway" element={<AdminRoute adminOnly><AdminVerificationGateway /></AdminRoute>} />
       <Route path="/dashboard/deploy-worker" element={<AdminRoute adminOnly><AdminDeployWorker /></AdminRoute>} />
+      <Route path="/dashboard/github-troubleshoot" element={<AdminRoute adminOnly><AdminGitHubTroubleshoot /></AdminRoute>} />
       <Route path="/my-requests" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
       <Route path="/my-messages" element={<ProtectedRoute><MyMessages /></ProtectedRoute>} />
       <Route path="/my-devices" element={<ProtectedRoute><MyDevices /></ProtectedRoute>} />
