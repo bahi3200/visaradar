@@ -211,19 +211,39 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
         </Card>
 
         {/* Step 2 */}
-        <Card className={`p-5 space-y-3 ${!token ? "opacity-50 pointer-events-none" : ""}`}>
+        <Card className={`p-5 space-y-4 ${!token ? "opacity-50 pointer-events-none" : ""}`}>
           <div className="flex items-center gap-2">
             <Badge variant="outline">2</Badge>
             <h2 className="font-heading text-lg">ملف .env الجاهز</h2>
-            {token && <CopyBtn text={envBlock} label="نسخ .env" />}
           </div>
+
           <p className="text-xs text-muted-foreground">
             عدّل <code>DECODO_PROXY</code> / <code>PROVIDER_PROXY_POOLS</code> و
             <code> TARGETS_JSON</code> حسب احتياجك قبل التشغيل.
           </p>
-          <pre className="bg-muted/30 rounded p-3 text-[11px] font-mono overflow-auto max-h-72">
+
+          <pre className="bg-muted/30 rounded p-3 text-[11px] font-mono overflow-auto max-h-72 border border-border">
             {envBlock || "أنشئ الـ token أولاً…"}
           </pre>
+
+          {token && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Button
+                className="flex-1 gap-2"
+                variant="default"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(envBlock);
+                  toast.success("تم نسخ ملف .env كامل — الصقه مباشرة في VPS");
+                }}
+              >
+                <Copy className="w-4 h-4" />
+                إنشاء ونسخ ملف .env كامل
+              </Button>
+              <div className="text-[11px] text-muted-foreground flex-1">
+                انسخ هذا الملف ثم الصقه في المسار <code>/opt/visaradar-worker/vps-worker/.env</code> على VPS لتجنب أخطاء الكتابة اليدوية.
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Step 3 */}
