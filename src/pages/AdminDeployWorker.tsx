@@ -73,6 +73,9 @@ export default function AdminDeployWorker() {
     localStorage.getItem("vr_targets_json") ||
       '[{"country_code":"DZ","provider":"tlscontact","url":"https://visas-fr.tlscontact.com/visa/dz","homepage":"https://visas-fr.tlscontact.com/"}]'
   );
+  const [vpsIp, setVpsIp] = useState<string>(
+    localStorage.getItem("vr_vps_ip") || "102.206.40.182"
+  );
 
   // persist convenience inputs
   const persist = (k: string, v: string) => {
