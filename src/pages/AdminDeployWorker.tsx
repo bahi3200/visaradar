@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Copy, Check, Server, Rocket, AlertTriangle, Terminal, Monitor } from "lucide-react";
+import { Copy, Check, Server, Rocket, AlertTriangle, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { Card } from "@/components/ui/card";
@@ -72,9 +72,6 @@ export default function AdminDeployWorker() {
   const [targetsJson, setTargetsJson] = useState<string>(
     localStorage.getItem("vr_targets_json") ||
       '[{"country_code":"DZ","provider":"tlscontact","url":"https://visas-fr.tlscontact.com/visa/dz","homepage":"https://visas-fr.tlscontact.com/"}]'
-  );
-  const [vpsIp, setVpsIp] = useState<string>(
-    localStorage.getItem("vr_vps_ip") || "102.206.40.182"
   );
 
   // persist convenience inputs
@@ -273,36 +270,6 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
           )}
         </Card>
 
-        {/* VPS Connect */}
-        <Card className="p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline"><Monitor className="w-3 h-3" /></Badge>
-            <h2 className="font-heading text-lg flex items-center gap-2">
-              الاتصال بالـ VPS
-            </h2>
-          </div>
-          <div className="grid sm:grid-cols-[1fr_auto] gap-3 items-end">
-            <div>
-              <Label className="text-xs">IP عنوان الـ VPS</Label>
-              <Input
-                placeholder="102.206.40.182"
-                value={vpsIp}
-                onChange={(e) => { setVpsIp(e.target.value); persist("vr_vps_ip", e.target.value); }}
-              />
-            </div>
-            <CopyBtn text={`ssh root@${vpsIp || "YOUR_VPS_IP"}`} label="نسخ أمر SSH" />
-          </div>
-          <div className="rounded border border-primary/30 bg-primary/5 p-3 text-xs space-y-1">
-            <div className="font-semibold">⚡ أمر الاتصال:</div>
-            <code className="block bg-background/60 rounded p-2 text-[11px] break-all">
-              ssh root@{vpsIp || "YOUR_VPS_IP"}
-            </code>
-            <div className="text-muted-foreground">
-              افتح Terminal (Mac/Linux) أو PowerShell (Windows) والصق الأمر أعلاه، ثم أدخل كلمة المرور عند الطلب.
-            </div>
-          </div>
-        </Card>
-
         {/* Step 3 */}
         <Card className={`p-5 space-y-3 ${!token ? "opacity-50 pointer-events-none" : ""}`}>
           <div className="flex items-center gap-2">
@@ -315,6 +282,15 @@ echo "✅ Worker started. Logs: pm2 logs visaradar-worker"`
           <p className="text-xs text-muted-foreground">
             نفّذ السكريبت كـ <b>root</b> على Ubuntu 22.04+ (≥1GB RAM). إذا تركت رابط GitHub فارغاً ستحتاج إلى استبداله يدوياً.
           </p>
+          {token && (
+            <div className="rounded border border-primary/30 bg-primary/5 p-3 text-xs space-y-1">
+              <div className="font-semibold">⚡ أمر واحد للتشغيل على VPS:</div>
+              <code className="block bg-background/60 rounded p-2 text-[11px] break-all">
+                ssh root@YOUR_VPS_IP
+              </code>
+              <div className="text-muted-foreground">ثم الصق السكريبت أدناه كاملاً واضغط Enter.</div>
+            </div>
+          )}
           <pre className="bg-muted/30 rounded p-3 text-[11px] font-mono overflow-auto max-h-96 leading-relaxed">
             {deployScript || "أنشئ الـ token أولاً…"}
           </pre>
