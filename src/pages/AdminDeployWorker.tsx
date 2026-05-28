@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Copy, Check, Server, Rocket, AlertTriangle, Terminal } from "lucide-react";
+import { Copy, Check, Server, Rocket, AlertTriangle, Terminal, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { Card } from "@/components/ui/card";
