@@ -53,3 +53,44 @@ pm2 startup        # follow printed instructions
 
 ## View results
 VisaRadar Admin → `/admin/browser-verifications`
+
+## Headful fallback on headless VPS (xvfb)
+
+Many providers (especially TLScontact / VFS) score headless Chromium higher
+for bot detection. On a VPS without a display, run the worker behind a
+virtual X display so Chromium can launch in *headful* mode normally.
+
+```bash
+sudo apt install -y xvfb
+# Run pm2 under xvfb (1920x1080x24 virtual display):
+pm2 delete visaradar-worker 2>/dev/null || true
+pm2 start "xvfb-run -a --server-args='-screen 0 1920x1080x24' node worker.js" \
+  --name visaradar-worker
+pm2 save
+```
+
+Then in `.env` you can safely set:
+
+```env
+HEADFUL_PROBABILITY=0.5
+HEADFUL_PROVIDERS=tls,vfs
+```
+
+Verify xvfb is active: `pm2 logs visaradar-worker` should show
+`headful_p=0.50` lines without `Missing X server` errors.
+
+## Debug failure reasons
+
+When a cycle returns `status=error buttons=0 dates=0`, check the saved
+`detection_details.failure_reason` in `/admin/browser-verifications`:
+
+| reason                     | meaning                                            |
+|----------------------------|----------------------------------------------------|
+| `selector_not_found`       | Page loaded but no known booking selector matched. |
+| `dom_not_ready`            | SPA root never mounted (likely silent block).      |
+| `iframe_detected`          | Booking widget is inside an iframe (cross-origin?).|
+| `unexpected_layout`        | DOM mounted but body text < 400 chars.             |
+| `empty_availability_state` | Provider explicitly says "no appointments".        |
+
+The raw HTML of failed cycles is now stored in
+`detection_details.html_snapshot` (first 250 KB) for offline forensics.
