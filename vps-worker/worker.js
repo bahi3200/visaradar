@@ -20,6 +20,7 @@ import { chromium } from 'playwright-extra'
 import stealth from 'puppeteer-extra-plugin-stealth'
 import fs from 'node:fs'
 import path from 'node:path'
+import { detectTlsAvailability } from './lib/tls-detector.js'
 
 chromium.use(stealth())
 
