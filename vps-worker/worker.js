@@ -687,7 +687,13 @@ async function runCycle() {
       const adaptiveHeadful = Math.min(0.6, HEADFUL_PROB + (Number(risk.risk_score || 0) / 200))
       console.log(`→ ${target.country_code}/${target.provider} (risk=${risk.risk_score} headful_p=${adaptiveHeadful.toFixed(2)})`)
       const result = await checkTarget(target, adaptiveHeadful)
+      const det = result.detection_details || {}
+      const tls = det.tls || {}
+      const reason = det.failure_reason || tls.failure_reason || result.error_message || '-'
+      const stages = (tls.stages || []).join('>') || '-'
+      const snapLen = det.html_snapshot ? det.html_snapshot.length : 0
       console.log(`  status=${result.status} buttons=${result.booking_buttons_count} dates=${result.available_dates_count} proxy=${result.proxy_used || '-'}${result.blocked ? ' BLOCKED='+result.blocked : ''}`)
+      console.log(`  detector reason=${reason} stages=${stages} widget_mounted=${tls.widget_mounted ?? '-'} iframe=${tls.iframe_detected ?? '-'} empty_state=${tls.empty_state ?? '-'} deep_buttons=${tls.deep_buttons ?? 0} deep_dates=${tls.deep_dates ?? 0} html_snapshot_bytes=${snapLen}`)
       await sendToSupabase(result)
       // Per-target gap: 20–40s by default (configurable)
       const gapMs = (BETWEEN_MIN_S + Math.random() * (BETWEEN_MAX_S - BETWEEN_MIN_S)) * 1000
