@@ -460,6 +460,16 @@ async function checkTargetOnce(browser, target, opts) {
       return result
     }
 
+    // === TLS / VFS / BLS — enhanced multi-stage detection ===
+    // Runs deep selector scan across iframes + shadow DOM, with
+    // SPA-hydration waits and structured failure reasons.
+    let tlsDeep = null
+    try {
+      tlsDeep = await detectTlsAvailability(page, { provider: target.provider })
+    } catch (e) {
+      tlsDeep = { failureReason: 'unexpected_layout', error: String(e?.message || e) }
+    }
+
     // Count booking buttons (use multiple selectors, dedupe by element handle)
     let bookingCount = 0
     const seenBtns = new Set()
@@ -477,7 +487,8 @@ async function checkTargetOnce(browser, target, opts) {
         }
       } catch {}
     }
-    result.booking_buttons_count = bookingCount
+    // Merge: take the max of legacy count and deep-frame/shadow count.
+    result.booking_buttons_count = Math.max(bookingCount, tlsDeep?.buttons || 0)
 
     // Calendar detection
     let calendarFound = false
@@ -501,7 +512,10 @@ async function checkTargetOnce(browser, target, opts) {
           if (n > availCount) availCount = n
         } catch {}
       }
-      result.available_dates_count = availCount
+      result.available_dates_count = Math.max(availCount, tlsDeep?.dates || 0)
+    } else {
+      // Even without legacy calendar match, deep detector may have found dates.
+      result.available_dates_count = tlsDeep?.dates || 0
     }
 
     // Page text + "no appointments" check
@@ -532,6 +546,25 @@ async function checkTargetOnce(browser, target, opts) {
       title: await page.title().catch(() => null),
       fingerprint: { platform: fp.platform, tz: fp.tz, viewport: fp.viewport, headful: opts.headful },
       proxy: proxy?.label || null,
+      tls: tlsDeep ? {
+        deep_buttons: tlsDeep.buttons,
+        deep_dates: tlsDeep.dates,
+        iframe_detected: tlsDeep.iframeDetected,
+        widget_mounted: tlsDeep.widgetMounted,
+        empty_state: tlsDeep.emptyState,
+        failure_reason: tlsDeep.failureReason,
+        stages: tlsDeep.stages,
+      } : null,
+    }
+
+    // Snapshot raw HTML on failed cycles (buttons=0 AND dates=0)
+    if (result.booking_buttons_count === 0 && result.available_dates_count === 0 && tlsDeep?.htmlSnapshot) {
+      result.detection_details.failure_reason = tlsDeep.failureReason
+      result.detection_details.html_snapshot = tlsDeep.htmlSnapshot
+      result.error_message = result.error_message || `tls_detect:${tlsDeep.failureReason}`
+      // Mark cycle status as error so admin dashboards surface it for triage.
+      if (result.status !== 'open') result.status = 'error'
+      console.warn(`  ⚠ TLS detect failed reason=${tlsDeep.failureReason} stages=${(tlsDeep.stages||[]).join('>')}`)
     }
     result.xhr_requests = xhrLog.slice(0, 20)
     result.load_time_ms = Date.now() - start
