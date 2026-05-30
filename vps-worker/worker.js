@@ -606,8 +606,8 @@ async function checkTarget(target, headfulProb) {
     if (proxy) triedProxies.add(proxy.label)
     const headful = forceHeadful || (Math.random() < headfulProb)
 const browser = await chromium.launch({
-  headless: !headful,
   ignoreHTTPSErrors: true,
+  headless: !headful,
   args: [
     '--no-sandbox',
     '--disable-setuid-sandbox',
