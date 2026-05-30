@@ -387,8 +387,9 @@ async function checkTargetOnce(browser, target, opts) {
   }
 
   const storageState = loadStorageState(target, proxy?.label)
-  const ctxOpts = {
-    userAgent: fp.ua,
+const ctxOpts = {
+  ignoreHTTPSErrors: true,
+  userAgent: fp.ua,
     viewport: fp.viewport,
     locale: fp.locale,
     timezoneId: fp.tz,
@@ -604,16 +605,22 @@ async function checkTarget(target, headfulProb) {
     }
     if (proxy) triedProxies.add(proxy.label)
     const headful = forceHeadful || (Math.random() < headfulProb)
-    const browser = await chromium.launch({
-      headless: !headful,
-      args: [
-        '--no-sandbox', '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-dev-shm-usage',
-        '--disable-features=IsolateOrigins,site-per-process',
-        `--window-size=${fp.viewport.width},${fp.viewport.height}`,
-      ],
-    })
+const browser = await chromium.launch({
+  headless: !headful,
+  ignoreHTTPSErrors: true,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--ignore-certificate-errors',
+    '--ignore-ssl-errors',
+    '--allow-running-insecure-content',
+    '--disable-web-security',
+    '--disable-blink-features=AutomationControlled',
+    '--disable-dev-shm-usage',
+    '--disable-features=IsolateOrigins,site-per-process',
+    `--window-size=${fp.viewport.width},${fp.viewport.height}`,
+  ],
+})
     try {
       const result = await checkTargetOnce(browser, target, { fp, proxy, headful })
       if (result.status !== 'blocked') return result
